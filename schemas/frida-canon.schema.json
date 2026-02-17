@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.frida.dev/frida-canon.schema.json",
+  "title": "Frida Canon Schema",
+  "type": "object",
+  "required": [
+    "meta",
+    "core"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "mode"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "const": "schema"
+        },
+        "canonArtifactRef": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "core": {
+      "type": "object",
+      "required": [
+        "canonicalSourceBlocks",
+        "selectorGrammar",
+        "generatorPipelineContracts",
+        "pathRefs",
+        "outputContracts"
+      ],
+      "properties": {
+        "canonicalSourceBlocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "selectorGrammar": {
+          "type": "string",
+          "const": "jsonpath-lite"
+        },
+        "generatorPipelineContracts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pathRefs": {
+          "type": "object",
+          "required": [
+            "canonArtifact",
+            "templatesFrida",
+            "templatesDocs"
+          ],
+          "properties": {
+            "canonArtifact": {
+              "type": "string",
+              "minLength": 1
+            },
+            "templatesFrida": {
+              "type": "string",
+              "minLength": 1
+            },
+            "templatesDocs": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": true
+        },
+        "outputContracts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "sourceSelectors"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "schemaRef": {
+            "type": "string"
+          },
+          "sourceSelectors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "selector"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "selector": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "generatorBindings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "outputTargets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

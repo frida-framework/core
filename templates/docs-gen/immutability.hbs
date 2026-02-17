@@ -1,0 +1,34 @@
+# Immutability
+
+This document describes read-only zones and the reasons for their immutability.
+
+## Read-Only Zones
+
+{{#each readOnlyZones}}
+### {{name}}
+
+**Path:** `{{formatPath path}}`
+
+#### Why read-only?
+
+{{whyReadOnly}}
+
+#### What happens if you edit these files?
+
+{{consequence}}
+
+#### How to make legitimate changes?
+
+{{howToChange}}
+
+---
+{{/each}}
+
+## General Principle
+
+Read-only zones serve as **sources of truth** that are managed by automated processes.
+
+Manual edits to these zones:
+1. Will be **overwritten** on next sync/build
+2. Create **inconsistency** with source of truth
+3. Make **debugging harder**
