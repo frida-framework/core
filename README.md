@@ -7,6 +7,8 @@ Schema-driven Frida Core generation engine.
 ```bash
 frida-core gen --strict-schema
 frida-core migration-report --strict
+frida-core visual build
+frida-core visual check
 frida-core check zone --path scripts/mapper --format text
 frida-core hash
 ```

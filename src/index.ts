@@ -1,4 +1,5 @@
 export { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
+export { runFridaVisualCli } from './visual.ts';
 export {
   runFridaCheckCli,
   loadZones,

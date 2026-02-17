@@ -2,6 +2,7 @@
 import { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
 import { runFridaCheckCli } from './zone-check.ts';
 import { runFridaHashCli } from './template-hash.ts';
+import { runFridaVisualCli } from './visual.ts';
 
 function printHelp(): void {
   console.log(`frida-core
@@ -9,6 +10,7 @@ function printHelp(): void {
 Usage:
   frida-core gen [--strict-schema]
   frida-core migration-report [--strict]
+  frida-core visual [build|check] [args...]
   frida-core check [zone args...]
   frida-core hash
   frida-core help
@@ -35,6 +37,8 @@ async function run(): Promise<number> {
         rootDir: process.cwd(),
         strictSchema: args.includes('--strict'),
       });
+    case 'visual':
+      return runFridaVisualCli(args);
     case 'check':
       return runFridaCheckCli(args);
     case 'hash':
