@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 20
           registry-url: https://npm.pkg.github.com
-          scope: '@frida'
+          scope: '@hanszel'
           cache: npm
 
       - name: Install
@@ -34,4 +34,10 @@ jobs:
       - name: Publish package
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm publish
+        run: |
+          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
+          if [[ "$VERSION" == *-* ]]; then
+            npm publish --tag alpha
+          else
+            npm publish
+          fi

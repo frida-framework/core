@@ -1,4 +1,4 @@
-# @frida/core
+# @hanszel/core
 
 Schema-driven Frida Core generation engine.
 
@@ -14,7 +14,7 @@ frida-core hash
 ## Package API
 
 ```ts
-import { runFridaGeneration, runFridaMigrationReport } from '@frida/core';
+import { runFridaGeneration, runFridaMigrationReport } from '@hanszel/core';
 ```
 
 Use adapters to attach host-specific generators and selector packs.
