@@ -1,0 +1,145 @@
+# ─── LAYER 2: ARCHITECTURE ───────────────────────────────────────────────────
+
+ARCHITECTURE_DECISIONS:
+  _visibility: private
+  decisions:
+    - id: CORE-ADR-001
+      title: Schema-first canon is the primary normalization axis
+      status: ACCEPTED
+      decision:
+        - "Generation input MUST be schema-native canon with top-level meta + core blocks."
+        - "Canon model MUST be validated against schemas/frida-canon.schema.json."
+        - "In strict mode, deprecated canon fields are treated as hard failure."
+      evidence:
+        - src/schema.ts
+        - schemas/frida-canon.schema.json
+        - src/runtime.ts
+
+    - id: CORE-ADR-002
+      title: Deterministic selectors for source binding
+      status: ACCEPTED
+      decision:
+        - "All source data binding uses jsonpath-lite selectors."
+        - "Required selectors MUST match at least one canon node."
+        - "Selector resolution is stateless and deterministic."
+      evidence:
+        - src/selector.ts
+
+    - id: CORE-ADR-003
+      title: Separation of core vs visual generation
+      status: ACCEPTED
+      decision:
+        - "Core generation produces profiles, AGENTS.md, docs, and config."
+        - "Visual generation produces overlay JSON from canon structure."
+        - "Visual artifacts are derived overlays, never source-of-truth."
+      evidence:
+        - src/runtime.ts
+        - src/visual.ts
+
+
+
+    - id: CORE-ADR-005
+      title: Zone-driven routing replaces heuristic matching
+      status: ACCEPTED
+      decision:
+        - "Zone resolution uses path-specificity algorithm, not profile heuristics."
+        - "Each zone has a canonical AGENTS.md path derived from agentsPath."
+        - "Zone resolution is deterministic: normalize → match → rank → select."
+      evidence:
+        - src/zone-check.ts
+
+    - id: CORE-ADR-006
+      title: Template integrity via hash manifest
+      status: ACCEPTED
+      decision:
+        - "Template .hbs files are source-of-truth, not inline content."
+        - "Drift detection uses SHA-256 manifest comparison."
+        - "Hash mismatch returns non-zero exit code."
+      evidence:
+        - src/template-hash.ts
+        - contract/template-integrity.manifest.yaml
+
+    - id: CORE-ADR-007
+      title: Reporting contract is fixed and immutable
+      status: ACCEPTED
+      decision:
+        - "Reporting path, extension, and filename pattern are constants."
+        - "Runtime config is generated from canon, not edited manually."
+        - "Init command normalizes reporting settings to fixed values."
+      evidence:
+        - src/reporting-contract.ts
+        - src/init.ts
+
+    - id: CORE-ADR-008
+      title: Visual overlay uses LOD-based semantic zoom
+      status: ACCEPTED
+      decision:
+        - "Canon YAML depth maps to LOD levels (topology/flow/specification)."
+        - "Typed reference keys (*Ref, *Refs) produce explicit edges."
+        - "Overlay is deterministic: same canon → same overlay (up to isomorphism)."
+      evidence:
+        - src/visual.ts
+
+    - id: CORE-ADR-009
+      title: Agent sessions enforce exclusive sequential access
+      status: ACCEPTED
+      decision:
+        - "Agent acquires session token before mutation."
+        - "Zone-scoped hard check rolls back changes outside target zone."
+        - "Stale token triggers routing regeneration after timeout."
+        - "Session ends with PR creation or explicit release."
+      evidence:
+        - "Future: src/session.ts"
+
+    - id: CORE-ADR-010
+      title: Scaffold delivers ahead-version canon
+      status: ACCEPTED
+      decision:
+        - "frida-core scaffold deploys base app + visualizer + canon."
+        - "Deployed canon describes the next iteration, not current state."
+        - "Scaffold is idempotent — re-run restores missing components."
+      evidence:
+        - "Future: src/scaffold.ts"
+
+    - id: CORE-ADR-011
+      title: Contract translators bridge natural language and code
+      status: ACCEPTED
+      decision:
+        - "Intent-to-contract translator converts user wishes to canon YAML."
+        - "Code-to-contract translator extracts canon from existing code."
+        - "Both produce draft canon requiring human or architect approval."
+      evidence:
+        - "Future: src/translator.ts"
+
+FRIDA_FOUNDATION_PRINCIPLES:
+  _visibility: private
+  status: ACTIVE
+  development_sequence:
+    order:
+      - CONTRACT
+      - ANTITASK
+      - DEVELOPMENT
+    rule: "No development step begins without a contract. No contract is valid without anti-task analysis."
+  principles:
+    - id: schema_first
+      text: "Schema-first normalization axis is mandatory."
+    - id: ref_dominance
+      text: "Path references (Ref-suffixed keys) dominate literal path values."
+    - id: canon_source_allowlist
+      text: "Canon source is limited to declared canonical files. No runtime inference."
+    - id: no_heuristics
+      text: "No heuristics for contract interpretation; explicit contract data only."
+    - id: fail_fast
+      text: "Fail-fast when mandatory contract or surface is missing."
+    - id: reproducibility
+      text: "Reproducibility and determinism are mandatory gates."
+    - id: single_source_of_truth
+      text: "Each datum has exactly one canonical source. Overlays are derived, never authoritative."
+    - id: context_minimization
+      text: "Agent context is minimal and contract-scoped. No ambient knowledge."
+    - id: architect_visual_loop
+      text: "Visual artifacts support the architect loop: see → model → commit."
+  migration_rule:
+    default: "Adopt stable old-kernel principles unless conflict is detected."
+    conflict_resolution: "Current core canon has priority and is treated as refinement."
+    wiki_only_policy: "Wiki-only postulates from old kernel are deprecated in package core."

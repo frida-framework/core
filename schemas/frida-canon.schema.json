@@ -1,13 +1,172 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.frida.dev/frida-canon.schema.json",
-  "title": "Frida Canon Schema",
+  "title": "Frida Canon Schema v2.0",
   "type": "object",
   "required": [
+    "CANON_META",
+    "CANON_UNIQUENESS_POLICY",
     "meta",
-    "core"
+    "core",
+    "ARCHITECTURE_DECISIONS",
+    "FRIDA_FOUNDATION_PRINCIPLES",
+    "PATHS",
+    "PATH_NORMALIZATION",
+    "FRIDA_CONFIG",
+    "FRIDA_RUNTIME_CONFIG",
+    "ZONES",
+    "ROUTING_POLICY",
+    "TASK_PROFILES",
+    "INVARIANTS",
+    "FRIDA_GUARDS_BASELINE",
+    "FRIDA_EXECUTION_PROTOCOL",
+    "FRIDA_ENFORCEMENT_TYPES",
+    "AGENT_SESSION_CONTRACT",
+    "REPORTING_CONTRACT",
+    "REPORTING_ACCESS_POLICY",
+    "FRIDA_VALIDATION_BASELINE",
+    "FRIDA_RUN_REPORTING",
+    "TEMPLATE_INTEGRITY_CONTRACT",
+    "CLI_CONTRACT",
+    "INTEGRATION_RULES",
+    "VISUAL_CONTRACT",
+    "VISUALIZER_PRINCIPLES",
+    "VISUALIZER_BOOTSTRAP_CONTRACT",
+    "CONTRACT_MANAGEMENT_INTERFACE",
+    "CONTRACT_TRANSLATOR_INTERFACES",
+    "SCAFFOLD_CONTRACT",
+    "CANON_INTERPRETATION",
+    "MIGRATION_TRANSITION_BLOCK",
+    "MIGRATION_LEDGER"
   ],
   "properties": {
+    "CANON_META": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "status",
+        "owner",
+        "updated_at",
+        "scope"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "updated_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "object",
+          "required": [
+            "repository",
+            "package",
+            "purpose"
+          ],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "package": {
+              "type": "string",
+              "minLength": 1
+            },
+            "purpose": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "CANON_UNIQUENESS_POLICY": {
+      "type": "object",
+      "required": [
+        "status",
+        "rule",
+        "control",
+        "strictness_freeze"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "first_rule": {
+          "type": "boolean"
+        },
+        "rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "control": {
+          "type": "object",
+          "required": [
+            "enforcement",
+            "fail_on_duplicate"
+          ],
+          "properties": {
+            "enforcement": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fail_on_duplicate": {
+              "type": "boolean"
+            },
+            "warning_code": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "strictness_freeze": {
+          "type": "object",
+          "required": [
+            "change_requires_explicit_owner_instruction"
+          ],
+          "properties": {
+            "change_requires_explicit_owner_instruction": {
+              "type": "boolean"
+            },
+            "note": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "projection_rule": {
+          "type": "object",
+          "properties": {
+            "allow_projection_via_source_ref": {
+              "type": "boolean"
+            },
+            "note": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
     "meta": {
       "type": "object",
       "required": [
@@ -92,65 +251,1477 @@
       },
       "additionalProperties": true
     },
-    "extensions": {
+    "ARCHITECTURE_DECISIONS": {
       "type": "array",
       "items": {
         "type": "object",
         "required": [
           "id",
-          "sourceSelectors"
+          "title",
+          "status"
         ],
         "properties": {
           "id": {
             "type": "string",
             "minLength": 1
           },
-          "schemaRef": {
-            "type": "string"
+          "title": {
+            "type": "string",
+            "minLength": 1
           },
-          "sourceSelectors": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "id",
-                "selector"
-              ],
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "selector": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "required": {
-                  "type": "boolean"
-                },
-                "description": {
-                  "type": "string"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "generatorBindings": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "outputTargets": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "status": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": true
       }
+    },
+    "FRIDA_FOUNDATION_PRINCIPLES": {
+      "type": "object",
+      "required": [
+        "status",
+        "principles"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "development_sequence": {
+          "type": "object",
+          "properties": {
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rule": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "principles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/principleEntry"
+          }
+        },
+        "migration_rule": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "PATHS": {
+      "type": "object",
+      "required": [
+        "contract",
+        "agents",
+        "specs",
+        "profiles",
+        "docs",
+        "frida",
+        "templates",
+        "scopes"
+      ],
+      "properties": {
+        "scaffold": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "visual": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "PATH_NORMALIZATION": {
+      "type": "object",
+      "required": [
+        "status",
+        "rules"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "text"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "FRIDA_CONFIG": {
+      "type": "object",
+      "required": [
+        "paths",
+        "reporting"
+      ],
+      "properties": {
+        "paths": {
+          "type": "object",
+          "required": [
+            "canon_inputFileRef",
+            "agents_bootloaderFileRef",
+            "specs_rootRef",
+            "profiles_rootRef",
+            "docs_policyDirRef",
+            "docs_referenceDirRef",
+            "frida_internalRef",
+            "templates_fridaRef",
+            "templates_docsRef"
+          ],
+          "properties": {
+            "canon_inputFileRef": {
+              "$ref": "#/$defs/pathRef"
+            },
+            "agents_bootloaderFileRef": {
+              "$ref": "#/$defs/pathRef"
+            },
+            "specs_rootRef": {
+              "$ref": "#/$defs/pathRef"
+            },
+            "profiles_rootRef": {
+              "$ref": "#/$defs/pathRef"
+            },
+            "docs_policyDirRef": {
+              "$ref": "#/$defs/pathRef"
+            },
+            "docs_referenceDirRef": {
+              "$ref": "#/$defs/pathRef"
+            },
+            "frida_internalRef": {
+              "$ref": "#/$defs/pathRef"
+            },
+            "templates_fridaRef": {
+              "$ref": "#/$defs/pathRef"
+            },
+            "templates_docsRef": {
+              "$ref": "#/$defs/pathRef"
+            }
+          },
+          "additionalProperties": true
+        },
+        "reporting": {
+          "type": "object",
+          "required": [
+            "collect_in_repo",
+            "repo_path",
+            "file_ext",
+            "filename_pattern",
+            "exists_check"
+          ],
+          "properties": {
+            "collect_in_repo": {
+              "type": "boolean",
+              "const": true
+            },
+            "repo_path": {
+              "type": "string",
+              "const": ".frida/job-reports"
+            },
+            "file_ext": {
+              "type": "string",
+              "const": ".yaml"
+            },
+            "filename_pattern": {
+              "type": "string",
+              "const": "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
+            },
+            "exists_check": {
+              "type": "boolean",
+              "const": false
+            },
+            "access_validation": {
+              "type": "object",
+              "required": [
+                "enabled",
+                "policy_paths"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "on_disabled": {
+                  "type": "string"
+                },
+                "policy_paths": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "visual": {
+          "type": "object",
+          "properties": {
+            "overlay_pathRef": {
+              "type": "string"
+            },
+            "generation_mode": {
+              "type": "string",
+              "enum": [
+                "on_demand",
+                "on_gen",
+                "manual"
+              ]
+            },
+            "determinism": {
+              "type": "string",
+              "enum": [
+                "required",
+                "best_effort"
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "naming": {
+          "type": "object",
+          "properties": {
+            "convention": {
+              "type": "string"
+            },
+            "ref_suffix": {
+              "type": "string"
+            },
+            "list_ref_suffix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "FRIDA_RUNTIME_CONFIG": {
+      "type": "object",
+      "required": [
+        "file",
+        "source_of_truth",
+        "generated_from"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "const": ".frida/config.yaml"
+        },
+        "source_of_truth": {
+          "type": "string",
+          "const": "canon"
+        },
+        "generated_from": {
+          "type": "string",
+          "const": "FRIDA_CONFIG.reporting"
+        }
+      },
+      "additionalProperties": true
+    },
+    "ZONES": {
+      "type": "object",
+      "required": [
+        "templates",
+        "non_templates"
+      ],
+      "properties": {
+        "templates": {
+          "$ref": "#/$defs/zoneEntry"
+        },
+        "non_templates": {
+          "$ref": "#/$defs/zoneEntry"
+        },
+        "zone_resolution": {
+          "type": "object",
+          "properties": {
+            "algorithm": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "step",
+                  "action"
+                ],
+                "properties": {
+                  "step": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "invariants": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "verification_policy": {
+          "type": "object",
+          "properties": {
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "ROUTING_POLICY": {
+      "type": "object",
+      "required": [
+        "status",
+        "classes",
+        "rules"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "classes": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "match"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "match": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "TASK_PROFILES": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "role",
+          "security"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "invariants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "security": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "INVARIANTS": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/invariantEntry"
+      }
+    },
+    "FRIDA_GUARDS_BASELINE": {
+      "type": "object",
+      "required": [
+        "globalGuardRefs",
+        "guards"
+      ],
+      "properties": {
+        "globalGuardRefs": {
+          "type": "array"
+        },
+        "guards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/guardEntry"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "FRIDA_EXECUTION_PROTOCOL": {
+      "type": "object",
+      "required": [
+        "status",
+        "agent_lifecycle"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "agent_lifecycle": {
+          "type": "object",
+          "required": [
+            "phases"
+          ],
+          "properties": {
+            "phases": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "action"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "action": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "invariants": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "interaction_modes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "allowed_operations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "forbidden_actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "pattern",
+              "reaction"
+            ],
+            "properties": {
+              "pattern": {
+                "type": "string"
+              },
+              "reaction": {
+                "type": "string",
+                "enum": [
+                  "HALT",
+                  "REDIRECT"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "FRIDA_ENFORCEMENT_TYPES": {
+      "type": "object",
+      "required": [
+        "version",
+        "types"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "types": {
+          "type": "object",
+          "required": [
+            "nail",
+            "chain",
+            "ban",
+            "drift",
+            "session"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "AGENT_SESSION_CONTRACT": {
+      "type": "object",
+      "required": [
+        "status",
+        "purpose",
+        "token_mechanism",
+        "zone_scope_hard_check",
+        "lifecycle"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "token_mechanism": {
+          "type": "object",
+          "required": [
+            "acquire",
+            "release",
+            "timeout"
+          ],
+          "properties": {
+            "acquire": {
+              "type": "object",
+              "required": [
+                "precondition",
+                "action"
+              ],
+              "additionalProperties": true
+            },
+            "release": {
+              "type": "object",
+              "required": [
+                "action"
+              ],
+              "additionalProperties": true
+            },
+            "timeout": {
+              "type": "object",
+              "required": [
+                "default_minutes"
+              ],
+              "properties": {
+                "default_minutes": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "recovery": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "zone_scope_hard_check": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "action",
+            "on_violation"
+          ],
+          "additionalProperties": true
+        },
+        "lifecycle": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "step"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "REPORTING_CONTRACT": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "collect_in_repo",
+            "repo_path",
+            "file_ext",
+            "filename_pattern",
+            "exists_check"
+          ],
+          "properties": {
+            "collect_in_repo": {
+              "type": "boolean",
+              "const": true
+            },
+            "repo_path": {
+              "type": "string",
+              "const": ".frida/job-reports"
+            },
+            "file_ext": {
+              "type": "string",
+              "const": ".yaml"
+            },
+            "filename_pattern": {
+              "type": "string",
+              "const": "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
+            },
+            "exists_check": {
+              "type": "boolean",
+              "const": false
+            }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": [
+            "source_ref"
+          ],
+          "properties": {
+            "source_ref": {
+              "type": "string",
+              "const": "FRIDA_CONFIG.reporting"
+            }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "REPORTING_ACCESS_POLICY": {
+      "type": "object",
+      "required": [
+        "create_all_profiles",
+        "read_only_profiles",
+        "update_delete_allowed_profiles"
+      ],
+      "properties": {
+        "create_all_profiles": {
+          "type": "boolean",
+          "const": true
+        },
+        "read_only_profiles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "string",
+            "const": "governance"
+          }
+        },
+        "update_delete_allowed_profiles": {
+          "type": "array",
+          "maxItems": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "FRIDA_VALIDATION_BASELINE": {
+      "type": "object",
+      "required": [
+        "contract_consistency",
+        "reporting_consistency",
+        "visual_consistency",
+        "template_integrity",
+        "session_consistency",
+        "scaffold_consistency"
+      ],
+      "additionalProperties": true
+    },
+    "FRIDA_RUN_REPORTING": {
+      "type": "object",
+      "required": [
+        "version",
+        "required_on",
+        "file_contract",
+        "schema_ref",
+        "minimum_fields"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "file_contract": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "directory",
+                "extension",
+                "filename_prefix",
+                "filename_pattern",
+                "exists_check"
+              ],
+              "properties": {
+                "directory": {
+                  "type": "string",
+                  "const": ".frida/job-reports"
+                },
+                "extension": {
+                  "type": "string",
+                  "const": ".yaml"
+                },
+                "filename_prefix": {
+                  "type": "string",
+                  "const": "unixtime_ms"
+                },
+                "filename_pattern": {
+                  "type": "string",
+                  "const": "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
+                },
+                "exists_check": {
+                  "type": "boolean",
+                  "const": false
+                }
+              },
+              "additionalProperties": true
+            },
+            {
+              "type": "object",
+              "required": [
+                "source_ref",
+                "filename_prefix"
+              ],
+              "properties": {
+                "source_ref": {
+                  "type": "string",
+                  "const": "REPORTING_CONTRACT"
+                },
+                "filename_prefix": {
+                  "type": "string",
+                  "const": "unixtime_ms"
+                }
+              },
+              "additionalProperties": true
+            }
+          ]
+        },
+        "schema_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minimum_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "TEMPLATE_INTEGRITY_CONTRACT": {
+      "type": "object",
+      "required": [
+        "status",
+        "manifest_file",
+        "manifest_schema",
+        "policy"
+      ],
+      "additionalProperties": true
+    },
+    "CLI_CONTRACT": {
+      "type": "object",
+      "required": [
+        "commands",
+        "command_separation"
+      ],
+      "properties": {
+        "commands": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "purpose"
+            ],
+            "properties": {
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "PLANNED",
+                  "DEPRECATED"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "command_separation": {
+          "type": "object",
+          "required": [
+            "core_commands"
+          ],
+          "properties": {
+            "core_commands": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "future_commands": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "INTEGRATION_RULES": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "VISUAL_CONTRACT": {
+      "type": "object",
+      "required": [
+        "status",
+        "generation_mode",
+        "source_of_truth",
+        "determinism"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "generation_mode": {
+          "type": "string",
+          "enum": [
+            "on_demand",
+            "on_gen",
+            "manual"
+          ]
+        },
+        "source_of_truth": {
+          "type": "string",
+          "const": "canon"
+        },
+        "determinism": {
+          "type": "string",
+          "enum": [
+            "required",
+            "best_effort"
+          ]
+        },
+        "lod": {
+          "type": "object",
+          "required": [
+            "levels"
+          ],
+          "properties": {
+            "levels": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "yaml_depth"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "yaml_depth": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "content": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "selector_grammar": {
+          "type": "object",
+          "properties": {
+            "typed_ref_keys": {
+              "type": "object",
+              "properties": {
+                "explicit": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "wildcard_suffix": {
+                  "type": "string"
+                },
+                "list_wildcard_suffix": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            },
+            "edge_inference": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "edge_types": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "overlay_output": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "enum": [
+                "JSON"
+              ]
+            },
+            "path_ref": {
+              "type": "string"
+            },
+            "schema_version": {
+              "type": "string"
+            },
+            "required_fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "VISUALIZER_PRINCIPLES": {
+      "type": "object",
+      "required": [
+        "status",
+        "principles"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "principles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/principleEntry"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "VISUALIZER_BOOTSTRAP_CONTRACT": {
+      "type": "object",
+      "required": [
+        "status",
+        "schema_version"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "mounted_component": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "mount_point": {
+              "type": "string"
+            },
+            "data_source": {
+              "type": "string"
+            },
+            "modes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "recovery": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "CONTRACT_MANAGEMENT_INTERFACE": {
+      "type": "object",
+      "required": [
+        "status",
+        "schema_version",
+        "operations"
+      ],
+      "additionalProperties": true
+    },
+    "CONTRACT_TRANSLATOR_INTERFACES": {
+      "type": "object",
+      "required": [
+        "status",
+        "schema_version",
+        "interfaces"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "interfaces": {
+          "type": "object",
+          "properties": {
+            "intent_to_contract": {
+              "type": "object",
+              "required": [
+                "description"
+              ],
+              "additionalProperties": true
+            },
+            "code_to_contract": {
+              "type": "object",
+              "required": [
+                "description"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "SCAFFOLD_CONTRACT": {
+      "type": "object",
+      "required": [
+        "status",
+        "purpose",
+        "command",
+        "deliverables",
+        "recovery"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deliverables": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "description"
+            ],
+            "properties": {
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "recovery": {
+          "type": "object",
+          "required": [
+            "full",
+            "behavior"
+          ],
+          "additionalProperties": true
+        },
+        "ahead_version_policy": {
+          "type": "object",
+          "properties": {
+            "rule": {
+              "type": "string"
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "example": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "CANON_INTERPRETATION": {
+      "type": "object",
+      "required": [
+        "status",
+        "model",
+        "source_of_truth",
+        "execution_rules"
+      ],
+      "additionalProperties": true
+    },
+    "MIGRATION_TRANSITION_BLOCK": {
+      "type": "object",
+      "required": [
+        "status",
+        "removal_strategy",
+        "exit_condition",
+        "errors_resolution",
+        "precision_resolution",
+        "drift_resolution"
+      ],
+      "additionalProperties": true
+    },
+    "MIGRATION_LEDGER": {
+      "type": "object",
+      "required": [
+        "status",
+        "entries"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "legacy_block",
+              "status"
+            ],
+            "properties": {
+              "legacy_block": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "adopted",
+                  "overridden_by_core",
+                  "deprecated"
+                ]
+              },
+              "target": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+        "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schemaRef": {
+          "type": "string"
+        },
+        "sourceSelectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "selector"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "selector": {
+                "type": "string",
+                "minLength": 1
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "generatorBindings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outputTargets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
     }
+  }
+},
+"$defs": {
+  "pathRef": {
+    "type": "string",
+    "pattern": "^PATHS\\.",
+    "minLength": 7
   },
-  "additionalProperties": true
+  "zoneEntry": {
+    "type": "object",
+    "required": [
+      "agentsPath",
+      "purpose"
+    ],
+    "properties": {
+      "status": {
+        "type": "string"
+      },
+      "hard_zone": {
+        "type": "boolean"
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "pathGlobRef": {
+        "$ref": "#/$defs/pathRef"
+      },
+      "agentsPath": {
+        "type": "string",
+        "minLength": 1
+      },
+      "agentsPathDirRef": {
+        "$ref": "#/$defs/pathRef"
+      },
+      "purpose": {
+        "type": "string",
+        "minLength": 1
+      },
+      "exclude_path_prefixes": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "anyOf": [
+      {
+        "required": [
+          "path"
+        ]
+      },
+      {
+        "required": [
+          "pathGlobRef"
+        ]
+      }
+    ],
+    "additionalProperties": true
+  },
+  "invariantEntry": {
+    "type": "object",
+    "required": [
+      "id",
+      "text"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "text": {
+        "type": "string",
+        "minLength": 1
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "kernel",
+          "app"
+        ]
+      }
+    },
+    "additionalProperties": true
+  },
+  "guardEntry": {
+    "type": "object",
+    "required": [
+      "id",
+      "kind",
+      "statement",
+      "enforcement"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "nail",
+          "chain",
+          "ban",
+          "drift",
+          "session"
+        ]
+      },
+      "statement": {
+        "type": "string",
+        "minLength": 1
+      },
+      "enforcement": {
+        "type": "string",
+        "enum": [
+          "hard",
+          "warn"
+        ]
+      }
+    },
+    "additionalProperties": true
+  },
+  "principleEntry": {
+    "type": "object",
+    "required": [
+      "id",
+      "text"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "text": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": true
+  }
+},
+"additionalProperties": false
 }

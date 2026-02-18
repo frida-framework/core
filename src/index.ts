@@ -1,5 +1,7 @@
 export { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
 export { runFridaVisualCli } from './visual.ts';
+export { runFridaInitCli } from './init.ts';
+export { runFridaReportCli } from './report.ts';
 export {
   runFridaCheckCli,
   loadZones,
@@ -8,11 +10,12 @@ export {
   validateZoneAgentsMd,
 } from './zone-check.ts';
 export { runFridaHashCli } from './template-hash.ts';
+export { runFridaBuildCli } from './build.ts';
+export { loadCanonDocument, resolveCanonPath } from './canon-path.ts';
 export type {
-  AdapterGeneratorSpec,
-  FridaAdapter,
-  FridaCanonSchema,
-  FridaExtensionSpec,
+  CanonNormalizationResult,
+  CanonLayerSpec,
+  CanonIndex,
   GeneratorSpec,
   SourceSelectorSpec,
   RunFridaCoreOptions,

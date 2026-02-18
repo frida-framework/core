@@ -1,0 +1,53 @@
+# ─── LAYER 5: REPORTING & VALIDATION ─────────────────────────────────────────
+
+REPORTING_CONTRACT:
+  _visibility: private
+  source_ref: "FRIDA_CONFIG.reporting"
+
+REPORTING_ACCESS_POLICY:
+  _visibility: private
+  create_all_profiles: true
+  read_only_profiles:
+    - governance
+  update_delete_allowed_profiles: []
+
+FRIDA_VALIDATION_BASELINE:
+  _visibility: private
+  contract_consistency:
+    - "All Ref-suffixed keys resolve to existing PATHS entries."
+    - "All required blocks listed in core.canonicalSourceBlocks exist as top-level keys."
+    - "Path refs resolve to valid filesystem targets."
+  reporting_consistency:
+    - "FRIDA_CONFIG.reporting is fixed and schema-valid."
+    - "Runtime config validates against frida-runtime-config.schema.json."
+  visual_consistency:
+    - "Visual overlay is deterministic: same input → same output."
+    - "Visual checks are fail-hard."
+  template_integrity:
+    - "Template-integrity manifest validates against schema."
+    - "Hash drift returns non-zero exit code."
+  session_consistency:
+    - "Session token file is valid YAML with required fields."
+    - "No concurrent tokens on same branch."
+  scaffold_consistency:
+    - "Scaffold output matches declared deliverables."
+    - "Re-scaffold does not duplicate existing components."
+
+FRIDA_RUN_REPORTING:
+  _visibility: private
+  version: "1.0"
+  required_on:
+    - SUCCESS
+    - HALTED
+  file_contract:
+    source_ref: REPORTING_CONTRACT
+    filename_prefix: unixtime_ms
+  schema_ref: "schemas/frida-job-report.schema.json"
+  minimum_fields:
+    - frida_report
+    - status
+    - profile_id
+    - created_at
+    - changes
+    - verification
+    - summary

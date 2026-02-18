@@ -1,101 +1,197 @@
-/**
- * FRIDA Template Hash Utility
- *
- * Computes SHA-256 hashes for all FRIDA_TPL_* template files
- * and compares against values stored in canon.cbmd.yaml.
- *
- * Usage: npm run frida:hash
- */
-
-import * as fs from 'fs';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
+import { loadCanonDocument } from './canon-path.ts';
+
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
-const CANON_PATH = path.join(ROOT_DIR, 'contract', 'canon.cbmd.yaml');
+const DEFAULT_MANIFEST_REL_PATH = 'contract/template-integrity.manifest.yaml';
+const MANIFEST_SCHEMA_REL_PATH = 'schemas/template-integrity.schema.json';
 
-export function runFridaHashCli(): number {
-    console.log('🔑 FRIDA Template Hash Check\n');
+interface TemplateManifestEntry {
+  id: string;
+  file: string;
+  sha256: string;
+}
 
-    if (!fs.existsSync(CANON_PATH)) {
-        console.error('❌ Canon file not found:', CANON_PATH);
-        return 1;
+interface TemplateManifest {
+  version: string;
+  templates: TemplateManifestEntry[];
+}
+
+interface HashArgs {
+  canonPath: string | null;
+  manifestPath: string | null;
+}
+
+function parseArgs(args: string[]): HashArgs {
+  const readFlag = (flag: string): string | null => {
+    const idx = args.indexOf(flag);
+    if (idx === -1 || idx + 1 >= args.length) {
+      return null;
+    }
+    return args[idx + 1];
+  };
+
+  return {
+    canonPath: readFlag('--canon'),
+    manifestPath: readFlag('--manifest'),
+  };
+}
+
+function sha256File(filePath: string): string {
+  const fileBytes = fs.readFileSync(filePath);
+  return `sha256:${crypto.createHash('sha256').update(fileBytes).digest('hex')}`;
+}
+
+function validateManifestSchema(manifest: unknown, schemaPath: string): void {
+  const schemaRaw = fs.readFileSync(schemaPath, 'utf-8');
+  const schema = JSON.parse(schemaRaw);
+  const AjvCtor: any = (Ajv2020 as any).default || Ajv2020;
+  const addFormatsFn: any = (addFormats as any).default || addFormats;
+  const ajv = new AjvCtor({ allErrors: true, strict: false });
+  addFormatsFn(ajv);
+  const validate = ajv.compile(schema);
+  if (!validate(manifest)) {
+    const message = (validate.errors || [])
+      .map((error: any) => `${error.instancePath || '/'} ${error.message || 'invalid'}`)
+      .join('; ');
+    throw new Error(`template manifest validation failed: ${message}`);
+  }
+}
+
+function runManifestMode(manifestPath: string): number {
+  const absoluteManifestPath = path.resolve(ROOT_DIR, manifestPath);
+  if (!fs.existsSync(absoluteManifestPath)) {
+    console.error(`❌ Template manifest not found: ${absoluteManifestPath}`);
+    return 1;
+  }
+
+  const absoluteSchemaPath = path.resolve(ROOT_DIR, MANIFEST_SCHEMA_REL_PATH);
+  if (!fs.existsSync(absoluteSchemaPath)) {
+    console.error(`❌ Template manifest schema not found: ${absoluteSchemaPath}`);
+    return 1;
+  }
+
+  const manifestRaw = fs.readFileSync(absoluteManifestPath, 'utf-8');
+  const manifest = yaml.parse(manifestRaw) as TemplateManifest;
+  validateManifestSchema(manifest, absoluteSchemaPath);
+
+  const templates = [...manifest.templates].sort((a, b) => a.id.localeCompare(b.id));
+  let ok = 0;
+  let mismatch = 0;
+  let missing = 0;
+
+  console.log(`📄 Manifest: ${path.relative(ROOT_DIR, absoluteManifestPath)}`);
+
+  for (const entry of templates) {
+    const absoluteFilePath = path.resolve(ROOT_DIR, entry.file);
+    if (!fs.existsSync(absoluteFilePath)) {
+      console.error(`❌ ${entry.id}: file missing (${entry.file})`);
+      missing += 1;
+      continue;
     }
 
-    const canonRaw = fs.readFileSync(CANON_PATH, 'utf-8');
-    const contract = yaml.parse(canonRaw);
-
-    const tplKeys = Object.keys(contract)
-        .filter(k => k.startsWith('FRIDA_TPL_'))
-        .sort();
-
-    let ok = 0;
-    let mismatch = 0;
-    let missing = 0;
-
-    for (const key of tplKeys) {
-        const block = contract[key];
-        const file = block?.file;
-        if (!file) {
-            console.warn(`⚠️  ${key}: no 'file' field`);
-            missing++;
-            continue;
-        }
-
-        const filePath = path.join(ROOT_DIR, file);
-        if (!fs.existsSync(filePath)) {
-            console.error(`❌ ${key}: file missing (${file})`);
-            missing++;
-            continue;
-        }
-
-        const fileBytes = fs.readFileSync(filePath);
-        const actualHash = 'sha256:' + crypto.createHash('sha256').update(fileBytes).digest('hex');
-        const canonHash = block.content_hash || null;
-
-        if (!canonHash) {
-            console.log(`🆕 ${key}: ${actualHash}  (no content_hash in canon)`);
-            mismatch++;
-        } else if (actualHash === canonHash) {
-            console.log(`✅ ${key}: ${actualHash}`);
-            ok++;
-        } else {
-            console.log(`❌ ${key}:`);
-            console.log(`   canon:  ${canonHash}`);
-            console.log(`   actual: ${actualHash}`);
-            mismatch++;
-        }
-
+    const actualHash = sha256File(absoluteFilePath);
+    if (actualHash === entry.sha256) {
+      console.log(`✅ ${entry.id}: ${actualHash}`);
+      ok += 1;
+      continue;
     }
 
-    console.log(`\n━━━ Summary: ${ok} ok, ${mismatch} changed, ${missing} missing ━━━\n`);
+    console.log(`❌ ${entry.id}:`);
+    console.log(`   manifest: ${entry.sha256}`);
+    console.log(`   actual:   ${actualHash}`);
+    mismatch += 1;
+  }
 
-    if (mismatch > 0) {
-        console.log('📋 Updated hashes for wiki (copy into FRIDA_TPL_* blocks):\n');
-        tplKeys.forEach((key, _i) => {
-            const block = contract[key];
-            if (!block?.file) return;
-            const filePath = path.join(ROOT_DIR, block.file);
-            if (!fs.existsSync(filePath)) return;
-            const fileBytes = fs.readFileSync(filePath);
-            const hash = 'sha256:' + crypto.createHash('sha256').update(fileBytes).digest('hex');
-            console.log(`# ${key}`);
-            console.log(`content_hash: "${hash}"\n`);
-        });
+  console.log(`\n━━━ Summary: ${ok} ok, ${mismatch} changed, ${missing} missing ━━━\n`);
+  return mismatch > 0 || missing > 0 ? 1 : 0;
+}
+
+function runLegacyCanonMode(canonPath: string | null): number {
+  const loaded = loadCanonDocument(ROOT_DIR, canonPath || undefined);
+  const contract = loaded.parsed as Record<string, any>;
+
+  const tplKeys = Object.keys(contract)
+    .filter((key) => key.startsWith('FRIDA_TPL_'))
+    .sort();
+
+  let ok = 0;
+  let mismatch = 0;
+  let missing = 0;
+
+  console.log(`📄 Canon fallback: ${path.relative(ROOT_DIR, loaded.canonPath)}`);
+
+  for (const key of tplKeys) {
+    const block = contract[key];
+    const file = block?.file;
+    if (!file) {
+      console.warn(`⚠️  ${key}: no 'file' field`);
+      missing += 1;
+      continue;
     }
 
-    return mismatch > 0 || missing > 0 ? 1 : 0;
+    const filePath = path.resolve(ROOT_DIR, file);
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ ${key}: file missing (${file})`);
+      missing += 1;
+      continue;
+    }
+
+    const actualHash = sha256File(filePath);
+    const canonHash = block.content_hash || null;
+    if (!canonHash) {
+      console.log(`🆕 ${key}: ${actualHash} (no content_hash in canon)`);
+      mismatch += 1;
+      continue;
+    }
+
+    if (actualHash === canonHash) {
+      console.log(`✅ ${key}: ${actualHash}`);
+      ok += 1;
+      continue;
+    }
+
+    console.log(`❌ ${key}:`);
+    console.log(`   canon:  ${canonHash}`);
+    console.log(`   actual: ${actualHash}`);
+    mismatch += 1;
+  }
+
+  console.log(`\n━━━ Summary: ${ok} ok, ${mismatch} changed, ${missing} missing ━━━\n`);
+  return mismatch > 0 || missing > 0 ? 1 : 0;
+}
+
+export function runFridaHashCli(args: string[] = process.argv.slice(2)): number {
+  console.log('🔑 FRIDA Template Hash Check\n');
+  try {
+    const parsedArgs = parseArgs(args);
+    const manifestPath = parsedArgs.manifestPath || DEFAULT_MANIFEST_REL_PATH;
+
+    if (fs.existsSync(path.resolve(ROOT_DIR, manifestPath))) {
+      return runManifestMode(manifestPath);
+    }
+
+    console.warn(`⚠️  Manifest not found (${manifestPath}), using legacy canon FRIDA_TPL_* fallback.`);
+    return runLegacyCanonMode(parsedArgs.canonPath);
+  } catch (error) {
+    console.error(`❌ hash check failed: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
 }
 
 function main(): void {
-    process.exit(runFridaHashCli());
+  process.exit(runFridaHashCli(process.argv.slice(2)));
 }
 
 const isMainModule = process.argv[1] && (
-    process.argv[1].endsWith('template-hash.ts') ||
-    process.argv[1].endsWith('template-hash.js')
+  process.argv[1].endsWith('template-hash.ts') ||
+  process.argv[1].endsWith('template-hash.js')
 );
 
 if (isMainModule) {
-    main();
+  main();
 }

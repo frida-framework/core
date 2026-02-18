@@ -1,0 +1,101 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FRIDA CANON INDEX v2.0.0
+# ═══════════════════════════════════════════════════════════════════════════════
+# Modular entry point for @hanszel/core canon.
+# Source of truth: this file + contract/layers/*.yaml
+# Monolith is a BUILD ARTIFACT: run `frida-core build` → dist/canon.assembled.yaml
+# ═══════════════════════════════════════════════════════════════════════════════
+
+canon_index:
+  version: "2.0.0"
+  schema: "schemas/frida-canon-index.schema.json"
+  assembled_schema: "schemas/frida-canon.schema.json"
+
+  layers:
+    - id: identity
+      path: layers/identity.yaml
+      visibility: private
+      keywords: [schema, version, meta, source-blocks, selectors, pipeline, output, uniqueness]
+      blocks:
+        - CANON_META
+        - CANON_UNIQUENESS_POLICY
+        - meta
+        - core
+
+    - id: architecture
+      path: layers/architecture.yaml
+      visibility: private
+      keywords: [ADR, decisions, principles, design, rationale, adapter, zone, template, overlay]
+      blocks:
+        - ARCHITECTURE_DECISIONS
+        - FRIDA_FOUNDATION_PRINCIPLES
+
+    - id: infrastructure
+      path: layers/infrastructure.yaml
+      visibility: mixed
+      keywords: [paths, config, zones, routing, directory, normalization, runtime, reporting, visual]
+      blocks:
+        - PATHS
+        - PATH_NORMALIZATION
+        - FRIDA_CONFIG
+        - FRIDA_RUNTIME_CONFIG
+        - ZONES
+
+    - id: agent-framework
+      path: layers/agent-framework.yaml
+      visibility: mixed
+      keywords: [agent, routing, profiles, invariants, guards, execution, enforcement, session, lifecycle, security, permissions]
+      blocks:
+        - ROUTING_POLICY
+        - TASK_PROFILES
+        - INVARIANTS
+        - FRIDA_GUARDS_BASELINE
+        - FRIDA_EXECUTION_PROTOCOL
+        - FRIDA_ENFORCEMENT_TYPES
+        - AGENT_SESSION_CONTRACT
+
+    - id: reporting
+      path: layers/reporting.yaml
+      visibility: private
+      keywords: [report, validation, session-report, access-policy, consistency, verification]
+      blocks:
+        - REPORTING_CONTRACT
+        - REPORTING_ACCESS_POLICY
+        - FRIDA_VALIDATION_BASELINE
+        - FRIDA_RUN_REPORTING
+
+    - id: templates-cli
+      path: layers/templates-cli.yaml
+      visibility: public
+      keywords: [templates, CLI, commands, hash, integrity, adapters, extensions, build, scaffold]
+      blocks:
+        - TEMPLATE_INTEGRITY_CONTRACT
+        - CLI_CONTRACT
+        - INTEGRATION_RULES
+
+    - id: visualization
+      path: layers/visualization.yaml
+      visibility: public
+      keywords: [visual, overlay, LOD, edges, nodes, graph, determinism, bootstrap, visualizer]
+      blocks:
+        - VISUAL_CONTRACT
+        - VISUALIZER_PRINCIPLES
+        - VISUALIZER_BOOTSTRAP_CONTRACT
+
+    - id: management
+      path: layers/management.yaml
+      visibility: mixed
+      keywords: [management, translator, scaffold, update, repair, audit, intent, code-to-contract]
+      blocks:
+        - CONTRACT_MANAGEMENT_INTERFACE
+        - CONTRACT_TRANSLATOR_INTERFACES
+        - SCAFFOLD_CONTRACT
+
+    - id: migration
+      path: layers/migration.yaml
+      visibility: private
+      keywords: [migration, legacy, deprecated, ledger, interpretation, transition, compatibility]
+      blocks:
+        - CANON_INTERPRETATION
+        - MIGRATION_TRANSITION_BLOCK
+        - MIGRATION_LEDGER

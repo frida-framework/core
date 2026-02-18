@@ -1,0 +1,301 @@
+# ─── LAYER 4: AGENT FRAMEWORK ────────────────────────────────────────────────
+
+ROUTING_POLICY:
+  _visibility: private
+  status: ACTIVE
+  stage: "wave-2-stable"
+  classes:
+    - id: templates
+      match:
+        pathPrefix: "templates/"
+      zone: templates
+      agentsRef: "ZONES.templates.agentsPath"
+    - id: non_templates
+      match:
+        default: true
+      zone: non_templates
+      agentsRef: "ZONES.non_templates.agentsPath"
+  rules:
+    - "Profile routing uses zone-driven AGENTS.md lookup."
+    - "No profile match MUST halt execution."
+    - "Routing state is not persisted between sessions."
+
+TASK_PROFILES:
+  _visibility: private
+  governance:
+    role: ARCHITECT_AGENT
+    keywords:
+      - governance
+      - canon
+      - frida
+    invariants: []
+    security:
+      read_allow:
+        - "tasks/**"
+        - ".frida/job-reports/*.yaml"
+      edit_allow:
+        - "tasks/inbox/**"
+      create_allow:
+        - ".frida/job-reports/*.yaml"
+      forbid:
+        - ".frida/**"
+      edit_forbid:
+        - "tasks/TASK-*.md"
+        - "tasks/**/TASK-*.md"
+        - ".frida/job-reports/*.yaml"
+  task_setter:
+    role: TASK_SETTER_AGENT
+    keywords:
+      - task
+      - formulation
+      - spec
+    invariants:
+      - no_scope_creep
+    security:
+      read_allow:
+        - "tasks/**"
+        - ".frida/job-reports/*.yaml"
+      create_allow:
+        - "tasks/TASK-*.md"
+        - ".frida/job-reports/*.yaml"
+      edit_allow: []
+      forbid:
+        - ".frida/**"
+      edit_forbid:
+        - "tasks/README.md"
+  readonly_observer:
+    role: READONLY_AGENT
+    keywords:
+      - observe
+      - review
+      - audit
+    invariants:
+      - canon_not_runtime
+    security:
+      read_allow:
+        - "**"
+      edit_allow: []
+      create_allow:
+        - ".frida/job-reports/*.yaml"
+      forbid: []
+      edit_forbid:
+        - "**"
+
+INVARIANTS:
+  _visibility: private
+  canon_entity_single_declaration:
+    id: canon_entity_single_declaration
+    text: "Any canon entity SHOULD be declared exactly once; duplicates emit warning."
+    scope: kernel
+  visual_overlay_only:
+    id: visual_overlay_only
+    text: "Visual artifacts are derived overlays and must not become source-of-truth canon state."
+    scope: kernel
+  visual_on_demand:
+    id: visual_on_demand
+    text: "Visual artifacts are refreshed only by explicit visual commands."
+    scope: kernel
+  visual_determinism:
+    id: visual_determinism
+    text: "Same canon input MUST produce identical visual overlay output."
+    scope: kernel
+  temp_dot_temp_only:
+    id: temp_dot_temp_only
+    text: "Temporary files MUST reside in .temp/ directories and never in working tree root."
+    scope: kernel
+  temp_ephemeral_session:
+    id: temp_ephemeral_session
+    text: "Temporary artifacts are ephemeral to a single session; no cross-session dependency allowed."
+    scope: kernel
+  error_explicit:
+    id: error_explicit
+    text: "Error conditions MUST be explicit. Silent failures are forbidden."
+    scope: kernel
+  no_scope_creep:
+    id: no_scope_creep
+    text: "Agent MUST NOT exceed the scope defined by its profile security permissions."
+    scope: kernel
+  canon_not_runtime:
+    id: canon_not_runtime
+    text: "Canon is a build-time/design-time artifact. Runtime state MUST NOT be stored in canon."
+    scope: kernel
+  agent_session_exclusive:
+    id: agent_session_exclusive
+    text: "Only one agent session token may be active per branch at any time."
+    scope: kernel
+  scaffold_idempotent:
+    id: scaffold_idempotent
+    text: "Scaffold command is idempotent. Re-running restores missing components without duplicating existing ones."
+    scope: kernel
+  zone_resolution_path_only:
+    id: zone_resolution_path_only
+    text: "Zone is resolved ONLY by path matching, never by profile keywords or heuristics."
+    scope: kernel
+  guard_chain_structural:
+    id: guard_chain_structural
+    text: "Guard chain enforcement verifies structural contract conformance, not runtime behavior."
+    scope: kernel
+  report_on_every_run:
+    id: report_on_every_run
+    text: "Every agent run MUST produce a job report, regardless of outcome."
+    scope: kernel
+  path_ref_dominance:
+    id: path_ref_dominance
+    text: "Ref-suffixed path keys dominate literal path values in case of conflict."
+    scope: kernel
+
+FRIDA_GUARDS_BASELINE:
+  _visibility: private
+  globalGuardRefs: []
+  guards:
+    - id: GUARD_CANON_SCHEMA_FIRST
+      kind: chain
+      statement: "Canon processing must remain schema-first."
+      enforcement: hard
+
+    - id: GUARD_CANON_SOURCE_DECLARED
+      kind: chain
+      statement: "Canon source is limited to files declared in PATHS and canonicalSourceBlocks."
+      enforcement: hard
+
+    - id: GUARD_CANON_NOT_RUNTIME
+      kind: ban
+      statement: "Canon MUST NOT contain runtime state or mutable data."
+      enforcement: hard
+
+    - id: GUARD_ARTIFACT_NO_MANUAL_EDITS
+      kind: nail
+      statement: "Generated artifacts (.frida/profiles/, .frida/AGENTS.md, .frida/docs/) must not be manually edited."
+      enforcement: warn
+
+    - id: GUARD_WORKSPACE_TEMP_ONLY
+      kind: ban
+      statement: "Temporary files must reside in .temp/ directories."
+      enforcement: hard
+
+    - id: GUARD_FRIDA_INTERNAL_NO_AGENT
+      kind: ban
+      statement: "Agent MUST NOT directly modify .frida/internal/ contents."
+      enforcement: hard
+
+    - id: GUARD_SESSION_REPORT_REQUIRED
+      kind: chain
+      statement: "Every agent run MUST produce a job report in .frida/job-reports/."
+      enforcement: warn
+
+    - id: GUARD_VISUAL_DETERMINISM
+      kind: drift
+      statement: "Visual overlay generation MUST be deterministic."
+      enforcement: hard
+
+    - id: GUARD_ZONE_AGENTS_MD
+      kind: chain
+      statement: "Each zone MUST have a canonical AGENTS.md at its agentsPath."
+      enforcement: warn
+
+    - id: GUARD_TEMPLATE_INTEGRITY
+      kind: nail
+      statement: "Template hash manifest must validate; drift returns non-zero."
+      enforcement: hard
+
+    - id: GUARD_SCAFFOLD_IDEMPOTENT
+      kind: chain
+      statement: "Scaffold re-run must not duplicate existing components."
+      enforcement: hard
+
+    - id: GUARD_SESSION_EXCLUSIVE
+      kind: session
+      statement: "Only one active session token per branch."
+      enforcement: hard
+
+FRIDA_EXECUTION_PROTOCOL:
+  _visibility: private
+  status: ACTIVE
+  agent_lifecycle:
+    phases:
+      - id: ROUTE
+        action: "Resolve zone from working directory path. Load zone-specific AGENTS.md."
+      - id: LOAD_PROFILE
+        action: "Match task context to TASK_PROFILES. Load security permissions and invariants."
+      - id: VALIDATE_ANTITASK
+        action: "Verify that the task does not violate invariants or guards."
+      - id: EXECUTE
+        action: "Execute within permission boundaries (read/edit/create/forbid paths)."
+      - id: VERIFY
+        action: "Run deterministic verification commands. Check zone-scoped changes."
+      - id: REPORT
+        action: "Emit job report for SUCCESS or HALT."
+    invariants:
+      - "no_profile_match MUST HALT"
+      - "Canonical zone AGENTS.md path resolution is zone-driven"
+      - "No writes outside explicit edit/create permissions"
+  interaction_modes:
+    architect:
+      description: "Full access to canon management, visual loop, and contract translation."
+      allowed_operations:
+        - canon_update
+        - visual_build
+        - contract_translate
+        - scaffold
+    developer:
+      description: "Scoped access to implementation within zone boundaries."
+      allowed_operations:
+        - execute_within_zone
+        - verify
+        - report
+  forbidden_actions:
+    - pattern: "Edit canon files without architect role"
+      reaction: HALT
+    - pattern: "Write outside zone boundaries"
+      reaction: HALT
+    - pattern: "Skip verification phase"
+      reaction: HALT
+    - pattern: "Modify generated artifacts"
+      reaction: REDIRECT
+      redirect_to: "Regenerate via frida-core gen"
+
+FRIDA_ENFORCEMENT_TYPES:
+  _visibility: public
+  version: "2.0"
+  types:
+    nail: "Tamper-evidence via signatures and hash manifests."
+    chain: "Structural contract conformance verification."
+    ban: "Forbidden pattern scan and rejection."
+    drift: "Generated output freshness and determinism drift checks."
+    session: "Token-based exclusive access enforcement."
+
+AGENT_SESSION_CONTRACT:
+  _visibility: private
+  status: ACTIVE
+  purpose: "Enforce synchronous sequential development through exclusive agent access."
+  token_mechanism:
+    acquire:
+      precondition: "Clean branch, no uncommitted changes."
+      action: "Create session token file at .frida/internal/session.lock"
+      content:
+        - agent_id
+        - branch
+        - acquired_at
+        - zone_id
+        - timeout_minutes
+    release:
+      action: "Remove session token file."
+      final_action: "Create PR or explicit release."
+    timeout:
+      default_minutes: 30
+      recovery: "If token not released within timeout, trigger routing regeneration and release."
+  zone_scope_hard_check:
+    enabled: true
+    action: "After execution, verify that all file changes are within the target zone pathGlob."
+    on_violation: "Rollback changes outside target zone. Emit HALT report."
+  lifecycle:
+    - step: acquire_token
+      precondition: "No active token on branch."
+    - step: execute_within_zone
+      constraint: "All mutations scoped to zone pathGlob."
+    - step: verify
+      action: "Run zone-specific verification."
+    - step: create_pr
+      action: "Open PR with session report attached."
+    - step: release_token
+      action: "Remove session lock."

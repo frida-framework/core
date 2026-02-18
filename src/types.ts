@@ -1,4 +1,4 @@
-import type { AdapterGenerationContext } from './legacy-generator.ts';
+
 
 export interface FridaCanonSchema {
   meta: {
@@ -15,16 +15,7 @@ export interface FridaCanonSchema {
     outputContracts: string[];
     [key: string]: unknown;
   };
-  extensions?: FridaExtensionSpec[];
   [key: string]: unknown;
-}
-
-export interface FridaExtensionSpec {
-  id: string;
-  schemaRef?: string;
-  sourceSelectors: SourceSelectorSpec[];
-  generatorBindings?: string[];
-  outputTargets?: string[];
 }
 
 export interface SourceSelectorSpec {
@@ -73,26 +64,6 @@ export interface GeneratorSpec {
   run: (context: GeneratorContext) => Promise<void> | void;
 }
 
-export interface FridaAdapter {
-  id: string;
-  schemaRef?: string;
-  registerGenerators: (registry: AdapterGeneratorRegistry) => void;
-  registerSelectors?: () => SourceSelectorSpec[];
-  registerGuards?: () => unknown[];
-}
-
-export interface AdapterGeneratorSpec {
-  id: string;
-  inputs?: string[];
-  outputs?: string[];
-  deterministic?: boolean;
-  run: (context: AdapterGenerationContext) => Promise<void> | void;
-}
-
-export interface AdapterGeneratorRegistry {
-  register: (spec: AdapterGeneratorSpec) => void;
-}
-
 export interface CanonNormalizationResult {
   model: FridaCanonSchema;
   telemetry: GenerationTelemetry;
@@ -101,7 +72,6 @@ export interface CanonNormalizationResult {
 export interface RunFridaCoreOptions {
   rootDir?: string;
   canonPath?: string;
-  adapters?: FridaAdapter[];
   strictSchema?: boolean;
 }
 
@@ -110,4 +80,23 @@ export interface MigrationIssue {
   replacement: string;
   severity: 'warning' | 'error';
   message: string;
+}
+
+export type BlockVisibility = 'public' | 'private';
+
+export interface CanonLayerSpec {
+  id: string;
+  path: string;
+  visibility: BlockVisibility | 'mixed';
+  blocks: string[];
+}
+
+export interface CanonIndex {
+  canon_index: {
+    version: string;
+    schema: string;
+    assembled_schema?: string;
+    monolith_fallback?: string;
+    layers: CanonLayerSpec[];
+  };
 }

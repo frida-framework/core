@@ -1,0 +1,80 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "frida-canon-index.schema.json",
+    "title": "Frida Canon Index",
+    "description": "Schema for canon.index.yaml — modular canon entry point",
+    "type": "object",
+    "required": [
+        "canon_index"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "canon_index": {
+            "type": "object",
+            "required": [
+                "version",
+                "schema",
+                "layers"
+            ],
+            "properties": {
+                "version": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                },
+                "schema": {
+                    "type": "string"
+                },
+                "assembled_schema": {
+                    "type": "string"
+                },
+                "monolith_fallback": {
+                    "type": "string"
+                },
+                "layers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/$defs/layerEntry"
+                    }
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "$defs": {
+        "layerEntry": {
+            "type": "object",
+            "required": [
+                "id",
+                "path",
+                "visibility",
+                "blocks"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "visibility": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private",
+                        "mixed"
+                    ]
+                },
+                "blocks": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}

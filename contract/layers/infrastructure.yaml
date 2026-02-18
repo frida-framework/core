@@ -1,0 +1,169 @@
+# ─── LAYER 3: INFRASTRUCTURE ─────────────────────────────────────────────────
+
+PATHS:
+  _visibility: public
+  contract:
+    coreCanonFile: "contract/core.canon.yaml"
+  agents:
+    bootloaderFile: "AGENTS.md"
+  specs:
+    rootDir: ".frida/specs"
+  profiles:
+    rootDir: ".frida/profiles"
+  docs:
+    policyDir: ".frida/docs/policy"
+    referenceDir: ".frida/docs/reference"
+  frida:
+    internalDir: ".frida/internal"
+    jobReportsDir: ".frida/job-reports"
+    configFile: ".frida/config.yaml"
+  templates:
+    fridaDir: "templates/frida"
+    docsDir: "templates/docs-gen"
+  scaffold:
+    appDir: "scaffold/app"
+    visualizerDir: "scaffold/visualizer"
+  visual:
+    overlayDir: ".frida/visual"
+    overlayFile: ".frida/visual/canon-overlay.json"
+  scopes:
+    templatesAll: "templates/**"
+    nonTemplatesAll: "**"
+
+PATH_NORMALIZATION:
+  _visibility: public
+  status: ACTIVE
+  rules:
+    - id: posix_format
+      text: "All paths in canon MUST use POSIX separators (forward slash)."
+    - id: no_leading_slash
+      text: "Paths are relative to repository root; no leading slash."
+    - id: glob_wildcards
+      text: "Glob wildcards use POSIX grammar only. No regex."
+      grammar: "POSIX glob"
+      supported_patterns:
+        - "**"
+        - "*"
+        - "?"
+    - id: ref_dominance
+      text: "If both literal path and Ref-suffixed key exist, Ref takes precedence."
+    - id: typed_suffix_mapping
+      text: "Keys MUST use typed suffixes to indicate path semantics."
+      suffixes:
+        Dir: "directory path"
+        File: "exact file path"
+        All: "glob pattern"
+        Ref: "reference to PATHS block"
+    - id: status_model
+      text: "PATH entries MAY carry status. Default is ACTIVE."
+      statuses:
+        - ACTIVE
+        - DEPRECATED
+        - PLANNED
+
+FRIDA_CONFIG:
+  _visibility: private
+  paths:
+    canon_inputFileRef: "PATHS.contract.coreCanonFile"
+    agents_bootloaderFileRef: "PATHS.agents.bootloaderFile"
+    specs_rootRef: "PATHS.specs.rootDir"
+    profiles_rootRef: "PATHS.profiles.rootDir"
+    docs_policyDirRef: "PATHS.docs.policyDir"
+    docs_referenceDirRef: "PATHS.docs.referenceDir"
+    frida_internalRef: "PATHS.frida.internalDir"
+    templates_fridaRef: "PATHS.templates.fridaDir"
+    templates_docsRef: "PATHS.templates.docsDir"
+  reporting:
+    collect_in_repo: true
+    repo_path: ".frida/job-reports"
+    file_ext: ".yaml"
+    filename_pattern: "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
+    exists_check: false
+    access_validation:
+      enabled: false
+      on_disabled: warn_only_skip_fail
+      policy_paths:
+        read_allow_required:
+          - "tasks/**"
+        edit_allow_architect_required:
+          - "tasks/inbox/**"
+        edit_allow_non_architect_required:
+          - "tasks/README.md"
+          - "tasks/**/README.md"
+        edit_forbid_required:
+          - "tasks/TASK-*.md"
+          - "tasks/**/TASK-*.md"
+          - ".frida/job-reports/*.yaml"
+        forbid_must_include:
+          - ".frida/**"
+        forbid_must_not_include:
+          - "tasks/**"
+          - "tasks/README.md"
+          - "tasks/**/README.md"
+          - "tasks/TASK-*.md"
+          - "tasks/**/TASK-*.md"
+        create_allow_required_all_profiles:
+          - ".frida/job-reports/*.yaml"
+        create_allow_non_task_setter_allowed_only:
+          - "tasks/sessions/*.md"
+          - "tasks/sessions/[0-9]*-*.md"
+          - ".frida/job-reports/*.yaml"
+        create_allow_task_setter_required:
+          - "tasks/TASK-*.md"
+        create_allow_task_setter_forbidden:
+          - "tasks/**"
+  visual:
+    overlay_pathRef: "PATHS.visual.overlayFile"
+    generation_mode: on_demand
+    determinism: required
+  naming:
+    convention: snake_case
+    ref_suffix: "Ref"
+    list_ref_suffix: "Refs"
+    path_typed_suffixes:
+      - Dir
+      - File
+      - All
+
+FRIDA_RUNTIME_CONFIG:
+  _visibility: private
+  file: ".frida/config.yaml"
+  source_of_truth: canon
+  generated_from: "FRIDA_CONFIG.reporting"
+
+ZONES:
+  _visibility: public
+  templates:
+    status: ACTIVE
+    hard_zone: true
+    pathGlobRef: "PATHS.scopes.templatesAll"
+    agentsPath: "templates"
+    purpose: "Template surface and template contract controls."
+  non_templates:
+    status: ACTIVE
+    hard_zone: false
+    pathGlobRef: "PATHS.scopes.nonTemplatesAll"
+    exclude_path_prefixes:
+      - "templates/"
+    agentsPath: "."
+    purpose: "Fallback non-template routing surface for current stage."
+  zone_resolution:
+    algorithm:
+      - step: normalize
+        action: "Convert working directory to POSIX-relative path."
+      - step: match
+        action: "Collect all zones whose pathGlob matches the normalized path. Exclude zones where path starts with exclude_path_prefixes."
+      - step: rank
+        action: "Sort matching zones by specificity (number of path segments, descending)."
+      - step: select
+        action: "Select the most specific zone. If tie, prefer hard_zone=true."
+      - step: fallback
+        action: "If no zone matches, HALT with error."
+    invariants:
+      - "Zone MUST NOT be inferred from profile keywords or working_dir heuristics."
+      - "Zone is resolved ONLY by matching path against ZONES entries."
+  verification_policy:
+    rules:
+      - "Verification commands MUST be one-shot and non-interactive."
+      - "Verification commands MUST be deterministic."
+      - "Verification exit code 0 = success, non-zero = failure."

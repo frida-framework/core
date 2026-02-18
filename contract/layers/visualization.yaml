@@ -1,0 +1,91 @@
+# ─── LAYER 7: VISUALIZATION ──────────────────────────────────────────────────
+
+VISUAL_CONTRACT:
+  _visibility: public
+  status: ACTIVE
+  generation_mode: on_demand
+  source_of_truth: canon
+  determinism: required
+  lod:
+    levels:
+      - id: LOD_1
+        name: topology
+        description: "Top-level canon entities as nodes."
+        yaml_depth: 1
+        content: "Container blocks — pages, resources, pipelines."
+      - id: LOD_2
+        name: flow
+        description: "Internal logic within blocks — steps, stages, transitions."
+        yaml_depth: 2
+        content: "Process elements — lists of steps, state machines, sequences."
+      - id: LOD_3
+        name: specification
+        description: "Leaf-level details — props, invariants, schemas, types."
+        yaml_depth: 3
+        content: "Implementation specifics — field types, validation rules, constraints."
+  selector_grammar:
+    typed_ref_keys:
+      explicit:
+        - transitionRef
+        - resourceRef
+        - slotRef
+        - schemaRef
+        - behaviorRef
+        - guardRef
+        - profileRef
+        - zoneRef
+        - invariantRef
+      wildcard_suffix: "Ref"
+      list_wildcard_suffix: "Refs"
+    edge_inference: "Keys matching *Ref pattern produce directed edges from container to target."
+  edge_types:
+    transition: "UI page/component navigation."
+    resource: "API call or data fetch."
+    slot: "Component mounting (parent → child)."
+    schema: "Data shape binding."
+    guard: "Constraint or validation reference."
+    invariant: "Rule binding."
+    profile: "Agent profile reference."
+    fallback: "ref"
+  overlay_output:
+    format: JSON
+    path_ref: "PATHS.visual.overlayFile"
+    schema_version: "1.0"
+    required_fields:
+      - meta
+      - nodes
+      - edges
+      - lod
+
+VISUALIZER_PRINCIPLES:
+  _visibility: public
+  status: ACTIVE
+  principles:
+    - id: derived_not_authoritative
+      text: "Visualizer produces derived artifacts; canon YAML is always authoritative."
+    - id: deterministic_output
+      text: "Same canon input MUST produce bit-identical overlay JSON."
+    - id: hierarchy_dictates_visualization
+      text: "YAML nesting depth implicitly defines LOD levels."
+    - id: explicit_edges
+      text: "Edges are typed reference keys (*Ref, *Refs), never inferred from names."
+    - id: domain_slicing
+      text: "Layers (UI, backend, data) can be toggled by filtering source blocks."
+    - id: no_manual_overlay
+      text: "Overlay is never manually edited; always regenerated from canon."
+    - id: fail_hard_on_drift
+      text: "Visual check fails hard if overlay does not match regenerated output."
+
+VISUALIZER_BOOTSTRAP_CONTRACT:
+  _visibility: public
+  status: ACTIVE
+  schema_version: "1.0"
+  purpose: "Bootstrap the visualizer component in scaffold deployments."
+  mounted_component:
+    source: "@hanszel/core/visualizer"
+    mount_point: "app-root"
+    data_source: "canon-overlay.json"
+    modes:
+      - view
+      - diff
+    recovery: "frida-core scaffold --component visualizer"

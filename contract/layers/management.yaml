@@ -1,0 +1,113 @@
+# ─── LAYER 8: MANAGEMENT & TRANSLATION ───────────────────────────────────────
+
+CONTRACT_MANAGEMENT_INTERFACE:
+  _visibility: public
+  status: ACTIVE
+  schema_version: "1.0"
+  operations:
+    update:
+      description: "Apply changes to canon via structured patch."
+      protocol: "AGENT-canon-update"
+      requires_role: ARCHITECT_AGENT
+    repair:
+      description: "Fix canon inconsistencies (broken refs, missing blocks)."
+      protocol: "AGENT-canon-repair"
+      requires_role: ARCHITECT_AGENT
+    audit:
+      description: "Validate canon against schema and report issues."
+      protocol: "frida-core migration-report"
+      requires_role: any
+    generate:
+      description: "Run full generation pipeline."
+      protocol: "frida-core gen"
+      requires_role: any
+    visualize:
+      description: "Build or check visual overlay."
+      protocol: "frida-core visualize [--check]"
+      requires_role: any
+
+CONTRACT_TRANSLATOR_INTERFACES:
+  _visibility: private
+  status: ACTIVE
+  schema_version: "1.0"
+  interfaces:
+    intent_to_contract:
+      description: "Translate user intent (natural language) into canon YAML blocks."
+      input:
+        format: natural_language
+        context:
+          - current_canon
+          - target_block
+          - schema_ref
+      pipeline:
+        - step: parse_intent
+          action: "Extract entities, actions, and constraints from user text."
+        - step: map_to_schema
+          action: "Map extracted entities to canon block schemas."
+        - step: generate_draft
+          action: "Produce draft YAML block conforming to schema."
+        - step: validate
+          action: "Validate draft against frida-canon.schema.json."
+        - step: present_diff
+          action: "Show visual diff (green/red nodes) on overlay."
+      output:
+        format: yaml
+        requires_approval: true
+    code_to_contract:
+      description: "Extract canon specification from existing codebase."
+      input:
+        format: source_code
+        supported_languages:
+          - TypeScript
+          - JavaScript
+          - HTML
+          - CSS
+      pipeline:
+        - step: analyze_structure
+          action: "Identify components, routes, data models, and API calls."
+        - step: extract_entities
+          action: "Map code structures to canon block types (UI_STRUCTURE, RESOURCES, DATABASE_SCHEMA)."
+        - step: generate_draft
+          action: "Produce draft app-canon YAML from extracted entities."
+        - step: validate
+          action: "Validate draft against app-canon schema."
+        - step: reconcile
+          action: "Merge with existing canon if present, flagging conflicts."
+      output:
+        format: yaml
+        requires_approval: true
+      use_cases:
+        - "Onboard existing project to Frida."
+        - "Background consistency loop: re-extract canon from code, diff against declared canon."
+
+SCAFFOLD_CONTRACT:
+  _visibility: public
+  status: ACTIVE
+  purpose: "Deploy a base Frida-managed application with visualizer and canon."
+  command: "frida-core scaffold"
+  deliverables:
+    base_app:
+      description: "Minimal application skeleton (index.html, main entry, styles)."
+      target_dir_flag: "--target"
+    visualizer_component:
+      description: "Canon visualizer component mounted in base app."
+      source: "@hanszel/core/visualizer"
+      mount_mechanism: "Mapper mounts component into app slot."
+    app_canon:
+      description: "Initial app-canon YAML describing the deployed application."
+      template: "scaffold/app-canon.template.yaml"
+      version_policy: ahead
+      note: "Deployed canon describes the next iteration, enabling agent-driven completion."
+    agents_md:
+      description: "Bootloader AGENTS.md at repository root."
+      template: "templates/frida/bootloader.hbs"
+    frida_internal:
+      description: ".frida/ directory structure (profiles, job-reports, config)."
+  recovery:
+    full: "frida-core scaffold --target <dir>"
+    component: "frida-core scaffold --component <name>"
+    behavior: "Idempotent — re-run detects existing components and only restores missing ones."
+  ahead_version_policy:
+    rule: "Scaffold deploys canon that describes features beyond current implementation."
+    purpose: "Agent can read canon and build the remaining features."
+    example: "Canon describes CRUD operations; scaffold only deploys read-only skeleton."

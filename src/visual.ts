@@ -1,9 +1,8 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as yaml from 'yaml';
+import { loadCanonDocument } from './canon-path.ts';
 
-const DEFAULT_CANON_PATH = 'contract/canon.cbmd.yaml';
 const FIXED_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 
 type AnyObject = Record<string, any>;
@@ -84,9 +83,26 @@ function isTypedRefKey(key: string, explicitKeys: Set<string>, wildcardSuffix: s
     return key === wildcardSuffix;
 }
 
+function isTypedRefsKey(key: string, explicitKeys: Set<string>, wildcardSuffix: string): boolean {
+    if (explicitKeys.has(key)) {
+        return true;
+    }
+    if (wildcardSuffix === '*Refs') {
+        return key.endsWith('Refs');
+    }
+    if (wildcardSuffix.startsWith('*')) {
+        return key.endsWith(wildcardSuffix.slice(1));
+    }
+    return key === wildcardSuffix;
+}
+
 function resolveEdgeType(key: string, edgeTypes: AnyObject, fallbackType: string): string {
     if (typeof edgeTypes[key] === 'string') {
         return edgeTypes[key];
+    }
+    if (key.endsWith('Refs')) {
+        const base = key.slice(0, -4);
+        return base ? toSnakeCase(base) : fallbackType;
     }
     if (key.endsWith('Ref')) {
         const base = key.slice(0, -3);
@@ -141,17 +157,6 @@ export function resolveVisualOverlayPath(contract: AnyObject): string {
         return contract.PATHS.frida.visualOverlayFile;
     }
     return '.frida/visual-schema.overlay.json';
-}
-
-export function resolveVisualDiffPreviewPath(contract: AnyObject): string {
-    const fromConfig = resolvePathRef(contract?.PATHS, contract?.FRIDA_CONFIG?.visual?.diff_previewFileRef);
-    if (fromConfig) {
-        return fromConfig;
-    }
-    if (typeof contract?.PATHS?.temp?.visualDiffPreviewFile === 'string') {
-        return contract.PATHS.temp.visualDiffPreviewFile;
-    }
-    return '.temp/visual-diff.preview.json';
 }
 
 function matchSelector(root: AnyObject, selector: string): SelectorMatch[] {
@@ -217,8 +222,10 @@ function collectTypedReferenceEdges(
     config: {
         explicitKeys: Set<string>;
         wildcardSuffix: string;
+        listWildcardSuffix: string;
         edgeTypes: AnyObject;
         fallbackType: string;
+        fallbackListType: string;
     }
 ): void {
     if (Array.isArray(node)) {
@@ -255,6 +262,24 @@ function collectTypedReferenceEdges(
         }
 
         if (Array.isArray(value)) {
+            if (isTypedRefsKey(key, config.explicitKeys, config.listWildcardSuffix)) {
+                for (const listValue of value) {
+                    if (typeof listValue !== 'string') {
+                        continue;
+                    }
+                    const targetRef = listValue.trim();
+                    if (!targetRef) {
+                        continue;
+                    }
+                    out.push({
+                        sourceKind: 'typed_ref',
+                        sourcePath: nodePath,
+                        sourceKey: key,
+                        edgeType: resolveEdgeType(key, config.edgeTypes, config.fallbackListType),
+                        targetRef,
+                    });
+                }
+            }
             for (let i = 0; i < value.length; i += 1) {
                 collectTypedReferenceEdges(value[i], joinArrayPath(childPath, i), out, config);
             }
@@ -276,45 +301,19 @@ function assertVisualSchemaContract(contract: AnyObject): void {
     }
 }
 
-function assertVisualDiffContract(contract: AnyObject): void {
-    if (!isObjectLike(contract?.VISUAL_DIFF)) {
-        throw new Error('contract VISUAL_DIFF is missing or invalid.');
-    }
-    const operations = contract.VISUAL_DIFF.operations;
-    if (!isObjectLike(operations)) {
-        throw new Error('contract VISUAL_DIFF.operations is missing or invalid.');
-    }
-    if (!Array.isArray(operations.allowedKinds) || operations.allowedKinds.length === 0) {
-        throw new Error('contract VISUAL_DIFF.operations.allowedKinds must be a non-empty array.');
-    }
-    if (!Array.isArray(operations.allowedEntities) || operations.allowedEntities.length === 0) {
-        throw new Error('contract VISUAL_DIFF.operations.allowedEntities must be a non-empty array.');
-    }
-}
-
 function assertVisualContractConsistency(raw: string, contract: AnyObject): void {
     const issues: string[] = [];
 
     const hasRef = (ref: string) => raw.includes(ref);
 
+    if (!isObjectLike(contract.VISUAL_SCHEMA)) {
+        issues.push('VISUAL_SCHEMA block is missing or invalid.');
+    } else if (typeof contract.VISUAL_SCHEMA.version !== 'string' || !contract.VISUAL_SCHEMA.version.trim()) {
+        issues.push('VISUAL_SCHEMA.version must be a non-empty string.');
+    }
+
     if (hasRef('contract:VISUAL_SCHEMA') && !isObjectLike(contract.VISUAL_SCHEMA)) {
         issues.push('Referenced contract:VISUAL_SCHEMA but VISUAL_SCHEMA block is missing.');
-    }
-    if (hasRef('contract:VISUAL_DIFF') && !isObjectLike(contract.VISUAL_DIFF)) {
-        issues.push('Referenced contract:VISUAL_DIFF but VISUAL_DIFF block is missing.');
-    }
-    if (hasRef('contract:ARCHCHAT_CONTEXT') && !isObjectLike(contract.ARCHCHAT_CONTEXT)) {
-        issues.push('Referenced contract:ARCHCHAT_CONTEXT but ARCHCHAT_CONTEXT block is missing.');
-    }
-    if (hasRef('contract:VALIDATION_RULES_FRIDA.repoGuards')) {
-        if (!isObjectLike(contract.VALIDATION_RULES_FRIDA) || !Array.isArray(contract.VALIDATION_RULES_FRIDA.repoGuards)) {
-            issues.push('Referenced contract:VALIDATION_RULES_FRIDA.repoGuards but it is missing or invalid.');
-        }
-    }
-    if (hasRef('contract:VALIDATION_RULES_FRIDA.visualGuards')) {
-        if (!isObjectLike(contract.VALIDATION_RULES_FRIDA) || !Array.isArray(contract.VALIDATION_RULES_FRIDA.visualGuards)) {
-            issues.push('Referenced contract:VALIDATION_RULES_FRIDA.visualGuards but it is missing or invalid.');
-        }
     }
 
     if (issues.length > 0) {
@@ -322,7 +321,11 @@ function assertVisualContractConsistency(raw: string, contract: AnyObject): void
     }
 }
 
-export function extractVisualSchemaOverlay(contract: AnyObject, contractRaw: string, options: { generatedAt?: string } = {}): OverlayResult {
+export function extractVisualSchemaOverlay(
+    contract: AnyObject,
+    contractRaw: string,
+    options: { generatedAt?: string; sourcePath?: string } = {}
+): OverlayResult {
     assertVisualSchemaContract(contract);
     const visualSchema = contract.VISUAL_SCHEMA;
 
@@ -343,7 +346,9 @@ export function extractVisualSchemaOverlay(contract: AnyObject, contractRaw: str
         ? visualSchema.edge_extraction.typed_references.edge_types
         : {};
     const wildcardSuffix = visualSchema?.edge_extraction?.typed_references?.wildcard_suffix || '*Ref';
+    const listWildcardSuffix = visualSchema?.edge_extraction?.typed_references?.list_wildcard_suffix || '*Refs';
     const fallbackType = edgeTypes.fallback_ref_suffix || 'ref';
+    const fallbackListType = edgeTypes.fallback_refs_suffix || fallbackType;
 
     const nodeById = new Map<string, OverlayNode & { selectorIndex: number }>();
     const nodeIdByPath = new Map<string, string>();
@@ -390,8 +395,10 @@ export function extractVisualSchemaOverlay(contract: AnyObject, contractRaw: str
             collectTypedReferenceEdges(match.value, match.path, typedEdges, {
                 explicitKeys,
                 wildcardSuffix,
+                listWildcardSuffix,
                 edgeTypes,
                 fallbackType,
+                fallbackListType,
             });
         }
     }
@@ -467,7 +474,7 @@ export function extractVisualSchemaOverlay(contract: AnyObject, contractRaw: str
             generatedAt,
             canonSha256: sha256(contractRaw),
             visualSchemaVersion: visualSchema.version || null,
-            source: path.posix.join('contract', 'canon.cbmd.yaml'),
+            source: options.sourcePath || path.posix.join('contract', 'canon.cbmd.yaml'),
             nodeCount: nodes.length,
             edgeCount: edges.length,
         },
@@ -499,13 +506,12 @@ function toAbsolutePath(rootDir: string, relativeOrAbsolute: string): string {
 
 function parseVisualArgs(args: string[]): {
     action: 'build' | 'check';
-    canonPath: string;
+    canonPath: string | null;
     outputPath: string | null;
     stdout: boolean;
     dryRun: boolean;
-    diffPathOverride: string | null;
 } {
-    const action = args[0] === 'check' ? 'check' : 'build';
+    const action = args.includes('--check') ? 'check' : 'build';
 
     const readFlag = (flag: string): string | null => {
         const idx = args.indexOf(flag);
@@ -517,59 +523,24 @@ function parseVisualArgs(args: string[]): {
 
     return {
         action,
-        canonPath: readFlag('--canon') || DEFAULT_CANON_PATH,
+        canonPath: readFlag('--canon'),
         outputPath: readFlag('--out'),
         stdout: args.includes('--stdout'),
         dryRun: args.includes('--dry-run'),
-        diffPathOverride: readFlag('--diff'),
     };
 }
 
-function loadContract(rootDir: string, canonPath: string): { raw: string; contract: AnyObject } {
-    const absCanonPath = toAbsolutePath(rootDir, canonPath);
-    if (!fs.existsSync(absCanonPath)) {
-        throw new Error(`Canon artifact not found: ${absCanonPath}`);
-    }
-    const raw = fs.readFileSync(absCanonPath, 'utf8');
-    const contract = yaml.parse(raw) as AnyObject;
-    if (!contract || typeof contract !== 'object') {
-        throw new Error('Canon artifact parsed to empty or non-object value.');
-    }
-    return { raw, contract };
-}
-
-function validateDiffPayload(payload: AnyObject, contract: AnyObject): void {
-    assertVisualDiffContract(contract);
-    if (!isObjectLike(payload)) {
-        throw new Error('Visual diff payload must be an object.');
-    }
-    if (typeof payload.baseCanonSha256 !== 'string' || typeof payload.draftCanonSha256 !== 'string') {
-        throw new Error('Visual diff payload must include baseCanonSha256 and draftCanonSha256 strings.');
-    }
-    if (!Array.isArray(payload.operations)) {
-        throw new Error('Visual diff payload operations must be an array.');
-    }
-
-    const allowedKinds = new Set(contract.VISUAL_DIFF.operations.allowedKinds);
-    const allowedEntities = new Set(contract.VISUAL_DIFF.operations.allowedEntities);
-
-    for (const [index, operation] of payload.operations.entries()) {
-        if (!isObjectLike(operation)) {
-            throw new Error(`operations[${index}] must be an object.`);
-        }
-        if (!allowedKinds.has(operation.kind)) {
-            throw new Error(`operations[${index}].kind='${operation.kind}' is not allowed.`);
-        }
-        if (!allowedEntities.has(operation.entity)) {
-            throw new Error(`operations[${index}].entity='${operation.entity}' is not allowed.`);
-        }
-    }
+function loadContract(rootDir: string, canonPath: string | null): { raw: string; contract: AnyObject; canonPath: string } {
+    const loaded = loadCanonDocument(rootDir, canonPath || undefined);
+    return { raw: loaded.raw, contract: loaded.parsed as AnyObject, canonPath: loaded.canonPath };
 }
 
 function runVisualBuild(rootDir: string, parsedArgs: ReturnType<typeof parseVisualArgs>): number {
-    const { raw, contract } = loadContract(rootDir, parsedArgs.canonPath);
+    const { raw, contract, canonPath } = loadContract(rootDir, parsedArgs.canonPath);
     assertVisualContractConsistency(raw, contract);
-    const overlay = extractVisualSchemaOverlay(contract, raw);
+    const overlay = extractVisualSchemaOverlay(contract, raw, {
+        sourcePath: path.relative(rootDir, canonPath).replace(/\\/g, '/'),
+    });
 
     const outputRelative = parsedArgs.outputPath || resolveVisualOverlayPath(contract);
     const outputFilePath = toAbsolutePath(rootDir, outputRelative);
@@ -591,11 +562,12 @@ function runVisualBuild(rootDir: string, parsedArgs: ReturnType<typeof parseVisu
 }
 
 function runVisualCheck(rootDir: string, parsedArgs: ReturnType<typeof parseVisualArgs>): number {
-    const { raw, contract } = loadContract(rootDir, parsedArgs.canonPath);
+    const { raw, contract, canonPath } = loadContract(rootDir, parsedArgs.canonPath);
     assertVisualContractConsistency(raw, contract);
 
-    const first = extractVisualSchemaOverlay(contract, raw, { generatedAt: FIXED_TIMESTAMP });
-    const second = extractVisualSchemaOverlay(contract, raw, { generatedAt: FIXED_TIMESTAMP });
+    const sourcePath = path.relative(rootDir, canonPath).replace(/\\/g, '/');
+    const first = extractVisualSchemaOverlay(contract, raw, { generatedAt: FIXED_TIMESTAMP, sourcePath });
+    const second = extractVisualSchemaOverlay(contract, raw, { generatedAt: FIXED_TIMESTAMP, sourcePath });
     if (JSON.stringify(first) !== JSON.stringify(second)) {
         throw new Error('Visual schema extraction is not deterministic (same input produced different overlays).');
     }
@@ -613,16 +585,6 @@ function runVisualCheck(rootDir: string, parsedArgs: ReturnType<typeof parseVisu
                 )}. Run 'frida-core visual build' to regenerate.`
             );
         }
-    }
-
-    const diffRelativePath = parsedArgs.diffPathOverride || resolveVisualDiffPreviewPath(contract);
-    const diffPath = toAbsolutePath(rootDir, diffRelativePath);
-    if (fs.existsSync(diffPath)) {
-        const payload = JSON.parse(fs.readFileSync(diffPath, 'utf8'));
-        validateDiffPayload(payload, contract);
-        console.log(`✅ Visual diff schema OK (${payload.operations.length} operations)`);
-    } else {
-        console.warn(`⚠️  Visual diff preview file not found: ${path.relative(rootDir, diffPath)} (skip schema check).`);
     }
 
     console.log(`✅ VISUAL_SCHEMA deterministic extraction OK (nodes=${first.nodes.length}, edges=${first.edges.length})`);

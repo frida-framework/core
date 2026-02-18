@@ -1,0 +1,90 @@
+# ─── LAYER 1: IDENTITY & META ────────────────────────────────────────────────
+
+CANON_META:
+  _visibility: private
+  id: FRIDA_CORE_CANON
+  version: 2.0.0
+  status: ACTIVE
+  owner: frida-core
+  updated_at: "2026-02-18"
+  scope:
+    repository: hanszel/frida
+    package: "@hanszel/core"
+    purpose: >-
+      Schema-driven generation engine, zone enforcement, visual overlay extraction,
+      agent session control, and project scaffold for Frida-managed repositories.
+
+CANON_UNIQUENESS_POLICY:
+  _visibility: private
+  status: ACTIVE
+  first_rule: true
+  rule: "Any canon entity MUST be declared exactly once."
+  control:
+    enforcement: warn_only
+    fail_on_duplicate: false
+    warning_code: CANON_DUPLICATE_ENTITY
+  strictness_freeze:
+    change_requires_explicit_owner_instruction: true
+    note: "Strictness level changes require explicit owner approval."
+  projection_rule:
+    allow_projection_via_source_ref: true
+    note: "Blocks may reference other blocks via source_ref without duplication."
+
+meta:
+  schemaVersion: "2.0"
+  mode: schema
+  canonArtifactRef: "PATHS.contract.coreCanonFile"
+
+core:
+  canonicalSourceBlocks:
+    - CANON_META
+    - CANON_UNIQUENESS_POLICY
+    - ARCHITECTURE_DECISIONS
+    - FRIDA_FOUNDATION_PRINCIPLES
+    - PATHS
+    - PATH_NORMALIZATION
+    - FRIDA_CONFIG
+    - FRIDA_RUNTIME_CONFIG
+    - ZONES
+    - ROUTING_POLICY
+    - TASK_PROFILES
+    - INVARIANTS
+    - FRIDA_GUARDS_BASELINE
+    - FRIDA_EXECUTION_PROTOCOL
+    - FRIDA_ENFORCEMENT_TYPES
+    - AGENT_SESSION_CONTRACT
+    - REPORTING_CONTRACT
+    - REPORTING_ACCESS_POLICY
+    - FRIDA_VALIDATION_BASELINE
+    - FRIDA_RUN_REPORTING
+    - TEMPLATE_INTEGRITY_CONTRACT
+    - CLI_CONTRACT
+    - INTEGRATION_RULES
+    - VISUAL_CONTRACT
+    - VISUALIZER_PRINCIPLES
+    - VISUALIZER_BOOTSTRAP_CONTRACT
+    - CONTRACT_MANAGEMENT_INTERFACE
+    - CONTRACT_TRANSLATOR_INTERFACES
+    - SCAFFOLD_CONTRACT
+    - CANON_INTERPRETATION
+    - MIGRATION_TRANSITION_BLOCK
+    - MIGRATION_LEDGER
+  selectorGrammar: jsonpath-lite
+  generatorPipelineContracts:
+    - "schema-validate"
+    - "normalize"
+    - "resolve-selectors"
+    - "run-legacy-generator"
+    - "run-adapter-generators"
+    - "emit-manifest"
+  pathRefs:
+    canonArtifact: "contract/core.canon.yaml"
+    templatesFrida: "templates/frida"
+    templatesDocs: "templates/docs-gen"
+  outputContracts:
+    - ".frida/profiles/*.xml"
+    - ".frida/AGENTS.md"
+    - ".frida/docs/policy/*.md"
+    - ".frida/docs/reference/*.md"
+    - ".frida/config.yaml"
+    - ".frida/frida.adapter.generated.json"

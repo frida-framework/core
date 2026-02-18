@@ -1,0 +1,179 @@
+# ─── LAYER 9: INTERPRETATION & MIGRATION ─────────────────────────────────────
+
+CANON_INTERPRETATION:
+  _visibility: private
+  status: ACTIVE
+  model: "schema-native-with-extensions"
+  source_of_truth: "core.canon.yaml + app-canon (if present)"
+  execution_rules:
+    - "Core blocks are inherited by all app-canons."
+    - "App-canon may override core blocks only via explicit extension mechanism."
+    - "Schema validation is mandatory before any generation."
+    - "Unknown top-level blocks in app-canon are passed through to adapters."
+
+MIGRATION_TRANSITION_BLOCK:
+  _visibility: private
+  status: ACTIVE
+  removal_strategy: "Remove when all consumers use schema-native canon v2."
+  exit_condition: "Zero deprecated field warnings in migration-report."
+  errors_resolution: "Deprecated fields → fix in canon source, re-run migration-report."
+  precision_resolution: "Use --strict flag to treat warnings as errors."
+  drift_resolution: "Run frida-core hash --check to detect template drift."
+
+MIGRATION_LEDGER:
+  _visibility: private
+  status: ACTIVE
+  entries:
+    # ── Phase 1 ──────────────────────────────────────────────────────────────
+    - legacy_block: FRIDA_PRINCIPLES
+      status: adopted
+      target: FRIDA_FOUNDATION_PRINCIPLES
+      note: "Expanded from 5 strings to 9 structured principles with ids."
+
+    - legacy_block: FRIDA_PROTOCOL
+      status: adopted
+      target: FRIDA_EXECUTION_PROTOCOL
+      note: "Restored agent_lifecycle (6 phases), interaction_modes, forbidden_actions."
+
+    - legacy_block: FRIDA_RUN_REPORTING
+      status: adopted
+      target: FRIDA_RUN_REPORTING
+      note: "Schema inlined → JSON schema ref. Minimum fields preserved."
+
+    - legacy_block: FRIDA_SCHEMAS
+      status: overridden_by_core
+      note: "Replaced by JSON schemas in schemas/ directory."
+
+    - legacy_block: VALIDATION_RULES_FRIDA
+      status: adopted
+      target: FRIDA_VALIDATION_BASELINE
+      note: "Guard refs → structured validation categories with session and scaffold consistency."
+
+    - legacy_block: ENFORCEMENT_TYPES
+      status: adopted
+      target: FRIDA_ENFORCEMENT_TYPES
+      note: "Added session enforcement type."
+
+    - legacy_block: VISUAL_SCHEMA
+      status: adopted
+      target: VISUAL_CONTRACT
+      note: "LOD levels, selector grammar, edge types now in VISUAL_CONTRACT."
+
+    - legacy_block: ARCHCHAT_CONTEXT
+      status: deprecated
+      note: "Removed from scope per design decision."
+
+    - legacy_block: VISUAL_DIFF
+      status: deprecated
+      note: "Visual diffing is handled by visualizer component, not canon block."
+
+    - legacy_block: FRIDA_GENERATOR
+      status: overridden_by_core
+      note: "Generator specification is now in source code. Pipeline contracts in core block."
+
+    - legacy_block: FRIDA_VISUAL_EXTRACTOR
+      status: overridden_by_core
+      note: "Implementation in src/visual.ts. Contract in VISUAL_CONTRACT."
+
+    - legacy_block: FRIDA_TPL_INLINE
+      status: overridden_by_core
+      note: "Template inline content replaced by hash manifest + .hbs files."
+
+    - legacy_block: ZONE_RESOLUTION
+      status: adopted
+      target: "ZONES.zone_resolution"
+      note: "Algorithm embedded in ZONES block as zone_resolution sub-key."
+
+    - legacy_block: PATH_NORMALIZATION
+      status: adopted
+      target: PATH_NORMALIZATION
+      note: "Promoted to standalone block with full normalization rules."
+
+    - legacy_block: PATH_USAGE_POLICY
+      status: adopted
+      target: PATH_NORMALIZATION
+      note: "Typed suffix mapping and ref_dominance absorbed into PATH_NORMALIZATION."
+
+    - legacy_block: VERIFICATION_POLICY
+      status: adopted
+      target: "ZONES.verification_policy"
+      note: "Embedded in ZONES block as verification_policy sub-key."
+
+    - legacy_block: INTERACTION_PROTOCOL
+      status: adopted
+      target: FRIDA_EXECUTION_PROTOCOL
+      note: "Interaction modes absorbed into FRIDA_EXECUTION_PROTOCOL."
+
+    - legacy_block: FRIDA_EXECUTION_PROTOCOL_BASELINE
+      status: adopted
+      target: FRIDA_EXECUTION_PROTOCOL
+      note: "Renamed. Suffix _BASELINE removed — core canon IS the baseline."
+
+    - legacy_block: FRIDA_CONFIG_VISUAL
+      status: adopted
+      target: "FRIDA_CONFIG.visual"
+      note: "Visual config section restored in FRIDA_CONFIG."
+
+    - legacy_block: FRIDA_CONFIG_NAMING
+      status: adopted
+      target: "FRIDA_CONFIG.naming"
+      note: "Naming convention section restored in FRIDA_CONFIG."
+
+    # ── Phase 2a: Modular Canon ───────────────────────────────────────────────
+    - legacy_block: core.canon.yaml
+      status: deprecated
+      note: "Monolithic file removed from source. Now a BUILD ARTIFACT: `frida-core build` → dist/canon.assembled.yaml."
+
+    - change: modular_canon_split
+      status: completed
+      description: "core.canon.yaml split into canon.index.yaml + 9 layer files under contract/layers/."
+      files_added:
+        - contract/canon.index.yaml
+        - contract/layers/identity.yaml
+        - contract/layers/architecture.yaml
+        - contract/layers/infrastructure.yaml
+        - contract/layers/agent-framework.yaml
+        - contract/layers/reporting.yaml
+        - contract/layers/templates-cli.yaml
+        - contract/layers/visualization.yaml
+        - contract/layers/management.yaml
+        - contract/layers/migration.yaml
+
+    - change: dual_mode_loader
+      status: completed
+      description: "loadCanonDocument() detects canon.index.yaml → modular assembly; else → monolith passthrough."
+      source: src/canon-path.ts
+
+    - change: build_command
+      status: completed
+      description: "frida-core build [--public] assembles canon from layers. --public filters to public-visibility blocks only."
+      source: src/build.ts
+      output:
+        assembled: dist/canon.assembled.yaml
+        public: dist/canon.public.yaml
+
+    - change: visibility_markers
+      status: completed
+      description: "Each block now carries _visibility: public | private. Stripped from build output."
+      public_blocks: [FRIDA_ENFORCEMENT_TYPES, TEMPLATE_INTEGRITY_CONTRACT, CLI_CONTRACT, INTEGRATION_RULES, VISUAL_CONTRACT, VISUALIZER_PRINCIPLES, VISUALIZER_BOOTSTRAP_CONTRACT, CONTRACT_MANAGEMENT_INTERFACE, SCAFFOLD_CONTRACT]
+
+    - change: index_keywords
+      status: completed
+      description: "Each layer in canon.index.yaml carries a keywords[] array for contextual search and agent routing."
+
+    # ── Phase 2b: Cleanup & Integrity ─────────────────────────────────────────
+    - legacy_block: FRIDA_EXTENSIONS
+      status: deprecated
+      note: "Extensions block removed from canon schema. Core features only."
+
+    - legacy_block: FRIDA_ADAPTERS
+      status: deprecated
+      note: "Adapter pattern (CORE-ADR-004) removed. Runtime is now strictly schema-driven."
+
+    - gap: CANON_INDEX_CONTRACT
+      status: integrity_gap
+      note: "Structure of canon.index.yaml is defined in code (src/types.ts) but lacks a formal canon contract."
+
+    - gap: GENERATION_TELEMETRY_CONTRACT
+      status: integrity_gap
+      note: "Telemetry structure defined in code (src/types.ts) but lacks a formal canon contract."

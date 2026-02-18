@@ -1,0 +1,94 @@
+# ─── LAYER 6: TEMPLATES & CLI ────────────────────────────────────────────────
+
+TEMPLATE_INTEGRITY_CONTRACT:
+  _visibility: public
+  status: ACTIVE
+  manifest_file: "contract/template-integrity.manifest.yaml"
+  manifest_schema: "schemas/template-integrity.schema.json"
+  policy:
+    source_of_truth: "*.hbs files in templates/"
+    manifest_role: "SHA-256 hash registry"
+    editing: "Templates are edited directly. Manifest is regenerated via frida-core hash."
+    failure: "Hash mismatch on frida-core hash --check returns exit code 1."
+
+CLI_CONTRACT:
+  _visibility: public
+  commands:
+    gen:
+      purpose: "Run schema-validate → normalize → generate pipeline."
+      flags:
+        - "--strict-schema"
+    migration-report:
+      purpose: "Report deprecated canon fields."
+      flags:
+        - "--strict"
+    init:
+      purpose: "Normalize reporting config and generate .frida/config.yaml."
+      flags:
+        - "--canon <path>"
+        - "--dry-run"
+    visual:
+      purpose: "Build or check visual overlay."
+      subcommands:
+        - build
+        - check
+    report:
+      purpose: "Session report operations."
+      subcommands:
+        - check
+        - path
+        - write
+    check:
+      purpose: "Zone resolution and AGENTS.md validation."
+      flags:
+        - "--path <dir>"
+        - "--format yaml|json|text"
+        - "--trace"
+    hash:
+      purpose: "Template integrity hash operations."
+      flags:
+        - "--manifest <path>"
+        - "--canon <path>"
+        - "--check"
+    build:
+      purpose: "Assemble and filter canon for distribution."
+      status: ACTIVE
+      flags:
+        - "--public"
+        - "--output <path>"
+    scaffold:
+      purpose: "Deploy base application with visualizer and canon."
+      status: PLANNED
+      flags:
+        - "--target <dir>"
+        - "--component visualizer|app|canon|all"
+        - "--dry-run"
+    session:
+      purpose: "Agent session token management."
+      status: PLANNED
+      subcommands:
+        - acquire
+        - release
+        - status
+  command_separation:
+    core_commands:
+      - gen
+      - migration-report
+      - init
+      - visual
+      - check
+      - hash
+      - report
+      - build
+    future_commands:
+      - scaffold
+      - session
+
+INTEGRATION_RULES:
+  _visibility: public
+  rules:
+    - "App adapters implement FridaAdapter interface and register via options.adapters."
+    - "Adapters contribute selectors, generators, and guards independently."
+    - "Core runtime orchestrates adapter execution order via registry."
+    - "Extension blocks live under top-level 'extensions' array."
+    - "App-canon extends core-canon via additional blocks; core blocks are inherited."

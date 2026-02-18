@@ -17,16 +17,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { fileURLToPath } from 'url';
+import { loadCanonDocument } from './canon-path.ts';
 
 // === CONFIG ===
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
-const CONTRACT_PATH = path.join(ROOT_DIR, 'contract/canon.cbmd.yaml');
 
 // === TYPES ===
 export interface Zone {
     id: string;
     path: string;
     agentsPath?: string;
+    excludePathPrefixes?: string[];
     readOnly?: boolean;
     purpose?: string;
 }
@@ -92,13 +93,9 @@ function resolvePathLike(contract: Record<string, any>, value: unknown): string 
 }
 
 // === CONTRACT LOADER ===
-export function loadZones(): Map<string, Zone> {
-    if (!fs.existsSync(CONTRACT_PATH)) {
-        throw new Error(`Contract not found: ${CONTRACT_PATH}`);
-    }
-
-    const raw = fs.readFileSync(CONTRACT_PATH, 'utf-8');
-    const contract = yaml.parse(raw);
+export function loadZones(canonPath?: string): Map<string, Zone> {
+    const loaded = loadCanonDocument(ROOT_DIR, canonPath);
+    const contract = loaded.parsed;
     const zones = new Map<string, Zone>();
 
     if (!contract.ZONES) {
@@ -123,6 +120,9 @@ export function loadZones(): Map<string, Zone> {
             id,
             path: zonePath,
             agentsPath: zoneAgentsPath,
+            excludePathPrefixes: Array.isArray(zoneData.exclude_path_prefixes)
+                ? zoneData.exclude_path_prefixes.filter((item: unknown) => typeof item === 'string')
+                : undefined,
             readOnly: zoneData.readOnly,
             purpose: zoneData.purpose,
         });
@@ -154,6 +154,11 @@ function matchesZonePath(workingDir: string, zonePattern: string): boolean {
     // Extract prefix from pattern (remove glob suffix)
     const prefix = normalizedPattern.replace(/\/?\*\*?\/?$/, '').replace(/\/$/, '');
 
+    // Global wildcard zone (for example "**") should match any normalized path.
+    if (!prefix) {
+        return true;
+    }
+
     // Check if working dir starts with prefix or equals prefix
     if (normalizedWorkDir === prefix) {
         return true;
@@ -179,8 +184,23 @@ function matchesZonePath(workingDir: string, zonePattern: string): boolean {
  */
 export function resolveZone(workingDir: string, zones: Map<string, Zone>): { zone: Zone | null; trace: DecisionStep } {
     const candidates: ZoneCandidate[] = [];
+    const normalizedWorkingDir = workingDir.replace(/\\/g, '/').replace(/^\//, '').replace(/\/$/, '');
 
     for (const [id, zone] of zones) {
+        const excludedByPrefix = Array.isArray(zone.excludePathPrefixes) && zone.excludePathPrefixes.some((prefix) => {
+            const normalizedPrefix = String(prefix || '')
+                .replace(/\\/g, '/')
+                .replace(/^\//, '')
+                .replace(/\/$/, '');
+            if (!normalizedPrefix.length) {
+                return false;
+            }
+            return normalizedWorkingDir === normalizedPrefix || normalizedWorkingDir.startsWith(`${normalizedPrefix}/`);
+        });
+        if (excludedByPrefix) {
+            continue;
+        }
+
         if (matchesZonePath(workingDir, zone.path)) {
             candidates.push({
                 zone_id: id,
@@ -235,13 +255,13 @@ export function getExpectedAgentsMd(zone: Zone): string {
 /**
  * Validate that canonical AGENTS.md exists for the zone containing working_dir.
  */
-export function validateZoneAgentsMd(workingDir: string): ValidationResult {
+export function validateZoneAgentsMd(workingDir: string, canonPath?: string): ValidationResult {
     const trace: DecisionStep[] = [];
 
     // Load zones from contract
     let zones: Map<string, Zone>;
     try {
-        zones = loadZones();
+        zones = loadZones(canonPath);
     } catch (err) {
         return {
             zone_id: null,
@@ -296,6 +316,7 @@ export function validateZoneAgentsMd(workingDir: string): ValidationResult {
 interface CliArgs {
     command: string;
     path: string;
+    canonPath: string | null;
     format: 'yaml' | 'json' | 'text';
     trace: boolean;
 }
@@ -304,6 +325,7 @@ function parseArgs(args: string[]): CliArgs {
     const result: CliArgs = {
         command: 'zone',
         path: '',
+        canonPath: null,
         format: 'text',
         trace: false,
     };
@@ -316,6 +338,8 @@ function parseArgs(args: string[]): CliArgs {
 
         if (arg === 'zone') {
             result.command = 'zone';
+        } else if (arg === '--canon' && i + 1 < args.length) {
+            result.canonPath = args[++i];
         } else if (arg === '--path' && i + 1 < args.length) {
             result.path = args[++i];
         } else if (arg === '--format' && i + 1 < args.length) {
@@ -376,13 +400,14 @@ function showHelp(): void {
 FRIDA Check CLI v1.0
 
 Usage:
-  frida-check zone --path <working_dir> [--format yaml|json|text] [--trace]
+  frida-check zone --path <working_dir> [--canon <path>] [--format yaml|json|text] [--trace]
 
 Commands:
   zone    Resolve zone for a path and validate AGENTS.md
 
 Options:
   --path <dir>     Working directory or file path to check
+  --canon <path>   Canon file path (default resolution chain)
   --format <fmt>   Output format: yaml, json, or text (default: text)
   --trace          Include decision trace in output
 
@@ -405,7 +430,7 @@ export async function runFridaCheckCli(argv: string[] = process.argv.slice(2)): 
         return args.command ? 2 : 0;
     }
 
-    const result = validateZoneAgentsMd(args.path);
+    const result = validateZoneAgentsMd(args.path, args.canonPath || undefined);
     console.log(formatOutput(result, args.format, args.trace));
 
     if (!result.zone_id) {

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.frida.dev/frida-runtime-config.schema.json",
+  "title": "Frida Runtime Config",
+  "type": "object",
+  "required": [
+    "version",
+    "reporting"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "reporting": {
+      "type": "object",
+      "required": [
+        "collect_in_repo",
+        "repo_path",
+        "file_ext",
+        "filename_pattern",
+        "exists_check"
+      ],
+      "properties": {
+        "collect_in_repo": {
+          "type": "boolean",
+          "const": true
+        },
+        "repo_path": {
+          "type": "string",
+          "const": ".frida/job-reports"
+        },
+        "file_ext": {
+          "type": "string",
+          "const": ".yaml"
+        },
+        "filename_pattern": {
+          "type": "string",
+          "const": "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
+        },
+        "exists_check": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

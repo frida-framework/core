@@ -24,9 +24,9 @@ import * as crypto from 'crypto';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import Handlebars from 'handlebars';
+import { resolveCanonPath } from './canon-path.ts';
 // === CONFIG ===
 const ROOT_DIR = path.resolve(process.cwd());
-const DEFAULT_CANON_ARTIFACT_REL = 'contract/canon.cbmd.yaml';
 
 const AUTO_GENERATED_HEADER = '<!-- AUTO-GENERATED FROM CONTRACT - DO NOT EDIT MANUALLY -->\n\n';
 
@@ -103,22 +103,10 @@ interface EffectiveGuards {
     layersUsed: GuardLayerName[];
 }
 
-export interface AdapterGenerationContext {
-    contract: Contract;
-    runtimePaths: GeneratorRuntimePaths;
-    zones: Zone[];
-    profiles: any[];
-    effectiveGuards: EffectiveGuards;
-    utils: {
-        loadTemplate: (dir: string, name: string) => HandlebarsTemplateDelegate;
-        write: (filePath: string, content: string, addHeader?: boolean) => void;
-        formatZoneName: (id: string) => string;
-        resolveRefValue: (contract: Contract, value: any, context: string) => string | null;
-    };
-}
+
 
 export interface LegacyGeneratorAdapter {
-    generate?: (context: AdapterGenerationContext) => Promise<{ policyDocs?: number; referenceDocs?: number } | void> | { policyDocs?: number; referenceDocs?: number } | void;
+    generate?: (context: any) => Promise<{ policyDocs?: number; referenceDocs?: number } | void> | { policyDocs?: number; referenceDocs?: number } | void;
 }
 
 export interface LegacyGeneratorOptions {
@@ -306,8 +294,7 @@ function readContractFileOrFail(absolutePath: string): { contract: Contract; con
         };
     } catch (error) {
         failWithError(
-            `failed to parse canon artifact '${path.relative(ROOT_DIR, absolutePath) || absolutePath}': ${
-                error instanceof Error ? error.message : String(error)
+            `failed to parse canon artifact '${path.relative(ROOT_DIR, absolutePath) || absolutePath}': ${error instanceof Error ? error.message : String(error)
             }`
         );
     }
@@ -862,8 +849,7 @@ function emitMachineReadableExports(
 
 // === CONTRACT LOADERS ===
 function loadGeneratorContext(): LoadedGeneratorContext {
-    const bootstrapPath = path.join(ROOT_DIR, DEFAULT_CANON_ARTIFACT_REL);
-    let canonPath = path.resolve(bootstrapPath);
+    let canonPath = resolveCanonPath(ROOT_DIR);
     let loaded = readContractFileOrFail(canonPath);
 
     // Resolve canon path from FRIDA_CONFIG and re-load if canonical artifact differs from bootstrap location.
@@ -1048,107 +1034,161 @@ function validateContract(contract: Contract): EffectiveGuards {
     };
     const has = (arr: any[], expected: string): boolean =>
         Array.isArray(arr) && arr.some(v => typeof v === 'string' && matchesPath(v, expected));
-
-    for (const [profileId, profileData] of Object.entries(contract.TASK_PROFILES || {})) {
-        const sec = (profileData as any).security || {};
-        const role = (profileData as any).role;
-        const isArchitect = role === 'ARCHITECT_AGENT';
-        const resolvedSec = resolveSecurity(contract, sec, `TASK_PROFILES.${profileId}.security`);
-        const readAllow = resolvedSec.read_allow;
-        const editAllow = resolvedSec.edit_allow;
-        const editForbid = resolvedSec.edit_forbid;
-        const forbid = resolvedSec.forbid;
-
-        // Check required read_allow
-        if (!has(readAllow, 'tasks/**')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.read_allow "tasks/**"`);
+    const hasAny = (arr: any[], expectedList: string[]): boolean =>
+        expectedList.some((expected) => has(arr, expected));
+    const accessValidation = (contract.FRIDA_CONFIG as any)?.reporting?.access_validation || {};
+    const policyPaths = (accessValidation && typeof accessValidation === 'object' && accessValidation.policy_paths
+        && typeof accessValidation.policy_paths === 'object')
+        ? accessValidation.policy_paths as Record<string, unknown>
+        : {};
+    const policyList = (key: string, fallback: string[]): string[] => {
+        const value = policyPaths[key];
+        if (!Array.isArray(value)) {
+            return fallback;
         }
+        const normalized = value.filter((item) => typeof item === 'string' && item.trim()) as string[];
+        return normalized.length > 0 ? normalized : fallback;
+    };
 
-        // Check required edit_allow based on role
-        if (isArchitect) {
-            if (!has(editAllow, 'tasks/inbox/**')) {
-                tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: ARCHITECT_AGENT must include security.edit_allow "tasks/inbox/**"`);
+    const readAllowRequired = policyList('read_allow_required', ['tasks/**']);
+    const editAllowArchitectRequired = policyList('edit_allow_architect_required', ['tasks/inbox/**']);
+    const editAllowArchitectAllowedOnly = policyList('edit_allow_architect_allowed_only', ['tasks/inbox/**', 'tasks/inbox/README.md']);
+    const editAllowNonArchitectRequired = policyList('edit_allow_non_architect_required', ['tasks/README.md', 'tasks/**/README.md']);
+    const editForbidRequired = policyList('edit_forbid_required', ['tasks/TASK-*.md', 'tasks/**/TASK-*.md', '.frida/job-reports/*.yaml']);
+    const forbidMustInclude = policyList('forbid_must_include', ['.frida/**']);
+    const forbidMustNotInclude = policyList('forbid_must_not_include', ['tasks/**', 'tasks/README.md', 'tasks/**/README.md', 'tasks/TASK-*.md', 'tasks/**/TASK-*.md']);
+    const createAllowRequiredAllProfiles = policyList('create_allow_required_all_profiles', ['.frida/job-reports/*.yaml']);
+    const createAllowNonTaskSetterAllowedOnly = policyList('create_allow_non_task_setter_allowed_only', ['tasks/sessions/*.md', 'tasks/sessions/[0-9]*-*.md', '.frida/job-reports/*.yaml']);
+    const createAllowTaskSetterRequired = policyList('create_allow_task_setter_required', ['tasks/TASK-*.md']);
+    const createAllowTaskSetterForbidden = policyList('create_allow_task_setter_forbidden', ['tasks/**']);
+    const reportingReadPath = (() => {
+        const fromPolicy = policyList('read_allow_reporting_required', []);
+        if (fromPolicy.length > 0) return fromPolicy[0];
+        const fromAcl = (contract as any)?.REPORTING_ACCESS_POLICY?.acl_projection?.read_allow_governance_glob;
+        return typeof fromAcl === 'string' && fromAcl.trim() ? fromAcl : '.frida/job-reports/*.yaml';
+    })();
+    const accessValidationEnabled =
+        (contract.FRIDA_CONFIG as any)?.reporting?.access_validation?.enabled === true;
+
+    if (!accessValidationEnabled) {
+        console.warn(
+            '⚠️  D5 access validation is disabled by FRIDA_CONFIG.reporting.access_validation.enabled=false; skipping fail-hard checks.'
+        );
+    } else {
+        for (const [profileId, profileData] of Object.entries(contract.TASK_PROFILES || {})) {
+            const sec = (profileData as any).security || {};
+            const role = (profileData as any).role;
+            const isArchitect = role === 'ARCHITECT_AGENT';
+            const isGovernanceProfile = profileId === 'governance';
+            const resolvedSec = resolveSecurity(contract, sec, `TASK_PROFILES.${profileId}.security`);
+            const readAllow = resolvedSec.read_allow;
+            const editAllow = resolvedSec.edit_allow;
+            const editForbid = resolvedSec.edit_forbid;
+            const forbid = resolvedSec.forbid;
+
+            // Check required read_allow
+            for (const requiredPath of readAllowRequired) {
+                if (!has(readAllow, requiredPath)) {
+                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.read_allow "${requiredPath}"`);
+                }
             }
 
-            const disallowedArchitectWrites = editAllow.filter((p: any) => (
-                typeof p === 'string' &&
-                !matchesPath(p, 'tasks/inbox/**') &&
-                !matchesPath(p, 'tasks/inbox/README.md')
-            ));
-            if (disallowedArchitectWrites.length > 0) {
-                tasksPolicyErrors.push(
-                    `TASK_PROFILES.${profileId}: ARCHITECT_AGENT edit_allow must be inbox-only (found: ${disallowedArchitectWrites.join(', ')})`
-                );
-            }
-        } else {
-            if (!has(editAllow, 'tasks/README.md')) {
-                tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.edit_allow "tasks/README.md"`);
-            }
-            if (!has(editAllow, 'tasks/**/README.md')) {
-                tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.edit_allow "tasks/**/README.md"`);
-            }
-        }
+            // Check required edit_allow based on role
+            if (isArchitect) {
+                for (const requiredPath of editAllowArchitectRequired) {
+                    if (!has(editAllow, requiredPath)) {
+                        tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: ARCHITECT_AGENT must include security.edit_allow "${requiredPath}"`);
+                    }
+                }
 
-        // Check required edit_forbid
-        if (!has(editForbid, 'tasks/TASK-*.md')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.edit_forbid "tasks/TASK-*.md"`);
-        }
-        if (!has(editForbid, 'tasks/**/TASK-*.md')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.edit_forbid "tasks/**/TASK-*.md"`);
-        }
-
-        // Check forbidden patterns in security.forbid
-        if (has(forbid, 'tasks/**')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST NOT include "tasks/**"`);
-        }
-        if (has(forbid, 'tasks/README.md')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST NOT include "tasks/README.md"`);
-        }
-        if (has(forbid, 'tasks/**/README.md')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST NOT include "tasks/**/README.md"`);
-        }
-        if (has(forbid, 'tasks/TASK-*.md')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST NOT include "tasks/TASK-*.md" (use edit_forbid instead)`);
-        }
-        if (has(forbid, 'tasks/**/TASK-*.md')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST NOT include "tasks/**/TASK-*.md" (use edit_forbid instead)`);
-        }
-
-        // Check required .frida/** in forbid
-        if (!has(forbid, '.frida/**')) {
-            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST include ".frida/**"`);
-        }
-
-        // Check create_allow policy
-        const createAllow = resolvedSec.create_allow;
-        if (createAllow.length > 0) {
-            const isSessionTelemetryPath = (p: string) =>
-                matchesPath(p, 'tasks/sessions/*.md') || matchesPath(p, 'tasks/sessions/[0-9]*-*.md');
-
-            if (role !== 'TASK_SETTER_AGENT') {
-                const invalidCreates = createAllow.filter((p: any) => typeof p === 'string' && !isSessionTelemetryPath(p));
-                if (invalidCreates.length > 0) {
+                const disallowedArchitectWrites = editAllow.filter((p: any) => (
+                    typeof p === 'string' &&
+                    !hasAny([p], editAllowArchitectAllowedOnly)
+                ));
+                if (disallowedArchitectWrites.length > 0) {
                     tasksPolicyErrors.push(
-                        `TASK_PROFILES.${profileId}: non-task-setter create_allow may target only tasks/sessions/*.md (found: ${invalidCreates.join(', ')})`
+                        `TASK_PROFILES.${profileId}: ARCHITECT_AGENT edit_allow contains paths outside policy allowlist (found: ${disallowedArchitectWrites.join(', ')})`
                     );
                 }
             } else {
-                if (!has(createAllow, 'tasks/TASK-*.md')) {
-                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: TASK_SETTER_AGENT create_allow MUST include "tasks/TASK-*.md"`);
+                for (const requiredPath of editAllowNonArchitectRequired) {
+                    if (!has(editAllow, requiredPath)) {
+                        tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.edit_allow "${requiredPath}"`);
+                    }
                 }
-                if (has(createAllow, 'tasks/**')) {
-                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: TASK_SETTER_AGENT create_allow MUST NOT use broad patterns like "tasks/**"`);
+            }
+
+            // Check required edit_forbid
+            for (const requiredPath of editForbidRequired) {
+                if (!has(editForbid, requiredPath)) {
+                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.edit_forbid "${requiredPath}"`);
+                }
+            }
+
+            // Check forbidden patterns in security.forbid
+            for (const forbiddenPath of forbidMustNotInclude) {
+                if (has(forbid, forbiddenPath)) {
+                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST NOT include "${forbiddenPath}"`);
+                }
+            }
+
+            // Check required .frida/** in forbid
+            for (const requiredPath of forbidMustInclude) {
+                if (!has(forbid, requiredPath)) {
+                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST include "${requiredPath}"`);
+                }
+            }
+
+            // Check create_allow policy
+            const createAllow = resolvedSec.create_allow;
+            for (const requiredPath of createAllowRequiredAllProfiles) {
+                if (!has(createAllow, requiredPath)) {
+                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.create_allow "${requiredPath}"`);
+                }
+            }
+
+            const hasReportingRead = has(readAllow, reportingReadPath);
+            if (isGovernanceProfile && !hasReportingRead) {
+                tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: governance profile must include security.read_allow "${reportingReadPath}"`);
+            }
+            if (!isGovernanceProfile && hasReportingRead) {
+                tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: only governance profile may include security.read_allow "${reportingReadPath}"`);
+            }
+
+            if (createAllow.length > 0) {
+                const isAllowedNonTaskSetterCreatePath = (p: string) => hasAny([p], createAllowNonTaskSetterAllowedOnly);
+
+                if (role !== 'TASK_SETTER_AGENT') {
+                    const invalidCreates = createAllow.filter(
+                        (p: any) => typeof p === 'string' && !isAllowedNonTaskSetterCreatePath(p)
+                    );
+                    if (invalidCreates.length > 0) {
+                        tasksPolicyErrors.push(
+                            `TASK_PROFILES.${profileId}: non-task-setter create_allow may target only configured policy paths (found: ${invalidCreates.join(', ')})`
+                        );
+                    }
+                } else {
+                    for (const requiredPath of createAllowTaskSetterRequired) {
+                        if (!has(createAllow, requiredPath)) {
+                            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: TASK_SETTER_AGENT create_allow MUST include "${requiredPath}"`);
+                        }
+                    }
+                    for (const forbiddenPath of createAllowTaskSetterForbidden) {
+                        if (has(createAllow, forbiddenPath)) {
+                            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: TASK_SETTER_AGENT create_allow MUST NOT include "${forbiddenPath}"`);
+                        }
+                    }
                 }
             }
         }
-    }
 
-    if (tasksPolicyErrors.length > 0) {
-        console.error('❌ Error: TASK_PROFILES violate tasks orchestration policy:');
-        for (const err of tasksPolicyErrors) {
-            console.error(`  - ${err}`);
+        if (tasksPolicyErrors.length > 0) {
+            console.error('❌ Error: TASK_PROFILES violate tasks orchestration policy:');
+            for (const err of tasksPolicyErrors) {
+                console.error(`  - ${err}`);
+            }
+            process.exit(1);
         }
-        process.exit(1);
     }
 
     console.log('✅ Contract validated');

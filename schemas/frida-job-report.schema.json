@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.frida.dev/frida-job-report.schema.json",
+  "title": "Frida Job Report",
+  "type": "object",
+  "required": [
+    "frida_report",
+    "status",
+    "profile_id",
+    "created_at",
+    "inputs",
+    "changes",
+    "verification",
+    "summary"
+  ],
+  "properties": {
+    "frida_report": {
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "SUCCESS",
+        "HALTED"
+      ]
+    },
+    "task_ref": {
+      "type": "string"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "inputs": {
+      "type": "object",
+      "required": [
+        "prompt_summary",
+        "canon_files_read",
+        "constraints_adopted"
+      ],
+      "properties": {
+        "prompt_summary": {
+          "type": "string"
+        },
+        "canon_files_read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "constraints_adopted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "changes": {
+      "type": "object",
+      "required": [
+        "modified",
+        "created",
+        "deleted"
+      ],
+      "properties": {
+        "modified": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "created": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deleted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "verification": {
+      "type": "object",
+      "required": [
+        "commands",
+        "result"
+      ],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "SKIPPED"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "what_done"
+      ],
+      "properties": {
+        "what_done": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risks_or_debt": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "followups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "halt_code": {
+      "type": "string"
+    },
+    "decision_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "recovery": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}
