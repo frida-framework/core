@@ -177,3 +177,13 @@ MIGRATION_LEDGER:
     - gap: GENERATION_TELEMETRY_CONTRACT
       status: integrity_gap
       note: "Telemetry structure defined in code (src/types.ts) but lacks a formal canon contract."
+
+    # ── Phase 3: Visual Layer Implementation ──────────────────────────────────
+    - requirement: VISUAL_LAYER_STRATEGY
+      status: pending
+      description: "Principles for the upcoming visual layer implementation."
+      principles:
+        - "Standard components MUST be visualized via standard canon principles."
+        - "Custom visualization objects are permitted in the canon if standard types are insufficient."
+        - "Canon schema MUST be optimized to support efficient visualization."
+        - "Visualization library selection is required for implementation."

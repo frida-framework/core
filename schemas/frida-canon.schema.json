@@ -29,9 +29,6 @@
     "TEMPLATE_INTEGRITY_CONTRACT",
     "CLI_CONTRACT",
     "INTEGRATION_RULES",
-    "VISUAL_CONTRACT",
-    "VISUALIZER_PRINCIPLES",
-    "VISUALIZER_BOOTSTRAP_CONTRACT",
     "CONTRACT_MANAGEMENT_INTERFACE",
     "CONTRACT_TRANSLATOR_INTERFACES",
     "SCAFFOLD_CONTRACT",
@@ -1163,137 +1160,6 @@
         "type": "string"
       }
     },
-    "VISUAL_CONTRACT": {
-      "type": "object",
-      "required": [
-        "status",
-        "generation_mode",
-        "source_of_truth",
-        "determinism"
-      ],
-      "properties": {
-        "status": {
-          "type": "string"
-        },
-        "generation_mode": {
-          "type": "string",
-          "enum": [
-            "on_demand",
-            "on_gen",
-            "manual"
-          ]
-        },
-        "source_of_truth": {
-          "type": "string",
-          "const": "canon"
-        },
-        "determinism": {
-          "type": "string",
-          "enum": [
-            "required",
-            "best_effort"
-          ]
-        },
-        "lod": {
-          "type": "object",
-          "required": [
-            "levels"
-          ],
-          "properties": {
-            "levels": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "object",
-                "required": [
-                  "id",
-                  "name",
-                  "yaml_depth"
-                ],
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "yaml_depth": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "content": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": true
-              }
-            }
-          },
-          "additionalProperties": true
-        },
-        "selector_grammar": {
-          "type": "object",
-          "properties": {
-            "typed_ref_keys": {
-              "type": "object",
-              "properties": {
-                "explicit": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "wildcard_suffix": {
-                  "type": "string"
-                },
-                "list_wildcard_suffix": {
-                  "type": "string"
-                }
-              },
-              "additionalProperties": true
-            },
-            "edge_inference": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": true
-        },
-        "edge_types": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "overlay_output": {
-          "type": "object",
-          "properties": {
-            "format": {
-              "type": "string",
-              "enum": [
-                "JSON"
-              ]
-            },
-            "path_ref": {
-              "type": "string"
-            },
-            "schema_version": {
-              "type": "string"
-            },
-            "required_fields": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": true
-    },
     "VISUALIZER_PRINCIPLES": {
       "type": "object",
       "required": [
@@ -1531,7 +1397,10 @@
         }
       },
       "additionalProperties": true
-        "properties": {
+    },
+    "CANON_GENERATOR_CONTRACT": {
+      "type": "object",
+      "properties": {
         "id": {
           "type": "string",
           "minLength": 1
@@ -1580,148 +1449,344 @@
         }
       },
       "additionalProperties": true
+    },
+    "UI_STRUCTURE": {
+      "$ref": "#/$defs/uiStructure"
+    },
+    "UI_COMPONENT_CONTRACTS": {
+      "$ref": "#/$defs/uiComponentContracts"
+    },
+    "RESOURCES": {
+      "$ref": "#/$defs/resources"
+    },
+    "MOUNT_POINTS": {
+      "$ref": "#/$defs/mountPoints"
+    },
+    "DATABASE_SCHEMA": {
+      "$ref": "#/$defs/databaseSchema"
+    },
+    "ROUTE_PIPELINE_CANON": {
+      "$ref": "#/$defs/routePipelineCanon"
     }
-  }
-},
-"$defs": {
-  "pathRef": {
-    "type": "string",
-    "pattern": "^PATHS\\.",
-    "minLength": 7
   },
-  "zoneEntry": {
-    "type": "object",
-    "required": [
-      "agentsPath",
-      "purpose"
-    ],
-    "properties": {
-      "status": {
-        "type": "string"
+  "$defs": {
+    "uiStructure": {
+      "type": "object",
+      "properties": {
+        "pages": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "route",
+              "pageComponent"
+            ],
+            "properties": {
+              "route": {
+                "type": "string"
+              },
+              "pageComponent": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "implementation": {
+                "type": "string",
+                "enum": [
+                  "mounted",
+                  "host"
+                ]
+              },
+              "layoutRef": {
+                "type": "string"
+              },
+              "slotRef": {
+                "type": "string"
+              },
+              "componentRef": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "layout": {
+          "type": "object",
+          "additionalProperties": true
+        }
       },
-      "hard_zone": {
-        "type": "boolean"
+      "additionalProperties": true
+    },
+    "uiComponentContracts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "exportName"
+        ],
+        "properties": {
+          "exportName": {
+            "type": "string"
+          },
+          "implementation": {
+            "type": "string"
+          },
+          "slotRef": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "props": {
+            "type": "object"
+          },
+          "steps": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "adapter": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "mountPoints": {
+      "type": "object",
+      "properties": {
+        "slots": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "fileRef": {
+                "type": "string"
+              },
+              "stubMarkerRef": {
+                "type": "string"
+              },
+              "mountedMarkerRef": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
       },
-      "path": {
-        "type": "string",
-        "minLength": 1
+      "additionalProperties": true
+    },
+    "databaseSchema": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "table"
+        ],
+        "properties": {
+          "table": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "routePipelineCanon": {
+      "type": "object",
+      "properties": {
+        "stages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "detectors": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
       },
-      "pathGlobRef": {
-        "$ref": "#/$defs/pathRef"
+      "additionalProperties": true
+    },
+    "pathRef": {
+      "type": "string",
+      "pattern": "^PATHS\\.",
+      "minLength": 7
+    },
+    "zoneEntry": {
+      "type": "object",
+      "required": [
+        "agentsPath",
+        "purpose"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "hard_zone": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pathGlobRef": {
+          "$ref": "#/$defs/pathRef"
+        },
+        "agentsPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "agentsPathDirRef": {
+          "$ref": "#/$defs/pathRef"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exclude_path_prefixes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       },
-      "agentsPath": {
-        "type": "string",
-        "minLength": 1
+      "anyOf": [
+        {
+          "required": [
+            "path"
+          ]
+        },
+        {
+          "required": [
+            "pathGlobRef"
+          ]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "invariantEntry": {
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "kernel",
+            "app"
+          ]
+        }
       },
-      "agentsPathDirRef": {
-        "$ref": "#/$defs/pathRef"
+      "additionalProperties": true
+    },
+    "guardEntry": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "statement",
+        "enforcement"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "nail",
+            "chain",
+            "ban",
+            "drift",
+            "session"
+          ]
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enforcement": {
+          "type": "string",
+          "enum": [
+            "hard",
+            "warn"
+          ]
+        }
       },
-      "purpose": {
-        "type": "string",
-        "minLength": 1
-      },
-      "exclude_path_prefixes": {
-        "type": "array",
-        "items": {
+      "additionalProperties": true
+    },
+    "principleEntry": {
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
           "type": "string",
           "minLength": 1
         }
-      }
-    },
-    "anyOf": [
-      {
-        "required": [
-          "path"
-        ]
       },
-      {
-        "required": [
-          "pathGlobRef"
-        ]
-      }
-    ],
-    "additionalProperties": true
+      "additionalProperties": true
+    }
   },
-  "invariantEntry": {
-    "type": "object",
-    "required": [
-      "id",
-      "text"
-    ],
-    "properties": {
-      "id": {
-        "type": "string",
-        "minLength": 1
-      },
-      "text": {
-        "type": "string",
-        "minLength": 1
-      },
-      "scope": {
-        "type": "string",
-        "enum": [
-          "kernel",
-          "app"
-        ]
-      }
-    },
-    "additionalProperties": true
-  },
-  "guardEntry": {
-    "type": "object",
-    "required": [
-      "id",
-      "kind",
-      "statement",
-      "enforcement"
-    ],
-    "properties": {
-      "id": {
-        "type": "string",
-        "minLength": 1
-      },
-      "kind": {
-        "type": "string",
-        "enum": [
-          "nail",
-          "chain",
-          "ban",
-          "drift",
-          "session"
-        ]
-      },
-      "statement": {
-        "type": "string",
-        "minLength": 1
-      },
-      "enforcement": {
-        "type": "string",
-        "enum": [
-          "hard",
-          "warn"
-        ]
-      }
-    },
-    "additionalProperties": true
-  },
-  "principleEntry": {
-    "type": "object",
-    "required": [
-      "id",
-      "text"
-    ],
-    "properties": {
-      "id": {
-        "type": "string",
-        "minLength": 1
-      },
-      "text": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "additionalProperties": true
-  }
-},
-"additionalProperties": false
+  "additionalProperties": false
 }
