@@ -33,7 +33,7 @@
     "./schemas/frida-canon.schema.json": "./schemas/frida-canon.schema.json"
   },
   "files": [
-    "dist",
+    "dist", 
     "schemas",
     "templates",
     "README.md"

@@ -293,8 +293,9 @@ function collectTypedReferenceEdges(
 }
 
 function assertVisualSchemaContract(contract: AnyObject): void {
+    // Schema-driven mode: VISUAL_SCHEMA block is optional
     if (!isObjectLike(contract?.VISUAL_SCHEMA)) {
-        throw new Error('contract VISUAL_SCHEMA is missing or invalid.');
+        return; // will use schema-derived config
     }
     if (typeof contract.VISUAL_SCHEMA.version !== 'string' || !contract.VISUAL_SCHEMA.version.trim()) {
         throw new Error('contract VISUAL_SCHEMA.version must be a non-empty string.');
@@ -304,21 +305,178 @@ function assertVisualSchemaContract(contract: AnyObject): void {
 function assertVisualContractConsistency(raw: string, contract: AnyObject): void {
     const issues: string[] = [];
 
-    const hasRef = (ref: string) => raw.includes(ref);
-
-    if (!isObjectLike(contract.VISUAL_SCHEMA)) {
-        issues.push('VISUAL_SCHEMA block is missing or invalid.');
-    } else if (typeof contract.VISUAL_SCHEMA.version !== 'string' || !contract.VISUAL_SCHEMA.version.trim()) {
-        issues.push('VISUAL_SCHEMA.version must be a non-empty string.');
-    }
-
-    if (hasRef('contract:VISUAL_SCHEMA') && !isObjectLike(contract.VISUAL_SCHEMA)) {
-        issues.push('Referenced contract:VISUAL_SCHEMA but VISUAL_SCHEMA block is missing.');
+    // In schema-driven mode, VISUAL_SCHEMA is optional
+    if (isObjectLike(contract.VISUAL_SCHEMA)) {
+        if (typeof contract.VISUAL_SCHEMA.version !== 'string' || !contract.VISUAL_SCHEMA.version.trim()) {
+            issues.push('VISUAL_SCHEMA.version must be a non-empty string.');
+        }
     }
 
     if (issues.length > 0) {
         throw new Error(`Visual contract consistency failed: ${issues.join(' | ')}`);
     }
+}
+
+// --- Schema-driven overlay derivation ---
+
+interface SchemaEntityDef {
+    defName: string;
+    nodeType: string;
+    lod?: number;
+}
+
+interface SchemaDerivedConfig {
+    version: string;
+    nodes: Array<{ selector: string; nodeType: string; idTemplate: string }>;
+    edgeSources: string[];
+    lod: Record<string, unknown>;
+}
+
+function findSchemaPath(): string | null {
+    // Walk up from __dirname to find schemas/frida-canon.schema.json
+    let dir = path.resolve(__dirname);
+    for (let i = 0; i < 5; i++) {
+        const candidate = path.join(dir, 'schemas', 'frida-canon.schema.json');
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+        dir = path.dirname(dir);
+    }
+    return null;
+}
+
+function deriveVisualConfigFromSchema(): SchemaDerivedConfig | null {
+    const schemaPath = findSchemaPath();
+    if (!schemaPath) {
+        return null;
+    }
+
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
+    const defs = schema.$defs || {};
+    const properties = schema.properties || {};
+
+    // Collect entity $defs
+    const entityDefs: SchemaEntityDef[] = [];
+    for (const [defName, defValue] of Object.entries(defs) as Array<[string, AnyObject]>) {
+        if (defValue['x-frida-entity'] === true && defValue['x-frida-node-type']) {
+            entityDefs.push({
+                defName,
+                nodeType: defValue['x-frida-node-type'],
+                lod: defValue['x-frida-lod'],
+            });
+        }
+    }
+
+    if (entityDefs.length === 0) {
+        return null;
+    }
+
+    // Find where each entity $def is referenced in the schema properties
+    const nodes: SchemaDerivedConfig['nodes'] = [];
+    const edgeSources: string[] = [];
+    const refPrefix = '#/$defs/';
+
+    function walkSchemaProperties(
+        obj: AnyObject,
+        currentPath: string,
+        visited: Set<string>
+    ): void {
+        if (visited.has(currentPath)) return;
+        visited.add(currentPath);
+
+        // Check if this object uses $ref to an entity $def
+        if (typeof obj.$ref === 'string' && obj.$ref.startsWith(refPrefix)) {
+            const refTarget = obj.$ref.slice(refPrefix.length);
+            const entityDef = entityDefs.find(ed => ed.defName === refTarget);
+            if (entityDef && currentPath) {
+                // This property IS an entity
+                nodes.push({
+                    selector: currentPath,
+                    nodeType: entityDef.nodeType,
+                    idTemplate: '{path}',
+                });
+                edgeSources.push(currentPath);
+            }
+            return;
+        }
+
+        // Check additionalProperties for entity maps (e.g., INVARIANTS.*)
+        if (isObjectLike(obj.additionalProperties)) {
+            const addProps = obj.additionalProperties;
+            if (typeof addProps.$ref === 'string' && addProps.$ref.startsWith(refPrefix)) {
+                const refTarget = addProps.$ref.slice(refPrefix.length);
+                const entityDef = entityDefs.find(ed => ed.defName === refTarget);
+                if (entityDef && currentPath) {
+                    nodes.push({
+                        selector: currentPath + '.*',
+                        nodeType: entityDef.nodeType,
+                        idTemplate: '{path}',
+                    });
+                    edgeSources.push(currentPath + '.*');
+                }
+            } else {
+                walkSchemaProperties(addProps, currentPath + '.*', visited);
+            }
+        }
+
+        // Check items for entity arrays (e.g., guards[])
+        if (isObjectLike(obj.items)) {
+            const items = obj.items;
+            if (typeof items.$ref === 'string' && items.$ref.startsWith(refPrefix)) {
+                const refTarget = items.$ref.slice(refPrefix.length);
+                const entityDef = entityDefs.find(ed => ed.defName === refTarget);
+                if (entityDef && currentPath) {
+                    nodes.push({
+                        selector: currentPath + '[*]',
+                        nodeType: entityDef.nodeType,
+                        idTemplate: '{path}',
+                    });
+                    edgeSources.push(currentPath + '[*]');
+                }
+            } else {
+                walkSchemaProperties(items, currentPath + '[*]', visited);
+            }
+        }
+
+        // Recurse into properties
+        if (isObjectLike(obj.properties)) {
+            for (const [propName, propDef] of Object.entries(obj.properties) as Array<[string, AnyObject]>) {
+                const childPath = currentPath ? currentPath + '.' + propName : propName;
+                walkSchemaProperties(propDef, childPath, visited);
+            }
+        }
+    }
+
+    // Walk top-level schema properties
+    const visited = new Set<string>();
+    for (const [blockName, blockDef] of Object.entries(properties) as Array<[string, AnyObject]>) {
+        // Resolve top-level $ref
+        if (typeof blockDef.$ref === 'string' && blockDef.$ref.startsWith(refPrefix)) {
+            const refTarget = blockDef.$ref.slice(refPrefix.length);
+            const resolved = defs[refTarget];
+            if (isObjectLike(resolved)) {
+                walkSchemaProperties(resolved, blockName, visited);
+            }
+        } else {
+            walkSchemaProperties(blockDef, blockName, visited);
+        }
+    }
+
+    // Build LoD from schema x-frida-lod annotations
+    const lod: Record<string, unknown> = {
+        levels: [
+            { id: 'topology', range: [0, 0.35], description: 'Top-level blocks and page-level entities' },
+            { id: 'flow', range: [0.35, 0.65], description: 'Resources, transitions, components' },
+            { id: 'specification', range: [0.65, 1.0], description: 'Guards, invariants, principles, stages' },
+        ],
+    };
+
+    return {
+        version: 'schema-derived',
+        nodes,
+        edgeSources,
+        lod,
+    };
 }
 
 export function extractVisualSchemaOverlay(
@@ -327,28 +485,62 @@ export function extractVisualSchemaOverlay(
     options: { generatedAt?: string; sourcePath?: string } = {}
 ): OverlayResult {
     assertVisualSchemaContract(contract);
-    const visualSchema = contract.VISUAL_SCHEMA;
 
-    const mappingNodes = Array.isArray(visualSchema?.mapping?.nodes)
-        ? visualSchema.mapping.nodes
-        : [];
-    const edgeSources = Array.isArray(visualSchema?.mapping?.edge_sources)
-        ? visualSchema.mapping.edge_sources
-        : [];
+    // Determine config source: explicit VISUAL_SCHEMA block or schema-derived
+    const hasExplicitSchema = isObjectLike(contract.VISUAL_SCHEMA);
+    let mappingNodes: AnyObject[];
+    let edgeSources: string[];
+    let explicitKeys: Set<string>;
+    let edgeTypes: AnyObject;
+    let wildcardSuffix: string;
+    let listWildcardSuffix: string;
+    let fallbackType: string;
+    let fallbackListType: string;
+    let schemaVersion: string | null;
+    let lodConfig: Record<string, unknown>;
 
-    const explicitKeys = new Set<string>(
-        Array.isArray(visualSchema?.edge_extraction?.typed_references?.explicit_keys)
-            ? visualSchema.edge_extraction.typed_references.explicit_keys
-            : []
-    );
-
-    const edgeTypes = isObjectLike(visualSchema?.edge_extraction?.typed_references?.edge_types)
-        ? visualSchema.edge_extraction.typed_references.edge_types
-        : {};
-    const wildcardSuffix = visualSchema?.edge_extraction?.typed_references?.wildcard_suffix || '*Ref';
-    const listWildcardSuffix = visualSchema?.edge_extraction?.typed_references?.list_wildcard_suffix || '*Refs';
-    const fallbackType = edgeTypes.fallback_ref_suffix || 'ref';
-    const fallbackListType = edgeTypes.fallback_refs_suffix || fallbackType;
+    if (hasExplicitSchema) {
+        const visualSchema = contract.VISUAL_SCHEMA;
+        mappingNodes = Array.isArray(visualSchema?.mapping?.nodes)
+            ? visualSchema.mapping.nodes
+            : [];
+        edgeSources = Array.isArray(visualSchema?.mapping?.edge_sources)
+            ? visualSchema.mapping.edge_sources
+            : [];
+        explicitKeys = new Set<string>(
+            Array.isArray(visualSchema?.edge_extraction?.typed_references?.explicit_keys)
+                ? visualSchema.edge_extraction.typed_references.explicit_keys
+                : []
+        );
+        edgeTypes = isObjectLike(visualSchema?.edge_extraction?.typed_references?.edge_types)
+            ? visualSchema.edge_extraction.typed_references.edge_types
+            : {};
+        wildcardSuffix = visualSchema?.edge_extraction?.typed_references?.wildcard_suffix || '*Ref';
+        listWildcardSuffix = visualSchema?.edge_extraction?.typed_references?.list_wildcard_suffix || '*Refs';
+        fallbackType = edgeTypes.fallback_ref_suffix || 'ref';
+        fallbackListType = edgeTypes.fallback_refs_suffix || fallbackType;
+        schemaVersion = visualSchema.version || null;
+        lodConfig = visualSchema.lod || {};
+    } else {
+        // Schema-driven mode: derive config from frida-canon.schema.json
+        const derived = deriveVisualConfigFromSchema();
+        if (!derived) {
+            throw new Error(
+                'No VISUAL_SCHEMA block found and unable to derive config from schema. ' +
+                'Ensure schemas/frida-canon.schema.json exists with x-frida-entity annotations.'
+            );
+        }
+        mappingNodes = derived.nodes;
+        edgeSources = derived.edgeSources;
+        explicitKeys = new Set<string>();
+        edgeTypes = {};
+        wildcardSuffix = '*Ref';
+        listWildcardSuffix = '*Refs';
+        fallbackType = 'ref';
+        fallbackListType = 'ref';
+        schemaVersion = derived.version;
+        lodConfig = derived.lod;
+    }
 
     const nodeById = new Map<string, OverlayNode & { selectorIndex: number }>();
     const nodeIdByPath = new Map<string, string>();
@@ -404,8 +596,8 @@ export function extractVisualSchemaOverlay(
     }
 
     const sequenceEdges: Array<{ sourceKind: 'sequence'; sourcePath: string; sourceKey: string; edgeType: string; targetRef: string }> = [];
-    const sequenceRules = Array.isArray(visualSchema?.edge_extraction?.deterministic_sequence?.rules)
-        ? visualSchema.edge_extraction.deterministic_sequence.rules
+    const sequenceRules = hasExplicitSchema && Array.isArray(contract.VISUAL_SCHEMA?.edge_extraction?.deterministic_sequence?.rules)
+        ? contract.VISUAL_SCHEMA.edge_extraction.deterministic_sequence.rules
         : [];
 
     for (const rule of sequenceRules) {
@@ -473,12 +665,12 @@ export function extractVisualSchemaOverlay(
         meta: {
             generatedAt,
             canonSha256: sha256(contractRaw),
-            visualSchemaVersion: visualSchema.version || null,
+            visualSchemaVersion: schemaVersion,
             source: options.sourcePath || path.posix.join('contract', 'canon.cbmd.yaml'),
             nodeCount: nodes.length,
             edgeCount: edges.length,
         },
-        lod: visualSchema.lod || {},
+        lod: lodConfig,
         nodes,
         edges,
     };

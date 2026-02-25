@@ -1,0 +1,85 @@
+# ─── LAYER 6: BUILDTIME ──────────────────────────────────────────────────────
+# Purpose: Build-time mechanisms — how canon data is transformed into
+#          application artifacts (agent context, component surgery, app bootstrap).
+
+FRIDA_GENERATOR:
+  _visibility: public
+  id: frida-generator
+  version: 1.0.0
+  purpose: "Generate agent context artifacts (AGENTS.md, profiles, policy docs) from canon."
+  command: "frida-core gen"
+  inputs:
+    - "Assembled canon (engine + app merged)."
+    - "Handlebars templates from FRIDA_TEMPLATE_INTEGRITY."
+  outputs:
+    bootloader: "AGENTS.md — root agent entry point."
+    router: "Profile router (maps keywords → profile files)."
+    profiles: "Per-agent permission and constraint files."
+    zone_agents: "Zone-specific AGENTS.md files."
+    policy_docs: "Human-readable policy documentation."
+  algorithm:
+    - step: LOAD
+      action: "Read assembled canon, validate required blocks."
+    - step: NORMALIZE
+      action: "Apply path normalization (aliases, deprecated names)."
+    - step: RESOLVE
+      action: "Expand invariant/guard references in profiles."
+    - step: GENERATE
+      action: "Apply Handlebars templates in dependency order."
+    - step: WRITE
+      action: "Atomic writes with AUTO-GENERATED header."
+  note: >-
+    Detailed generator spec (classes, functions, main_sequence, handlebars_helpers)
+    belongs in the app contract annex as an implementation reference.
+
+FRIDA_MAPPER_MODEL:
+  _visibility: public
+  id: frida-mapper-model
+  version: 1.0.0
+  purpose: "Engine-level description of the Mapper mechanism for component surgery."
+  concept: >-
+    Mapper is a build-time transformation pipeline that takes external source
+    components and adapts them for the target application. It operates through
+    surgeon scripts (structural changes) and styler scripts (visual changes).
+  principles:
+    - "Source components are read-only. Mapper writes to output slots."
+    - "Surgeon scripts handle structural changes (imports, exports, props, state)."
+    - "Styler scripts handle visual changes (CSS, layout adaptation)."
+    - "Output is idempotent: same input → same output."
+    - "Forbidden tokens (mock data, direct API imports) must be stripped."
+  component_contract:
+    required_fields:
+      - sourceRef: "Input component path (from external source)."
+      - outputRef: "Output mount path in the application."
+      - exportName: "Named export from the processed component."
+    optional_fields:
+      - styleRef: "Separate style source if not co-located."
+      - slotRef: "Target slot file where component is mounted."
+    surgery_spec:
+      forbidden: "List of mock data, imports, and state to strip."
+      required: "List of required props and exports after surgery."
+  note: >-
+    Concrete mapper configuration (components, forbidden/required lists)
+    belongs in the app contract, not engine.
+
+FRIDA_SCAFFOLD:
+  _visibility: public
+  id: frida-scaffold
+  version: 1.0.0
+  purpose: "Deploy a base Frida-managed application with canon and agent context."
+  command: "frida-core scaffold"
+  deliverables_summary:
+    - "Minimal application skeleton."
+    - "Initial app-canon YAML (ahead-version policy)."
+    - "Bootloader AGENTS.md."
+    - ".frida/ directory structure."
+  recovery:
+    full: "frida-core scaffold --target <dir>"
+    component: "frida-core scaffold --component <name>"
+    behavior: "Idempotent — re-run detects existing components and only restores missing ones."
+  ahead_version_policy:
+    rule: "Scaffold deploys canon that describes features beyond current implementation."
+    purpose: "Agent can read canon and build the remaining features."
+  note: >-
+    Detailed scaffold deliverables (templates, visualizer component, mount
+    mechanism) belong in the app contract.

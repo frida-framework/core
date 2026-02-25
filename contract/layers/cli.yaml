@@ -1,0 +1,83 @@
+# ─── LAYER 6: CLI & INTEGRITY ────────────────────────────────────────────────
+
+FRIDA_TEMPLATE_INTEGRITY:
+  _visibility: public
+  id: frida-template-integrity
+  version: 1.0.0
+  hash_algorithm: sha256
+  manifest_format: yaml
+  manifest_path: "contract/template-integrity.manifest.yaml"
+  manifest_schema: "schemas/template-integrity.schema.json"
+  template_source_dir: "templates/"
+  checks:
+    - id: hash_match
+      rule: "Hash of template file content MUST match manifest entry."
+      on_failure: fail_hard
+  enforcement:
+    kind: nail
+    check_command: "frida-core check-templates"
+    exit_code_on_drift: 1
+
+FRIDA_CLI:
+  _visibility: public
+  id: frida-cli
+  version: 1.0.0
+  binary: "frida-core"
+  commands:
+    build:
+      purpose: "Assemble contract from sources."
+      description: "Assemble contract from sources."
+      flags:
+        - "--public"
+        - "--strict"
+    gen:
+      purpose: "Run full generation pipeline."
+      description: "Run full generation pipeline."
+    check_templates:
+      purpose: "Verify template integrity (hash drift)."
+      description: "Verify template integrity (hash drift)."
+    migration_report:
+      purpose: "Generate migration report."
+      description: "Generate migration report."
+    scaffold:
+      purpose: "Deploy base application with visualizer and canon."
+      description: "Deploy base application with visualizer and canon."
+      flags:
+        - "--target <dir>"
+        - "--component <name>"
+    visual:
+      subcommands:
+        build:
+          description: "Build visual overlay from canon."
+        check:
+          description: "Validate visual overlay freshness."
+  command_separation:
+    core_commands:
+      - build
+      - gen
+      - check_templates
+      - scaffold
+      - visual
+    future_commands:
+      - migration_report
+  exit_codes:
+    0: "Success."
+    1: "Failure."
+  determinism: "All commands MUST produce deterministic output for identical input."
+  integration:
+    rules:
+      - "Template generation relies on Handlebars engine only."
+      - "Canon YAML uses js-yaml compatible parsing."
+      - "Output file encoding is always UTF-8."
+      - "No shell commands in templates."
+      - "Template partials MUST be registered before rendering."
+      - "Adapter functions receive resolved selector data and canon context."
+    adapter_contract:
+      description: "All custom generation adapters MUST implement FridaAdapter interface."
+      interface:
+        name: FridaAdapter
+        methods:
+          - "selectors(): SelectorDef[]"
+          - "generate(context: GeneratorContext): void"
+          - "guards?(): Guard[]"
+

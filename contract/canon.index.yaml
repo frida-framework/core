@@ -1,101 +1,129 @@
-# ═══════════════════════════════════════════════════════════════════════════════
-# FRIDA CANON INDEX v2.0.0
-# ═══════════════════════════════════════════════════════════════════════════════
-# Modular entry point for @hanszel/core canon.
-# Source of truth: this file + contract/layers/*.yaml
-# Monolith is a BUILD ARTIFACT: run `frida-core build` → dist/canon.assembled.yaml
-# ═══════════════════════════════════════════════════════════════════════════════
+# ─── FRIDA CANON INDEX ────────────────────────────────────────────────────────
+# Modular entry point for the Frida core canon.
+# Each layer is a separate YAML file in contract/layers/.
+# Blocks list declares all top-level keys exported by the layer.
+# ──────────────────────────────────────────────────────────────────────────────
 
-canon_index:
-  version: "2.0.0"
-  schema: "schemas/frida-canon-index.schema.json"
-  assembled_schema: "schemas/frida-canon.schema.json"
+schema_version: "1.0"
+canon_id: "FRIDA_CORE_CANON"
+version: "2.0.0"
 
-  layers:
-    - id: identity
-      path: layers/identity.yaml
-      visibility: private
-      keywords: [schema, version, meta, source-blocks, selectors, pipeline, output, uniqueness]
-      blocks:
-        - CANON_META
-        - CANON_UNIQUENESS_POLICY
-        - meta
-        - core
+layers:
+  - id: identity
+    path: contract/layers/identity.yaml
+    visibility: private
+    keywords:
+      - canon-meta
+      - uniqueness
+      - core-assembly
+    blocks:
+      - CANON_META
+      - CANON_UNIQUENESS
+      - meta
+      - core
 
-    - id: architecture
-      path: layers/architecture.yaml
-      visibility: private
-      keywords: [ADR, decisions, principles, design, rationale, adapter, zone, template, overlay]
-      blocks:
-        - ARCHITECTURE_DECISIONS
-        - FRIDA_FOUNDATION_PRINCIPLES
+  - id: architecture
+    path: contract/layers/architecture.yaml
+    visibility: private
+    keywords:
+      - adr
+      - principles
+      - schema-support
+    blocks:
+      - FRIDA_SCHEMA_SUPPORT
+      - FRIDA_ARCHITECTURE_DECISIONS
+      - FRIDA_FOUNDATION_PRINCIPLES
 
-    - id: infrastructure
-      path: layers/infrastructure.yaml
-      visibility: mixed
-      keywords: [paths, config, zones, routing, directory, normalization, runtime, reporting, visual]
-      blocks:
-        - PATHS
-        - PATH_NORMALIZATION
-        - FRIDA_CONFIG
-        - FRIDA_RUNTIME_CONFIG
-        - ZONES
+  - id: infrastructure
+    path: contract/layers/infrastructure.yaml
+    visibility: mixed
+    keywords:
+      - paths
+      - config
+      - zones
+      - assembly
+      - refs
+      - routing
+    blocks:
+      - FRIDA_CONFIG_SPEC
+      - FRIDA_ASSEMBLY_PROTOCOL
+      - FRIDA_REFS
+      - PATHS
+      - FRIDA_CONFIG
+      - FRIDA_RUNTIME_CONFIG
+      - ZONES
 
-    - id: agent-framework
-      path: layers/agent-framework.yaml
-      visibility: mixed
-      keywords: [agent, routing, profiles, invariants, guards, execution, enforcement, session, lifecycle, security, permissions]
-      blocks:
-        - ROUTING_POLICY
-        - TASK_PROFILES
-        - INVARIANTS
-        - FRIDA_GUARDS_BASELINE
-        - FRIDA_EXECUTION_PROTOCOL
-        - FRIDA_ENFORCEMENT_TYPES
-        - AGENT_SESSION_CONTRACT
+  - id: agent-framework
+    path: contract/layers/agent-framework.yaml
+    visibility: private
+    keywords:
+      - profiles
+      - enforcement
+      - lifecycle
+    blocks:
+      - FRIDA_TASK_PROFILES
+      - FRIDA_ENFORCEMENT
+      - FRIDA_AGENT_LIFECYCLE
+      - FRIDA_ENFORCEMENT_TYPES
+      - FRIDA_VALIDATION_RULES
 
-    - id: reporting
-      path: layers/reporting.yaml
-      visibility: private
-      keywords: [report, validation, session-report, access-policy, consistency, verification]
-      blocks:
-        - REPORTING_CONTRACT
-        - REPORTING_ACCESS_POLICY
-        - FRIDA_VALIDATION_BASELINE
-        - FRIDA_RUN_REPORTING
+  - id: reporting
+    path: contract/layers/reporting.yaml
+    visibility: private
+    keywords:
+      - reporting
+      - validation
+    blocks:
+      - FRIDA_REPORTING
+      - FRIDA_VALIDATION_CHECKLIST
 
-    - id: templates-cli
-      path: layers/templates-cli.yaml
-      visibility: public
-      keywords: [templates, CLI, commands, hash, integrity, adapters, extensions, build, scaffold]
-      blocks:
-        - TEMPLATE_INTEGRITY_CONTRACT
-        - CLI_CONTRACT
-        - INTEGRATION_RULES
+  - id: cli
+    path: contract/layers/cli.yaml
+    visibility: public
+    keywords:
+      - cli
+      - integrity
+      - integration
+    blocks:
+      - FRIDA_TEMPLATE_INTEGRITY
+      - FRIDA_CLI
 
-    - id: visualization
-      path: layers/visualization.yaml
-      visibility: public
-      keywords: [visual, overlay, LOD, edges, nodes, graph, determinism, bootstrap, visualizer]
-      blocks:
-        - VISUAL_CONTRACT
-        - VISUALIZER_PRINCIPLES
-        - VISUALIZER_BOOTSTRAP_CONTRACT
+  - id: buildtime
+    path: contract/layers/buildtime.yaml
+    visibility: public
+    keywords:
+      - buildtime
+      - generator
+      - mapper
+      - scaffold
+    blocks:
+      - FRIDA_GENERATOR
+      - FRIDA_MAPPER_MODEL
+      - FRIDA_SCAFFOLD
 
-    - id: management
-      path: layers/management.yaml
-      visibility: mixed
-      keywords: [management, translator, scaffold, update, repair, audit, intent, code-to-contract]
-      blocks:
-        - CONTRACT_MANAGEMENT_INTERFACE
-        - CONTRACT_TRANSLATOR_INTERFACES
-        - SCAFFOLD_CONTRACT
+  - id: visualization
+    path: contract/layers/visualization.yaml
+    visibility: public
+    keywords:
+      - visual
+      - overlay
+      - lod
+    blocks:
+      - FRIDA_VISUAL
 
-    - id: migration
-      path: layers/migration.yaml
-      visibility: private
-      keywords: [migration, legacy, deprecated, ledger, interpretation, transition, compatibility]
-      blocks:
-        - CANON_INTERPRETATION
-        - MIGRATION_TRANSITION_BLOCK
-        - MIGRATION_LEDGER
+  - id: management
+    path: contract/layers/management.yaml
+    visibility: mixed
+    keywords:
+      - management
+      - translation
+      - guard-spec
+      - antitask
+    blocks:
+      - FRIDA_GUARD_SPEC
+      - FRIDA_INVARIANT_SPEC
+      - FRIDA_ANTITASK_SPEC
+      - FRIDA_INTERFACE_VERIFY
+      - FRIDA_INTERFACE_UPDATE_SPEC
+      - FRIDA_INTERFACE_UPDATE_CODE
+      - FRIDA_INTERFACE_TASKSET

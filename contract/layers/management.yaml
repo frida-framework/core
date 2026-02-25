@@ -1,10 +1,179 @@
 # ─── LAYER 8: MANAGEMENT & TRANSLATION ───────────────────────────────────────
+# Purpose: Interfaces for interacting with the contract — how to read, verify,
+#          and change it. Specs, guards, antitasks, update/verify/taskset protocols.
 
-CONTRACT_MANAGEMENT_INTERFACE:
+FRIDA_GUARD_SPEC:
+  _visibility: private
+  id: frida-guard-spec
+  version: 1.0.0
+  guard_format:
+    required_fields:
+      - id
+      - trigger
+      - action
+      - error_code
+    optional_fields:
+      - text
+      - scope
+  actions:
+    - id: HALT
+    - id: WARN
+  triggers:
+    - id: schema_version_missing
+      text: "schema_version is absent."
+    - id: schema_version_not_supported
+      text: "schema_version differs from supported version."
+    - id: schema_version_mismatch
+      text: "schema_version mismatch across required indexes."
+    - id: unknown_top_level_key
+      text: "Top-level key not allowed by schema."
+    - id: duplicate_layer_id
+      text: "layers[].id duplicates within one index or merged plan."
+    - id: duplicate_layer_path
+      text: "layers[].path duplicates within one index or merged plan."
+    - id: invalid_layer_path
+      text: "layers[].path violates path rules."
+    - id: missing_layer_exports
+      text: "layers[].exports missing."
+    - id: duplicate_export_id
+      text: "exports[].id duplicates across merged exports registry."
+    - id: missing_config_file
+      text: "configFile field is missing."
+    - id: sources_missing
+      text: "CONFIG.sources missing or empty."
+    - id: core_missing
+      text: "No source with id=core."
+    - id: app_missing
+      text: "No source with id=app."
+    - id: duplicate_source_id
+      text: "CONFIG.sources[].id duplicates."
+    - id: duplicate_source_index
+      text: "CONFIG.sources[].index duplicates."
+    - id: invalid_source_index_path
+      text: "CONFIG.sources[].index violates path rules."
+    - id: ref_value_not_string
+      text: "Ref/Refs value is not a string id."
+    - id: ref_target_not_found
+      text: "Ref/Refs target id not found in exports registry."
+    - id: ref_target_ambiguous
+      text: "Ref/Refs resolves to more than one export id."
+    - id: id_contains_profanity
+      text: "id violates neutral naming policy."
+    - id: version_not_semver
+      text: "version is not semver (MAJOR.MINOR.PATCH)."
+
+FRIDA_INVARIANT_SPEC:
+  _visibility: private
+  id: frida-invariant-spec
+  version: 1.0.0
+  invariant_format:
+    required_fields:
+      - id
+      - text
+    optional_fields:
+      - scope
+      - applies_to
+
+FRIDA_ANTITASK_SPEC:
+  _visibility: private
+  id: frida-antitask-spec
+  version: 1.0.0
+  antitask_term: >-
+    An antitask is any forbidden or disallowed action/pattern that MUST
+    be stopped or redirected.
+  antitask_format:
+    required_fields:
+      - id
+      - pattern
+      - reaction
+    optional_fields:
+      - text
+      - scope
+      - redirect_to
+      - source
+  reactions:
+    - id: HALT
+    - id: REDIRECT
+    - id: WARN
+  sources:
+    - id: canonical_catalog
+      source_ref: "FRIDA_ENFORCEMENT.antitasks"
+    - id: execution_protocol_forbidden_actions
+      source_ref: "FRIDA_AGENT_LIFECYCLE.forbidden_actions_ref"
+    - id: enforcement_guards
+      source_ref: "FRIDA_ENFORCEMENT.guards"
+  antitasks:
+    - id: ANTITASK_edit_canon_files_without_architect_role
+      pattern: "Edit canon files without architect role"
+      reaction: HALT
+    - id: ANTITASK_write_outside_zone_boundaries
+      pattern: "Write outside zone boundaries"
+      reaction: HALT
+    - id: ANTITASK_skip_verification_phase
+      pattern: "Skip verification phase"
+      reaction: HALT
+    - id: ANTITASK_modify_generated_artifacts
+      pattern: "Modify generated artifacts"
+      reaction: REDIRECT
+      redirect_to: "Regenerate via frida-core gen"
+  report_proof:
+    required: true
+    path: "verification.antitask"
+    required_fields:
+      - status
+      - checked_at
+      - summary
+    allowed_status:
+      - PASS
+      - FAIL
+      - SKIP
+
+FRIDA_INTERFACE_VERIFY:
   _visibility: public
-  status: ACTIVE
-  schema_version: "1.0"
+  id: frida-interface-verify
+  version: 1.0.0
+  purpose: "Validate canon against schema, check ref consistency, report issues."
   operations:
+    audit:
+      description: "Validate canon against schema and report issues."
+      protocol: "frida-core migration-report"
+    schema_check:
+      description: "Validate assembled canon against frida-canon.schema.json."
+    ref_check:
+      description: "Resolve all Ref/Refs and report broken references."
+    generate:
+      description: "Run full generation pipeline."
+      protocol: "frida-core gen"
+    visual_check:
+      description: "Check visual overlay freshness."
+      protocol: "frida-core visual check"
+
+FRIDA_INTERFACE_UPDATE_SPEC:
+  _visibility: public
+  id: frida-interface-update-spec
+  version: 1.0.0
+  purpose: "Extend or modify contract based on specification / task description."
+  input:
+    format: natural_language
+    context:
+      - current_canon
+      - target_block
+      - schema_ref
+  pipeline:
+    - step: parse_intent
+      action: "Extract entities, actions, and constraints from user text."
+    - step: map_to_schema
+      action: "Map extracted entities to canon block schemas."
+    - step: generate_draft
+      action: "Produce draft YAML block conforming to schema."
+    - step: validate
+      action: "Validate draft against frida-canon.schema.json."
+    - step: present_diff
+      action: "Show visual diff (green/red nodes) on overlay."
+  output:
+    format: yaml
+    requires_approval: true
+  protocols:
     update:
       description: "Apply changes to canon via structured patch."
       protocol: "AGENT-canon-update"
@@ -13,101 +182,72 @@ CONTRACT_MANAGEMENT_INTERFACE:
       description: "Fix canon inconsistencies (broken refs, missing blocks)."
       protocol: "AGENT-canon-repair"
       requires_role: ARCHITECT_AGENT
-    audit:
-      description: "Validate canon against schema and report issues."
-      protocol: "frida-core migration-report"
-      requires_role: any
-    generate:
-      description: "Run full generation pipeline."
-      protocol: "frida-core gen"
-      requires_role: any
-    visualize:
-      description: "Build or check visual overlay."
-      protocol: "frida-core visualize [--check]"
-      requires_role: any
 
-CONTRACT_TRANSLATOR_INTERFACES:
-  _visibility: private
-  status: ACTIVE
-  schema_version: "1.0"
-  interfaces:
-    intent_to_contract:
-      description: "Translate user intent (natural language) into canon YAML blocks."
-      input:
-        format: natural_language
-        context:
-          - current_canon
-          - target_block
-          - schema_ref
-      pipeline:
-        - step: parse_intent
-          action: "Extract entities, actions, and constraints from user text."
-        - step: map_to_schema
-          action: "Map extracted entities to canon block schemas."
-        - step: generate_draft
-          action: "Produce draft YAML block conforming to schema."
-        - step: validate
-          action: "Validate draft against frida-canon.schema.json."
-        - step: present_diff
-          action: "Show visual diff (green/red nodes) on overlay."
-      output:
-        format: yaml
-        requires_approval: true
-    code_to_contract:
-      description: "Extract canon specification from existing codebase."
-      input:
-        format: source_code
-        supported_languages:
-          - TypeScript
-          - JavaScript
-          - HTML
-          - CSS
-      pipeline:
-        - step: analyze_structure
-          action: "Identify components, routes, data models, and API calls."
-        - step: extract_entities
-          action: "Map code structures to canon block types (UI_STRUCTURE, RESOURCES, DATABASE_SCHEMA)."
-        - step: generate_draft
-          action: "Produce draft app-canon YAML from extracted entities."
-        - step: validate
-          action: "Validate draft against app-canon schema."
-        - step: reconcile
-          action: "Merge with existing canon if present, flagging conflicts."
-      output:
-        format: yaml
-        requires_approval: true
-      use_cases:
-        - "Onboard existing project to Frida."
-        - "Background consistency loop: re-extract canon from code, diff against declared canon."
-
-SCAFFOLD_CONTRACT:
+FRIDA_INTERFACE_UPDATE_CODE:
   _visibility: public
-  status: ACTIVE
-  purpose: "Deploy a base Frida-managed application with visualizer and canon."
-  command: "frida-core scaffold"
-  deliverables:
-    base_app:
-      description: "Minimal application skeleton (index.html, main entry, styles)."
-      target_dir_flag: "--target"
-    visualizer_component:
-      description: "Canon visualizer component mounted in base app."
-      source: "@hanszel/core/visualizer"
-      mount_mechanism: "Mapper mounts component into app slot."
-    app_canon:
-      description: "Initial app-canon YAML describing the deployed application."
-      template: "scaffold/app-canon.template.yaml"
-      version_policy: ahead
-      note: "Deployed canon describes the next iteration, enabling agent-driven completion."
-    agents_md:
-      description: "Bootloader AGENTS.md at repository root."
-      template: "templates/frida/bootloader.hbs"
-    frida_internal:
-      description: ".frida/ directory structure (profiles, job-reports, config)."
-  recovery:
-    full: "frida-core scaffold --target <dir>"
-    component: "frida-core scaffold --component <name>"
-    behavior: "Idempotent — re-run detects existing components and only restores missing ones."
-  ahead_version_policy:
-    rule: "Scaffold deploys canon that describes features beyond current implementation."
-    purpose: "Agent can read canon and build the remaining features."
-    example: "Canon describes CRUD operations; scaffold only deploys read-only skeleton."
+  id: frida-interface-update-code
+  version: 1.0.0
+  purpose: "Extract and extend canon specification from existing codebase."
+  input:
+    format: source_code
+    supported_languages:
+      - TypeScript
+      - JavaScript
+      - HTML
+      - CSS
+  pipeline:
+    - step: analyze_structure
+      action: "Identify components, routes, data models, and API calls."
+    - step: extract_entities
+      action: "Map code structures to canon block types (UI_STRUCTURE, RESOURCES, DATABASE_SCHEMA)."
+    - step: generate_draft
+      action: "Produce draft app-canon YAML from extracted entities."
+    - step: validate
+      action: "Validate draft against app-canon schema."
+    - step: reconcile
+      action: "Merge with existing canon if present, flagging conflicts."
+  output:
+    format: yaml
+    requires_approval: true
+  use_cases:
+    - "Onboard existing project to Frida."
+    - "Background consistency loop: re-extract canon from code, diff against declared canon."
+
+FRIDA_INTERFACE_TASKSET:
+  _visibility: public
+  id: frida-interface-taskset
+  version: 1.0.0
+  purpose: "Prepare self-contained task packs from contract for agent execution."
+  task_pack_definition:
+    term: >-
+      A Task Pack is a self-contained instruction set for an agent-developer.
+      It transfers canon requirements into an actionable scope without
+      requiring the agent to interpret the wiki or canon directly.
+    principle: "CANON → ANTITASK → DEVELOPMENT"
+    required_fields:
+      - action: "What to do — concrete, unambiguous."
+      - files: "Paths or zones affected."
+      - profile_id: "Id from FRIDA_TASK_PROFILES."
+      - canon_requirements: "Guards/invariants/terms embedded explicitly."
+      - verification_command: "Usually 'npm run verify', may differ by zone."
+    optional_fields:
+      - specific_invariants: "Task-specific invariant checks."
+    forbidden: "Referencing wiki or canon by link instead of embedding requirements."
+  readiness_checklist:
+    canon_ready:
+      - "Feature described in the appropriate contract:* block."
+      - "All terms used in the task defined in contract:GLOSSARY."
+    frida_ready:
+      - "Zone for target files exists in ZONES."
+      - "Antitask generated after last canon update (npm run frida:gen)."
+      - "Profile covers target paths via edit_allowGlobRefs."
+      - "Profile invariants are current for the task."
+    scope_check:
+      - "Task does not add functionality beyond what is described in canon."
+      - "If new functionality needed — update canon first."
+  halt_conditions:
+    - "Canon does not describe the feature being tasked."
+    - "Zone or profile does not cover target files."
+    - "Antitask not regenerated after last canon update."
+    - "Task requires agent to write outside edit_allowGlobRefs."
+

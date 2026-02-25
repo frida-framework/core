@@ -26,10 +26,10 @@ The canon is split into 9 layers. Each layer has `keywords` for contextual looku
 | `infrastructure` | mixed | paths, config, zones, routing, normalization |
 | `agent-framework` | mixed | agent, routing, profiles, invariants, guards, session |
 | `reporting` | private | report, validation, consistency, verification |
-| `templates-cli` | public | templates, CLI, commands, hash, build, scaffold |
+| `cli` | public | CLI, commands, hash, integrity, integration |
+| `buildtime` | public | generator, mapper, scaffold |
 | `visualization` | public | visual, overlay, LOD, edges, graph, determinism |
-| `management` | mixed | management, translator, scaffold, audit |
-| `migration` | private | migration, legacy, deprecated, ledger |
+| `management` | mixed | guard-spec, antitask, verify, update, taskset |
 
 The monolith is a **build artifact** — run `frida-core build` to produce `dist/canon.assembled.yaml`.
 

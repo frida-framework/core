@@ -1,7 +1,28 @@
 # ─── LAYER 2: ARCHITECTURE ───────────────────────────────────────────────────
 
-ARCHITECTURE_DECISIONS:
+FRIDA_SCHEMA_SUPPORT:
   _visibility: private
+  id: frida-schema-support
+  version: 1.0.0
+  schema_version:
+    supported: 1.0.0
+  path_rules:
+    - id: no_leading_slash
+      text: "path MUST NOT start with '/'."
+    - id: no_backslash
+      text: "path MUST NOT contain '\\'."
+    - id: no_parent_traversal
+      text: "path MUST NOT contain '..'."
+  guards:
+    - id: invalid_layer_path
+      trigger: invalid_layer_path
+      action: HALT
+      error_code: INVALID_LAYER_PATH
+
+FRIDA_ARCHITECTURE_DECISIONS:
+  _visibility: private
+  id: frida-architecture-decisions
+  version: 1.0.0
   decisions:
     - id: CORE-ADR-001
       title: Schema-first canon is the primary normalization axis
@@ -25,18 +46,13 @@ ARCHITECTURE_DECISIONS:
       evidence:
         - src/selector.ts
 
-    - id: CORE-ADR-003
-      title: Separation of core vs visual generation
+    - id: CORE-ADR-004
+      title: Extension via adapter pattern
       status: ACCEPTED
       decision:
-        - "Core generation produces profiles, AGENTS.md, docs, and config."
-        - "Visual generation produces overlay JSON from canon structure."
-        - "Visual artifacts are derived overlays, never source-of-truth."
-      evidence:
-        - src/runtime.ts
-        - src/visual.ts
-
-
+        - "App-specific generation registers adapters implementing FridaAdapter."
+        - "Adapters contribute selectors, generators, and guards."
+        - "Core runtime orchestrates adapter execution via registry."
 
     - id: CORE-ADR-005
       title: Zone-driven routing replaces heuristic matching
@@ -113,7 +129,8 @@ ARCHITECTURE_DECISIONS:
 
 FRIDA_FOUNDATION_PRINCIPLES:
   _visibility: private
-  status: ACTIVE
+  id: frida-frida-foundation-principles
+  version: 1.0.0
   development_sequence:
     order:
       - CONTRACT

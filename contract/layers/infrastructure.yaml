@@ -1,7 +1,155 @@
 # ─── LAYER 3: INFRASTRUCTURE ─────────────────────────────────────────────────
 
+FRIDA_CONFIG_SPEC:
+  _visibility: private
+  id: frida-config-spec
+  version: 1.0.0
+  config_shape:
+    root_key: CONFIG
+    required_fields:
+      - sources
+  source_item_shape:
+    required_fields:
+      - id
+      - index
+    optional_fields:
+      - text
+  invariants:
+    - id: sources_not_empty
+      text: "CONFIG.sources MUST be non-empty."
+    - id: core_present_once
+      text: "CONFIG.sources MUST contain exactly one item with id=core."
+    - id: app_present_once
+      text: "CONFIG.sources MUST contain exactly one item with id=app."
+    - id: source_ids_unique
+      text: "All CONFIG.sources[].id MUST be unique."
+    - id: source_indexes_unique
+      text: "All CONFIG.sources[].index MUST be unique."
+    - id: source_index_path_valid
+      text: "All CONFIG.sources[].index MUST pass FRIDA_SCHEMA_SUPPORT.path_rules."
+  guards:
+    - id: sources_missing
+      trigger: sources_missing
+      action: HALT
+      error_code: SOURCES_MISSING
+    - id: core_missing
+      trigger: core_missing
+      action: HALT
+      error_code: CORE_MISSING
+    - id: app_missing
+      trigger: app_missing
+      action: HALT
+      error_code: APP_MISSING
+    - id: duplicate_source_id
+      trigger: duplicate_source_id
+      action: HALT
+      error_code: DUPLICATE_SOURCE_ID
+    - id: duplicate_source_index
+      trigger: duplicate_source_index
+      action: HALT
+      error_code: DUPLICATE_SOURCE_INDEX
+    - id: invalid_source_index_path
+      trigger: invalid_source_index_path
+      action: HALT
+      error_code: INVALID_SOURCE_INDEX_PATH
+
+FRIDA_ASSEMBLY_PROTOCOL:
+  _visibility: private
+  id: frida-assembly-policy
+  version: 1.0.0
+  inputs:
+    - id: sources
+      text: "Use CONFIG.sources as the only input for assembly."
+  outputs:
+    - id: exports_registry
+      text: "Build a merged exports registry: export.id -> {key, path, layer_id, source_id}."
+  steps:
+    - id: load_indexes
+      text: "Load each CONFIG.sources[].index in order."
+    - id: validate_indexes
+      text: "Validate each index document: schema_version, layers[], guards."
+    - id: merge_layers
+      text: "Concatenate layers[] from all indexes in source order."
+    - id: validate_layers
+      text: "Validate merged layers: ids unique, paths unique, path rules."
+    - id: build_exports_registry
+      text: "For each merged layer, read layer.exports[] and merge into exports_registry."
+    - id: validate_exports_registry
+      text: "Validate exports_registry uniqueness: export.id."
+  determinism:
+    - id: stable_order
+      text: "Order is CONFIG.sources[] then index.layers[] then layer.exports[]. No filesystem discovery."
+  guards:
+    - id: schema_version_missing
+      trigger: schema_version_missing
+      action: HALT
+      error_code: SCHEMA_VERSION_MISSING
+    - id: schema_version_not_supported
+      trigger: schema_version_not_supported
+      action: HALT
+      error_code: SCHEMA_VERSION_NOT_SUPPORTED
+    - id: schema_version_mismatch
+      trigger: schema_version_mismatch
+      action: HALT
+      error_code: SCHEMA_VERSION_MISMATCH
+    - id: duplicate_layer_id
+      trigger: duplicate_layer_id
+      action: HALT
+      error_code: DUPLICATE_LAYER_ID
+    - id: duplicate_layer_path
+      trigger: duplicate_layer_path
+      action: HALT
+      error_code: DUPLICATE_LAYER_PATH
+    - id: invalid_layer_path
+      trigger: invalid_layer_path
+      action: HALT
+      error_code: INVALID_LAYER_PATH
+    - id: missing_layer_exports
+      trigger: missing_layer_exports
+      action: HALT
+      error_code: MISSING_LAYER_EXPORTS
+    - id: duplicate_export_id
+      trigger: duplicate_export_id
+      action: HALT
+      error_code: DUPLICATE_EXPORT_ID
+
+FRIDA_REFS:
+  _visibility: private
+  id: frida-refs
+  version: 1.0.0
+  suffix:
+    single: Ref
+    list: Refs
+  resolution:
+    steps:
+      - id: detect
+        text: "Any key ending with Ref/Refs is a reference field."
+      - id: normalize
+        text: "Ref value MUST normalize to string id; no inference."
+      - id: locate
+        text: "Locate target by id in merged exports registry built from indexes."
+      - id: load
+        text: "Load only the target layer file and read the exported block key."
+      - id: bind
+        text: "Bind reference to exactly one target block."
+  guards:
+    - id: ref_value_not_string
+      trigger: ref_value_not_string
+      action: HALT
+      error_code: REF_VALUE_NOT_STRING
+    - id: ref_target_not_found
+      trigger: ref_target_not_found
+      action: HALT
+      error_code: REF_TARGET_NOT_FOUND
+    - id: ref_target_ambiguous
+      trigger: ref_target_ambiguous
+      action: HALT
+      error_code: REF_TARGET_AMBIGUOUS
+
 PATHS:
   _visibility: public
+  id: frida-paths
+  version: 1.0.0
   contract:
     coreCanonFile: "contract/core.canon.yaml"
   agents:
@@ -29,40 +177,39 @@ PATHS:
   scopes:
     templatesAll: "templates/**"
     nonTemplatesAll: "**"
-
-PATH_NORMALIZATION:
-  _visibility: public
-  status: ACTIVE
-  rules:
-    - id: posix_format
-      text: "All paths in canon MUST use POSIX separators (forward slash)."
-    - id: no_leading_slash
-      text: "Paths are relative to repository root; no leading slash."
-    - id: glob_wildcards
-      text: "Glob wildcards use POSIX grammar only. No regex."
-      grammar: "POSIX glob"
-      supported_patterns:
-        - "**"
-        - "*"
-        - "?"
-    - id: ref_dominance
-      text: "If both literal path and Ref-suffixed key exist, Ref takes precedence."
-    - id: typed_suffix_mapping
-      text: "Keys MUST use typed suffixes to indicate path semantics."
-      suffixes:
-        Dir: "directory path"
-        File: "exact file path"
-        All: "glob pattern"
-        Ref: "reference to PATHS block"
-    - id: status_model
-      text: "PATH entries MAY carry status. Default is ACTIVE."
-      statuses:
-        - ACTIVE
-        - DEPRECATED
-        - PLANNED
+  normalization:
+    rules:
+      - id: posix_format
+        text: "All paths in canon MUST use POSIX separators (forward slash)."
+      - id: no_leading_slash
+        text: "Paths are relative to repository root; no leading slash."
+      - id: glob_wildcards
+        text: "Glob wildcards use POSIX grammar only. No regex."
+        grammar: "POSIX glob"
+        supported_patterns:
+          - "**"
+          - "*"
+          - "?"
+      - id: ref_dominance
+        text: "If both literal path and Ref-suffixed key exist, Ref takes precedence."
+      - id: typed_suffix_mapping
+        text: "Keys MUST use typed suffixes to indicate path semantics."
+        suffixes:
+          Dir: "directory path"
+          File: "exact file path"
+          All: "glob pattern"
+          Ref: "reference to PATHS block"
+      - id: status_model
+        text: "PATH entries MAY carry status. Default is ACTIVE."
+        statuses:
+          - ACTIVE
+          - DEPRECATED
+          - PLANNED
 
 FRIDA_CONFIG:
   _visibility: private
+  id: frida-frida-config
+  version: 1.0.0
   paths:
     canon_inputFileRef: "PATHS.contract.coreCanonFile"
     agents_bootloaderFileRef: "PATHS.agents.bootloaderFile"
@@ -127,20 +274,22 @@ FRIDA_CONFIG:
 
 FRIDA_RUNTIME_CONFIG:
   _visibility: private
+  id: frida-frida-runtime-config
+  version: 1.0.0
   file: ".frida/config.yaml"
   source_of_truth: canon
   generated_from: "FRIDA_CONFIG.reporting"
 
 ZONES:
   _visibility: public
+  id: frida-zones
+  version: 1.0.0
   templates:
-    status: ACTIVE
     hard_zone: true
     pathGlobRef: "PATHS.scopes.templatesAll"
     agentsPath: "templates"
     purpose: "Template surface and template contract controls."
   non_templates:
-    status: ACTIVE
     hard_zone: false
     pathGlobRef: "PATHS.scopes.nonTemplatesAll"
     exclude_path_prefixes:
@@ -167,3 +316,20 @@ ZONES:
       - "Verification commands MUST be one-shot and non-interactive."
       - "Verification commands MUST be deterministic."
       - "Verification exit code 0 = success, non-zero = failure."
+  routing:
+    stage: "wave-2-stable"
+    classes:
+      - id: templates
+        match:
+          pathPrefix: "templates/"
+        zone: templates
+        agentsRef: "ZONES.templates.agentsPath"
+      - id: non_templates
+        match:
+          default: true
+        zone: non_templates
+        agentsRef: "ZONES.non_templates.agentsPath"
+    rules:
+      - "Profile routing uses zone-driven AGENTS.md lookup."
+      - "No profile match MUST halt execution."
+      - "Routing state is not persisted between sessions."

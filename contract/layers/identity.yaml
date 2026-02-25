@@ -2,21 +2,22 @@
 
 CANON_META:
   _visibility: private
-  id: FRIDA_CORE_CANON
+  id: frida-canon-meta
   version: 2.0.0
-  status: ACTIVE
   owner: frida-core
-  updated_at: "2026-02-18"
+  updated_at: "2026-02-19"
   scope:
     repository: hanszel/frida
     package: "@hanszel/core"
     purpose: >-
       Schema-driven generation engine, zone enforcement, visual overlay extraction,
       agent session control, and project scaffold for Frida-managed repositories.
+  source_ref: FRIDA_CORE_CANON
 
-CANON_UNIQUENESS_POLICY:
+CANON_UNIQUENESS:
   _visibility: private
-  status: ACTIVE
+  id: frida-canon-uniqueness-policy
+  version: 1.0.0
   first_rule: true
   rule: "Any canon entity MUST be declared exactly once."
   control:
@@ -31,44 +32,45 @@ CANON_UNIQUENESS_POLICY:
     note: "Blocks may reference other blocks via source_ref without duplication."
 
 meta:
+  id: frida-meta
+  version: 1.0.0
   schemaVersion: "2.0"
   mode: schema
   canonArtifactRef: "PATHS.contract.coreCanonFile"
 
 core:
+  id: frida-assembly-core
+  version: 1.0.0
   canonicalSourceBlocks:
     - CANON_META
-    - CANON_UNIQUENESS_POLICY
-    - ARCHITECTURE_DECISIONS
+    - CANON_UNIQUENESS
+    - FRIDA_SCHEMA_SUPPORT
+    - FRIDA_ARCHITECTURE_DECISIONS
     - FRIDA_FOUNDATION_PRINCIPLES
     - PATHS
-    - PATH_NORMALIZATION
+    - FRIDA_CONFIG_SPEC
+    - FRIDA_ASSEMBLY_PROTOCOL
+    - FRIDA_REFS
     - FRIDA_CONFIG
     - FRIDA_RUNTIME_CONFIG
     - ZONES
-    - ROUTING_POLICY
-    - TASK_PROFILES
-    - INVARIANTS
-    - FRIDA_GUARDS_BASELINE
-    - FRIDA_EXECUTION_PROTOCOL
+    - FRIDA_TASK_PROFILES
+    - FRIDA_ENFORCEMENT
+    - FRIDA_AGENT_LIFECYCLE
     - FRIDA_ENFORCEMENT_TYPES
-    - AGENT_SESSION_CONTRACT
-    - REPORTING_CONTRACT
-    - REPORTING_ACCESS_POLICY
-    - FRIDA_VALIDATION_BASELINE
-    - FRIDA_RUN_REPORTING
-    - TEMPLATE_INTEGRITY_CONTRACT
-    - CLI_CONTRACT
-    - INTEGRATION_RULES
-    - VISUAL_CONTRACT
-    - VISUALIZER_PRINCIPLES
-    - VISUALIZER_BOOTSTRAP_CONTRACT
-    - CONTRACT_MANAGEMENT_INTERFACE
-    - CONTRACT_TRANSLATOR_INTERFACES
-    - SCAFFOLD_CONTRACT
-    - CANON_INTERPRETATION
-    - MIGRATION_TRANSITION_BLOCK
-    - MIGRATION_LEDGER
+    - FRIDA_REPORTING
+    - FRIDA_VALIDATION_CHECKLIST
+    - FRIDA_TEMPLATE_INTEGRITY
+    - FRIDA_CLI
+    - FRIDA_VISUAL
+    - FRIDA_GUARD_SPEC
+    - FRIDA_INVARIANT_SPEC
+    - FRIDA_ANTITASK_SPEC
+    - FRIDA_INTERFACE_VERIFY
+    - FRIDA_INTERFACE_UPDATE_SPEC
+    - FRIDA_INTERFACE_UPDATE_CODE
+    - FRIDA_INTERFACE_TASKSET
+    - FRIDA_SCAFFOLD
   selectorGrammar: jsonpath-lite
   generatorPipelineContracts:
     - "schema-validate"

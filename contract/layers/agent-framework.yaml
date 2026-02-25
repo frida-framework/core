@@ -1,27 +1,9 @@
 # ─── LAYER 4: AGENT FRAMEWORK ────────────────────────────────────────────────
 
-ROUTING_POLICY:
+FRIDA_TASK_PROFILES:
   _visibility: private
-  status: ACTIVE
-  stage: "wave-2-stable"
-  classes:
-    - id: templates
-      match:
-        pathPrefix: "templates/"
-      zone: templates
-      agentsRef: "ZONES.templates.agentsPath"
-    - id: non_templates
-      match:
-        default: true
-      zone: non_templates
-      agentsRef: "ZONES.non_templates.agentsPath"
-  rules:
-    - "Profile routing uses zone-driven AGENTS.md lookup."
-    - "No profile match MUST halt execution."
-    - "Routing state is not persisted between sessions."
-
-TASK_PROFILES:
-  _visibility: private
+  id: frida-task-profiles
+  version: 1.0.0
   governance:
     role: ARCHITECT_AGENT
     keywords:
@@ -81,154 +63,259 @@ TASK_PROFILES:
       edit_forbid:
         - "**"
 
-INVARIANTS:
+FRIDA_ENFORCEMENT:
   _visibility: private
-  canon_entity_single_declaration:
-    id: canon_entity_single_declaration
-    text: "Any canon entity SHOULD be declared exactly once; duplicates emit warning."
-    scope: kernel
-  visual_overlay_only:
-    id: visual_overlay_only
-    text: "Visual artifacts are derived overlays and must not become source-of-truth canon state."
-    scope: kernel
-  visual_on_demand:
-    id: visual_on_demand
-    text: "Visual artifacts are refreshed only by explicit visual commands."
-    scope: kernel
-  visual_determinism:
-    id: visual_determinism
-    text: "Same canon input MUST produce identical visual overlay output."
-    scope: kernel
-  temp_dot_temp_only:
-    id: temp_dot_temp_only
-    text: "Temporary files MUST reside in .temp/ directories and never in working tree root."
-    scope: kernel
-  temp_ephemeral_session:
-    id: temp_ephemeral_session
-    text: "Temporary artifacts are ephemeral to a single session; no cross-session dependency allowed."
-    scope: kernel
-  error_explicit:
-    id: error_explicit
-    text: "Error conditions MUST be explicit. Silent failures are forbidden."
-    scope: kernel
-  no_scope_creep:
-    id: no_scope_creep
-    text: "Agent MUST NOT exceed the scope defined by its profile security permissions."
-    scope: kernel
-  canon_not_runtime:
-    id: canon_not_runtime
-    text: "Canon is a build-time/design-time artifact. Runtime state MUST NOT be stored in canon."
-    scope: kernel
-  agent_session_exclusive:
-    id: agent_session_exclusive
-    text: "Only one agent session token may be active per branch at any time."
-    scope: kernel
-  scaffold_idempotent:
-    id: scaffold_idempotent
-    text: "Scaffold command is idempotent. Re-running restores missing components without duplicating existing ones."
-    scope: kernel
-  zone_resolution_path_only:
-    id: zone_resolution_path_only
-    text: "Zone is resolved ONLY by path matching, never by profile keywords or heuristics."
-    scope: kernel
-  guard_chain_structural:
-    id: guard_chain_structural
-    text: "Guard chain enforcement verifies structural contract conformance, not runtime behavior."
-    scope: kernel
-  report_on_every_run:
-    id: report_on_every_run
-    text: "Every agent run MUST produce a job report, regardless of outcome."
-    scope: kernel
-  path_ref_dominance:
-    id: path_ref_dominance
-    text: "Ref-suffixed path keys dominate literal path values in case of conflict."
-    scope: kernel
-
-FRIDA_GUARDS_BASELINE:
-  _visibility: private
-  globalGuardRefs: []
-  guards:
+  id: frida-enforcement
+  version: 1.0.0
+  invariants:
+    - id: canon_entity_single_declaration
+      text: "Any canon entity SHOULD be declared exactly once; duplicates emit warning."
+      scope: kernel
+    - id: visual_overlay_only
+      text: "Visual artifacts are derived overlays and must not become source-of-truth canon state."
+      scope: kernel
+    - id: visual_on_demand
+      text: "Visual artifacts are refreshed only by explicit visual commands."
+      scope: kernel
+    - id: visual_determinism
+      text: "Same canon input MUST produce identical visual overlay output."
+      scope: kernel
+    - id: temp_dot_temp_only
+      text: "Temporary files MUST reside in .temp/ directories and never in working tree root."
+      scope: kernel
+    - id: temp_ephemeral_session
+      text: "Temporary artifacts are ephemeral to a single session; no cross-session dependency allowed."
+      scope: kernel
+    - id: error_explicit
+      text: "Error conditions MUST be explicit. Silent failures are forbidden."
+      scope: kernel
+    - id: no_scope_creep
+      text: "Agent MUST NOT exceed the scope defined by its profile security permissions."
+      scope: kernel
+    - id: canon_not_runtime
+      text: "Canon is a build-time/design-time artifact. Runtime state MUST NOT be stored in canon."
+      scope: kernel
+    - id: agent_session_exclusive
+      text: "Only one agent session token may be active per branch at any time."
+      scope: kernel
+    - id: scaffold_idempotent
+      text: "Scaffold command is idempotent. Re-running restores missing components without duplicating existing ones."
+      scope: kernel
+    - id: zone_resolution_path_only
+      text: "Zone is resolved ONLY by path matching, never by profile keywords or heuristics."
+      scope: kernel
+    - id: guard_chain_structural
+      text: "Guard chain enforcement verifies structural contract conformance, not runtime behavior."
+      scope: kernel
+    - id: report_on_every_run
+      text: "Every agent run MUST produce a job report, regardless of outcome."
+      scope: kernel
+    - id: path_ref_dominance
+      text: "Ref-suffixed path keys dominate literal path values in case of conflict."
+      scope: kernel
+    - id: schema_version_fixed
+      text: >-
+        All index documents MUST declare schema_version and it MUST equal
+        FRIDA_SCHEMA_SUPPORT.schema_version.supported.
+    - id: index_format_symmetric
+      text: >-
+        FRIDA_INDEX and APP_INDEX MUST use identical index format and the same
+        schema.index/schema.assembled paths.
+    - id: exports_are_authoritative
+      text: >-
+        Index layers[].exports MUST be the authoritative registry of defined blocks
+        (id+key+path).
+    - id: refs_resolve_via_exports
+      text: >-
+        Every Ref/Refs MUST resolve to exactly one exported id in the merged exports
+        registry.
+    - id: guard_format_uniform
+      text: "Every guards[] entry MUST conform to FRIDA_GUARD_SPEC.guard_format."
+    - id: invariant_format_uniform
+      text: "Every invariants[] entry MUST conform to FRIDA_INVARIANT_SPEC.invariant_format."
+    - id: ids_neutral
+      text: >-
+        Identifiers MUST be neutral snake_case and MUST NOT contain profanity or
+        jokes.
+    - id: no_legacy_id_fields
+      text: >-
+        Contract blocks MUST NOT contain legacy_id fields; use source_ref during
+        migration if needed.
+    - id: contract_uniformity
+      text: "Contract MUST be structured and uniform across blocks."
+    - id: rules_are_prominent
+      text: "Guards and invariants MUST be explicit and easy to extract."
+    - id: no_interface_spec
+      text: "UI/CLI interfaces are out of contract scope and may evolve independently."
+  policies:
     - id: GUARD_CANON_SCHEMA_FIRST
       kind: chain
       statement: "Canon processing must remain schema-first."
       enforcement: hard
-
     - id: GUARD_CANON_SOURCE_DECLARED
       kind: chain
       statement: "Canon source is limited to files declared in PATHS and canonicalSourceBlocks."
       enforcement: hard
-
     - id: GUARD_CANON_NOT_RUNTIME
       kind: ban
       statement: "Canon MUST NOT contain runtime state or mutable data."
       enforcement: hard
-
     - id: GUARD_ARTIFACT_NO_MANUAL_EDITS
       kind: nail
       statement: "Generated artifacts (.frida/profiles/, .frida/AGENTS.md, .frida/docs/) must not be manually edited."
       enforcement: warn
-
     - id: GUARD_WORKSPACE_TEMP_ONLY
       kind: ban
       statement: "Temporary files must reside in .temp/ directories."
       enforcement: hard
-
     - id: GUARD_FRIDA_INTERNAL_NO_AGENT
       kind: ban
       statement: "Agent MUST NOT directly modify .frida/internal/ contents."
       enforcement: hard
-
     - id: GUARD_SESSION_REPORT_REQUIRED
       kind: chain
       statement: "Every agent run MUST produce a job report in .frida/job-reports/."
       enforcement: warn
-
     - id: GUARD_VISUAL_DETERMINISM
       kind: drift
       statement: "Visual overlay generation MUST be deterministic."
       enforcement: hard
-
     - id: GUARD_ZONE_AGENTS_MD
       kind: chain
       statement: "Each zone MUST have a canonical AGENTS.md at its agentsPath."
       enforcement: warn
-
     - id: GUARD_TEMPLATE_INTEGRITY
       kind: nail
       statement: "Template hash manifest must validate; drift returns non-zero."
       enforcement: hard
-
     - id: GUARD_SCAFFOLD_IDEMPOTENT
       kind: chain
       statement: "Scaffold re-run must not duplicate existing components."
       enforcement: hard
-
     - id: GUARD_SESSION_EXCLUSIVE
       kind: session
       statement: "Only one active session token per branch."
       enforcement: hard
+    - id: GUARD_ANTITASK_VALIDATE_PHASE
+      kind: chain
+      statement: >-
+        VALIDATE_ANTITASK phase MUST run before EXECUTE. Run report MUST include
+        verification.antitask per FRIDA_ANTITASK_SPEC.report_proof.
+      enforcement: hard
+      spec_ref: FRIDA_ANTITASK_SPEC
+  triggers:
+    - id: schema_version_missing
+      trigger: schema_version_missing
+      action: HALT
+      error_code: SCHEMA_VERSION_MISSING
+    - id: schema_version_not_supported
+      trigger: schema_version_not_supported
+      action: HALT
+      error_code: SCHEMA_VERSION_NOT_SUPPORTED
+    - id: schema_version_mismatch
+      trigger: schema_version_mismatch
+      action: HALT
+      error_code: SCHEMA_VERSION_MISMATCH
+    - id: invalid_layer_path
+      trigger: invalid_layer_path
+      action: HALT
+      error_code: INVALID_LAYER_PATH
+    - id: duplicate_layer_id
+      trigger: duplicate_layer_id
+      action: HALT
+      error_code: DUPLICATE_LAYER_ID
+    - id: duplicate_layer_path
+      trigger: duplicate_layer_path
+      action: HALT
+      error_code: DUPLICATE_LAYER_PATH
+    - id: missing_layer_exports
+      trigger: missing_layer_exports
+      action: HALT
+      error_code: MISSING_LAYER_EXPORTS
+    - id: duplicate_export_id
+      trigger: duplicate_export_id
+      action: HALT
+      error_code: DUPLICATE_EXPORT_ID
+    - id: unknown_top_level_key
+      trigger: unknown_top_level_key
+      action: HALT
+      error_code: UNKNOWN_TOP_LEVEL_KEY
+    - id: ref_target_not_found
+      trigger: ref_target_not_found
+      action: HALT
+      error_code: REF_TARGET_NOT_FOUND
+    - id: ref_target_ambiguous
+      trigger: ref_target_ambiguous
+      action: HALT
+      error_code: REF_TARGET_AMBIGUOUS
+    - id: id_contains_profanity
+      trigger: id_contains_profanity
+      action: HALT
+      error_code: ID_CONTAINS_PROFANITY
+    - id: version_not_semver
+      trigger: version_not_semver
+      action: HALT
+      error_code: VERSION_NOT_SEMVER
+    - id: antitask_verification_missing
+      trigger: antitask_verification_missing
+      action: HALT
+      error_code: ANTITASK_VERIFICATION_MISSING
+  antitask_spec_ref: FRIDA_ANTITASK_SPEC
 
-FRIDA_EXECUTION_PROTOCOL:
+FRIDA_AGENT_LIFECYCLE:
   _visibility: private
-  status: ACTIVE
-  agent_lifecycle:
-    phases:
-      - id: ROUTE
-        action: "Resolve zone from working directory path. Load zone-specific AGENTS.md."
-      - id: LOAD_PROFILE
-        action: "Match task context to TASK_PROFILES. Load security permissions and invariants."
-      - id: VALIDATE_ANTITASK
-        action: "Verify that the task does not violate invariants or guards."
-      - id: EXECUTE
-        action: "Execute within permission boundaries (read/edit/create/forbid paths)."
-      - id: VERIFY
-        action: "Run deterministic verification commands. Check zone-scoped changes."
-      - id: REPORT
-        action: "Emit job report for SUCCESS or HALT."
-    invariants:
-      - "no_profile_match MUST HALT"
-      - "Canonical zone AGENTS.md path resolution is zone-driven"
-      - "No writes outside explicit edit/create permissions"
+  id: frida-agent-lifecycle
+  version: 1.0.0
+  phases:
+    - id: ROUTE
+      action: "Resolve zone from working directory path. Load zone-specific AGENTS.md."
+    - id: LOAD_PROFILE
+      action: "Match task context to FRIDA_TASK_PROFILES. Load security permissions and invariants."
+    - id: VALIDATE_ANTITASK
+      action: "Verify that the task does not violate invariants or guards."
+    - id: EXECUTE
+      action: "Execute within permission boundaries (read/edit/create/forbid paths)."
+    - id: VERIFY
+      action: "Run deterministic verification commands. Check zone-scoped changes."
+    - id: REPORT
+      action: "Emit job report for SUCCESS or HALT."
+  phase_invariants:
+    - "no_profile_match MUST HALT"
+    - "Canonical zone AGENTS.md path resolution is zone-driven"
+    - "No writes outside explicit edit/create permissions"
+  session:
+    purpose: "Enforce synchronous sequential development through exclusive agent access."
+    token_mechanism:
+      acquire:
+        precondition: "Clean branch, no uncommitted changes."
+        action: "Create session token file at .frida/internal/session.lock"
+        content:
+          - agent_id
+          - branch
+          - acquired_at
+          - zone_id
+          - timeout_minutes
+      release:
+        action: "Remove session token file."
+        final_action: "Create PR or explicit release."
+      timeout:
+        default_minutes: 30
+        recovery: "If token not released within timeout, trigger routing regeneration and release."
+    zone_scope_hard_check:
+      enabled: true
+      action: "After execution, verify that all file changes are within the target zone pathGlob."
+      on_violation: "Rollback changes outside target zone. Emit HALT report."
+    lifecycle:
+      - step: acquire_token
+        precondition: "No active token on branch."
+      - step: execute_within_zone
+        constraint: "All mutations scoped to zone pathGlob."
+      - step: verify
+        action: "Run zone-specific verification."
+      - step: create_pr
+        action: "Open PR with session report attached."
+      - step: release_token
+        action: "Remove session lock."
   interaction_modes:
     architect:
       description: "Full access to canon management, visual loop, and contract translation."
@@ -243,20 +330,13 @@ FRIDA_EXECUTION_PROTOCOL:
         - execute_within_zone
         - verify
         - report
-  forbidden_actions:
-    - pattern: "Edit canon files without architect role"
-      reaction: HALT
-    - pattern: "Write outside zone boundaries"
-      reaction: HALT
-    - pattern: "Skip verification phase"
-      reaction: HALT
-    - pattern: "Modify generated artifacts"
-      reaction: REDIRECT
-      redirect_to: "Regenerate via frida-core gen"
+  forbidden_actions_ref: FRIDA_ANTITASK_SPEC.antitasks
+  antitask_spec_ref: FRIDA_ANTITASK_SPEC
 
 FRIDA_ENFORCEMENT_TYPES:
   _visibility: public
-  version: "2.0"
+  id: frida-enforcement-types
+  version: 2.0.0
   types:
     nail: "Tamper-evidence via signatures and hash manifests."
     chain: "Structural contract conformance verification."
@@ -264,38 +344,36 @@ FRIDA_ENFORCEMENT_TYPES:
     drift: "Generated output freshness and determinism drift checks."
     session: "Token-based exclusive access enforcement."
 
-AGENT_SESSION_CONTRACT:
+FRIDA_VALIDATION_RULES:
   _visibility: private
-  status: ACTIVE
-  purpose: "Enforce synchronous sequential development through exclusive agent access."
-  token_mechanism:
-    acquire:
-      precondition: "Clean branch, no uncommitted changes."
-      action: "Create session token file at .frida/internal/session.lock"
-      content:
-        - agent_id
-        - branch
-        - acquired_at
-        - zone_id
-        - timeout_minutes
-    release:
-      action: "Remove session token file."
-      final_action: "Create PR or explicit release."
-    timeout:
-      default_minutes: 30
-      recovery: "If token not released within timeout, trigger routing regeneration and release."
-  zone_scope_hard_check:
-    enabled: true
-    action: "After execution, verify that all file changes are within the target zone pathGlob."
-    on_violation: "Rollback changes outside target zone. Emit HALT report."
-  lifecycle:
-    - step: acquire_token
-      precondition: "No active token on branch."
-    - step: execute_within_zone
-      constraint: "All mutations scoped to zone pathGlob."
-    - step: verify
-      action: "Run zone-specific verification."
-    - step: create_pr
-      action: "Open PR with session report attached."
-    - step: release_token
-      action: "Remove session lock."
+  id: frida-validation-rules
+  version: 1.0.0
+  purpose: "Domain-grouped guard references for structured validation."
+  contract_consistency:
+    - GUARD_CANON_SCHEMA_FIRST
+    - GUARD_CANON_SOURCE_DECLARED
+    - GUARD_CANON_NOT_RUNTIME
+  repo_guards:
+    - GUARD_ARTIFACT_NO_MANUAL_EDITS
+    - GUARD_WORKSPACE_TEMP_ONLY
+    - GUARD_FRIDA_INTERNAL_NO_AGENT
+  layer_guards:
+    - guard_chain_structural
+    - schema_version_fixed
+    - index_format_symmetric
+    - exports_are_authoritative
+    - refs_resolve_via_exports
+  visual_guards:
+    - GUARD_VISUAL_DETERMINISM
+    - visual_overlay_only
+    - visual_on_demand
+    - visual_determinism
+  session_guards:
+    - GUARD_SESSION_EXCLUSIVE
+    - GUARD_SESSION_REPORT_REQUIRED
+    - agent_session_exclusive
+  template_guards:
+    - GUARD_TEMPLATE_INTEGRITY
+    - GUARD_SCAFFOLD_IDEMPOTENT
+  antitask_guards:
+    - GUARD_ANTITASK_VALIDATE_PHASE

@@ -1,0 +1,2427 @@
+GLOSSARY:
+  routeId: Internal ID of generated route (UUID)
+  skeleton: Asynchronous Baseline. A transient state containing llm_segments (boundary-driven waypoints) and a unique ID. Served as a placeholder while full details are built by updRouteDetails.
+  skeleton_raw: 'LLM response stored for debugging and downstream processing. Format: { llm_segments: [...], llm_raw: string }'
+  details_status: 'Route details build status. Values: idle | running | ready | error. Strict state machine with atomic transitions.'
+  details_attempts: Number of updRouteDetails execution attempts. Increments on each trigger. Used for retry debugging.
+  details_started_at: Timestamp when details_status first set to 'running'. NULL if never started.
+  details_last_attempt_at: Timestamp of most recent updRouteDetails attempt. NULL if never attempted.
+  updRouteDetails: 'Async route builder: validates llm_segments waypoints via Mapbox -> generates polyline -> creates route_assembly.assembled_segments. Idempotent, lock-based.'
+  details_rev: Increments on every successful updRouteDetails. Triggers timeline update.
+  geometry_rev: Increments only when geometry_hash changes. Triggers map update.
+  geometry_hash: Deterministic hash of route geometry to detect changes
+  route_line_map_geometry: 'Technical rendering points (100-200) for map gradient color-coding. Each item: {index, lat, lng, complexity|null}.'
+  micro_points: DEPRECATED term for route_line_map_geometry. MUST NOT be used.
+  ui_waypoint: 'Structural node: Origin, Destination, or Road Junction (highway change). Defines segment boundaries. NO tactical maneuvers (turns).'
+  road_junction: Point where step.ref changes. Marks the transition between two major road segments.
+  cache_ground: 'Validated road segment attributes (Beauty 1-10, Complexity 1-10). Key: (boundary_a, mid_coord, boundary_b). Persistent knowledge.'
+  topology_segment: 'Section of road between two junctions. Container for sub-segments. Key format: MEX135D [MEX150 x OAX175].'
+  visual_skeleton: Procedural curvy line displayed during loading. Pure aesthetics, no real geometry data.
+  llm_segments: 'LLM-proposed boundary-driven segments. Each segment: { from_waypoint_lat/lng, to_waypoint_lat/lng, road_ref, title_ru, estimated_km, expected_beauty, expected_complexity }. Stored in skeleton_raw, validated by Mapbox.'
+  progress_stage: 'Route loading stage. Values: skeleton | polyline | waypoints | segments. Progressive UI updates.'
+  boundary_trigger: 'Event that creates a segment boundary: highway_change (mandatory), scenery_change, serpentine_cluster, difficulty_jump (strong), road_character_change (weak).'
+  serpentine_cluster: 'Sustained twisty section that a rider would remember. Detection: gradient-based edge detection (v2). Achieves boundary precision ±0.5-1 km. See ROUTE_PIPELINE_CANON.serpentine for algorithm details. Detector outputs PotentialWaypoint with trigger serpentine_start/serpentine_end; internal zone data stays inside detector.'
+  Polyline: Array of PolylinePoint. Route geometry from Mapbox.
+  PolylinePoint: '[lng, lat] tuple. Single coordinate in Mapbox format.'
+  Waypoint: 'Structural node in route. Schema: { id: string, lat: number, lng: number, type: ''origin''|''destination''|''road-junction'', title_ru: string, hint_ru?: string }. Created from PotentialWaypoint after filtering/merging.'
+  PotentialWaypoint: 'Candidate waypoint from detector. Schema: { lat: number, lng: number, trigger: string, priority: 0-10, confidence: 0-1, metadata?: object }. Metadata may contain detector-specific info (e.g., complexity for serpentine triggers).'
+  Segment: 'Road section between two adjacent Waypoints. Schema: { segment_index: number, from_lat, from_lng, to_lat, to_lng, road_ref?, title_ru, distance_km, beauty: 1-10, complexity: 1-10, kind, turniness: 0-1, decision_density: 0-1 }. Derived from Waypoints - never exists independently.'
+  RouteLineMapGeometry: 'Array of technical rendering points for map gradient. Schema: [{ index: number, lat: number, lng: number, complexity: number|null }]. 100-200 points per route.'
+  canon: 1:1 data artifact extracted from wiki contract:* blocks
+  guard: Normative constraint. Statement stored only in GUARDS; elsewhere only ID refs
+  zone: File system area with defined permissions (read-only, read-write)
+  profile: Agent role definition with permissions and constraints
+  invariant: Development rule that must always hold
+  AppHeader: Global top bar containing branding and primary actions.
+  AppStage: Main area below the AppHeader.
+  Side-by-Side: Layout mode where AppStage is split vertically into two panes.
+  TimelinePane: Left pane of the Side-by-Side layout, containing the Timeline component.
+  route_algorithm_optimization: 'Изменение механики генерации маршрута: правки кода детекторов/генератора/пайплайна, изменение набора параметров (params.schema) или изменение семантики параметров. Требует обновления contract:WAYPOINT_SYSTEM_CANON (version/date, schema) и при необходимости contract:ROUTE_PIPELINE_CANON.'
+  route_algorithm_tuning: 'Настройка алгоритма: изменение только значений таблицы параметров (presets/experiments) без изменения механики (логики) и без изменения params.schema. Единственная допустимая поверхность настройки — waypoint-config.ts параметры.'
+  cityBoundaryFilter: Filter for blurred serpentine boundaries near cities. When serpentine starts from origin city or ends at destination city, the boundary between 'city' and 'serpentine' is blurred. Filter removes serpentine_start within bufferKm from origin and serpentine_end within bufferKm from destination. Long zones (>= minClearBoundaryZoneKm) have clear boundaries and are not filtered. Origin/destination used as natural serpentine boundaries.
+  tailTrimming: DEPRECATED (v1.5). Previously used for trimming serpentine zone tails via trimZoneTails function. Replaced by gradient-based edge detection which naturally finds precise boundaries without post-processing. Parameter tailLengthRatio is still used to scale WINDOW_SIZE.
+  registry_city: 'City that is present in the Mexico city registry datasets (mx_cities_gates_dataset and/or mx_cities_casetas_dataset).
+
+    Defined strictly by presence of a city_id in the datasets. This is the normative definition (no "big city" heuristics).
+
+    '
+  mx_cities_gates_dataset: 'Human-authored YAML dataset: resources/mx_cities_gates.yaml.
+
+    Build-only input. Contains cities[] with city_id and exit_corridors[].gate {lat,lng}.
+
+    Runtime MUST NOT parse this YAML.
+
+    '
+  mx_cities_casetas_dataset: 'Human-authored YAML dataset: resources/mx_cities_casetas.yaml (same schema as gates).
+
+    Build-only input. Runtime MUST NOT parse this YAML.
+
+    '
+  city_polygon_index_artifact: 'Build artifact generated from BOTH YAML datasets.
+
+    Location: resources/_generated/city_polygon_index.(ts|json).
+
+    Single runtime source of truth for registry cities list and their city polygons.
+
+    '
+  city_polygon_index_schema: "Normative schema for city_polygon_index_artifact:\n{ version: number, generated_at: string, city_ids: string[],\n  cities: Array<{ city_id: string, polygon: PolylinePoint[], bbox?: {minLat,maxLat,minLng,maxLng} }> }\ncity_ids MUST equal cities[].city_id set (same membership).\ncities[] MUST be sorted by city_id asc for determinism.\n"
+  start_finish_regime: 'Normative rules for defining origin/destination urban exclusion zones ("blind zones") used by Waypoint generator.
+
+    Uses city polygons from city_polygon_index_artifact when origin/destination lies inside a registry city polygon;
+
+    otherwise uses fallback circle radius (km) from waypoint params.'
+DATABASE_SCHEMA:
+  cache_ground:
+    table: cache_ground
+    purpose: Validated road segment attributes. Source of truth for beauty/complexity.
+    columns:
+      id:
+        type: uuid
+        constraint: primary key default gen_random_uuid()
+      boundary_a:
+        type: point
+        constraint: not null
+        notes: Start coordinate of segment
+      mid_coord:
+        type: point
+        constraint: not null
+        notes: Disambiguator - middle point of the path. Unique identifier when combined with boundaries.
+      boundary_b:
+        type: point
+        constraint: not null
+        notes: End coordinate of segment
+      road_ref:
+        type: text
+        notes: Road reference number (e.g., MX-135D). NULL if unknown.
+      road_type:
+        type: text
+        enum:
+        - motorway
+        - mountain
+        - urban
+        - rural
+        - path
+        notes: General road classification
+      raw_beauty:
+        type: int
+        notes: 1-10, objective score derived from validated sources (not LLM)
+      raw_complexity:
+        type: int
+        notes: 1-10, objective score derived from Mapbox geometry analysis
+      source:
+        type: text
+        enum:
+        - mapbox
+        - osm
+        - manual
+        notes: Origin of the validated data
+      created_at:
+        type: timestamptz
+        constraint: default now()
+    indexes:
+    - name: idx_cache_ground_path
+      type: unique
+      columns: boundary_a, mid_coord, boundary_b
+      notes: Unique path identifier - disambiguates alternative routes between same endpoints
+    - name: idx_cache_ground_mid_spatial
+      type: gist
+      columns: mid_coord
+      notes: Spatial index for intersection queries
+  cache_llm_eval:
+    table: cache_llm_eval
+    purpose: Raw LLM responses for debugging and reprocessing. Hypothesis storage.
+    columns:
+      id:
+        type: uuid
+        constraint: primary key default gen_random_uuid()
+      boundary_a:
+        type: point
+        constraint: not null
+        notes: Query start coordinate
+      boundary_b:
+        type: point
+        constraint: not null
+        notes: Query end coordinate
+      prompt_hash:
+        type: text
+        notes: Hash of prompt used - for tracking prompt versions
+      model:
+        type: text
+        notes: LLM model id
+      raw_response:
+        type: text
+        notes: Full raw LLM response
+      created_at:
+        type: timestamptz
+        constraint: default now()
+  route:
+    table: route
+    purpose: Route metadata + skeleton placeholder
+    columns:
+      id:
+        type: uuid
+        constraint: primary key default gen_random_uuid()
+      origin:
+        type: jsonb
+        constraint: not null
+        format: '{label, lat, lng}'
+      destination:
+        type: jsonb
+        constraint: not null
+        format: '{label, lat, lng}'
+      is_skeleton:
+        type: bool
+        constraint: not null default true
+      details_status:
+        type: text
+        enum:
+        - idle
+        - running
+        - ready
+        - error
+        constraint: not null default 'idle'
+      details_error:
+        type: text
+        notes: Reason string if details build failed
+      skeleton_raw:
+        type: jsonb
+        notes: Stores llm_segments + raw LLM text for debugging
+      details_rev:
+        type: int
+        constraint: not null default 0
+      geometry_rev:
+        type: int
+        constraint: not null default 0
+      details_attempts:
+        type: int
+        constraint: not null default 0
+      details_started_at:
+        type: timestamptz
+        notes: Timestamp when details first started
+      details_last_attempt_at:
+        type: timestamptz
+        notes: Timestamp of most recent attempt
+      created_at:
+        type: timestamptz
+        constraint: not null default now()
+      updated_at:
+        type: timestamptz
+        constraint: not null default now()
+      expires_at:
+        type: timestamptz
+        constraint: not null default (now() + interval '24 hours')
+        notes: TTL for anonymous routes
+    indexes:
+    - idx_route_expires on route(expires_at)
+    rls:
+    - Public read/write (anonymous access)
+  route_assembly:
+    table: route_assembly
+    purpose: Materialized JOIN of cache layers. Ready-to-serve route data.
+    columns:
+      route_id:
+        type: uuid
+        constraint: not null references route(id) on delete cascade
+      rev:
+        type: int
+        constraint: not null
+        notes: Equals route.details_rev after update
+      assembled_polyline:
+        type: jsonb
+        constraint: not null
+        format: '[{lat, lng}, ...]'
+        notes: Merged geometry from cache_polyline segments
+      assembled_segments:
+        type: jsonb
+        constraint: not null
+        format: '[{segment_index, from_lat, from_lng, to_lat, to_lng, road_ref, title_ru, distance_km, beauty, complexity, kind, turniness, decision_density}, ...]'
+        notes: "Segments with rider-adjusted scores.\nbeauty/complexity: base from cache_ground, modified by rider_experience.\nkind: Segment type, one of:\n  - monotonous_highway: Скучная скоростная трасса (turniness < 0.2)\n  - urban_navigation: Городской трафик\n  - cruise: Спокойная дорога без особенностей\n  - twisty_forest: Приятная извилистость (turniness 0.3-0.7)\n  - serious_serpentine: Сложный серпантин (turniness > 0.7)\n  - nav: Навигационный узел (decision_density > 0.3)\nturniness: 0-1, average curvature metric for the segment.\ndecision_density: 0-1, concentration of navigation decisions.\n"
+      route_line_map_geometry:
+        type: jsonb
+        format: '[{index, lat, lng, complexity}, ...]'
+        notes: 'Technical rendering points (100-200 per route) for map color-coding. complexity: number|null.'
+      waypoints:
+        type: jsonb
+        format: '[{id, type, lat, lng, title_ru, hint_ru, anchor}, ...]'
+        notes: 'Types: ''origin''|''destination''|''road-junction''. Structural nodes only (no turns). Anchor: {anchorPartIndex} (PolylinePartIndex).'
+      summary:
+        type: jsonb
+        constraint: not null
+        format: '{distance_km, duration_min, ...}'
+      created_at:
+        type: timestamptz
+        constraint: not null default now()
+    primary_key: (route_id, rev)
+    indexes:
+    - idx_route_assembly_rev on route_assembly(route_id, rev desc)
+    rls:
+    - Public read (anonymous access)
+WAYPOINT_SYSTEM_CANON:
+  version: '1.7'
+  date: '2026-02-04'
+  source_notes:
+  - Unified canon to prevent agent drift.
+  - 'Single tuning surface: waypoint-config.ts parameters. Do not tune by changing logic.'
+  - Detector internal structures (zones, indices) do not leak outside detector boundary.
+  - Added start/finish regime and city polygon build artifact; banned runtime YAML parsing.
+  change_control:
+    terms:
+      tuning_ref: route_algorithm_tuning
+      optimization_ref: route_algorithm_optimization
+    tuning:
+      allowed_changes:
+      - 'Change preset values (presets: exp-XXX-* experiments and promotion into main presets).'
+      - Change numeric/string values inside waypoint-config.ts only.
+      required_location:
+      - supabase/functions/v2-upd-route-details/waypoint-config.ts
+      forbidden_changes:
+      - MUST NOT modify generator/detector logic files.
+      - MUST NOT change params.schema (parameter surface).
+      - MUST NOT add/remove/rename parameters.
+      - MUST NOT edit pipeline stage behavior (ROUTE_PIPELINE_CANON).
+      fail_fast:
+      - If task requires any forbidden change -> HALT and request an OPTIMIZATION task.
+    optimization:
+      allowed_changes:
+      - Modify generator/detector logic and/or pipeline stages.
+      - Add/remove/rename parameters (requires schema update).
+      required_canon_updates:
+      - Update params.schema if parameter surface changes.
+      - Update ROUTE_PIPELINE_CANON if stage/process changes.
+  types:
+    PolylinePoint: '[lng, lat] tuple'
+    Polyline: PolylinePoint[]
+    Waypoint: '{ id, lat, lng, type, title_ru, hint_ru }'
+    PotentialWaypoint: '{ lat, lng, trigger, priority(0-10), confidence(0-1), metadata? }'
+  triggers_priority:
+    system:
+    - trigger: origin
+      priority: 10
+    - trigger: destination
+      priority: 10
+    - trigger: user_poi
+      priority: 10
+    structural:
+    - trigger: highway_change
+      priority: 8
+    difficulty:
+    - trigger: serpentine_start
+      priority: 7
+    - trigger: serpentine_end
+      priority: 7
+    - trigger: difficulty_jump
+      priority: 7
+    aesthetics:
+    - trigger: scenery_change
+      priority: 5
+    quality:
+    - trigger: surface_change
+      priority: 4
+  indexing_systems:
+    MapBoxCoordinateIndex:
+      used_by:
+      - serpentine detector (internal only)
+      note: Internal detector index over directions.coordinates. NOT exposed outside detector. Detector converts to lat/lng before emitting PotentialWaypoint.
+    MapBoxDirectionsStepIndex:
+      note: Not used as waypoint anchor. Step is a hint only.
+    PolyLinePartIndex:
+      used_by:
+      - segment anchors
+      - route_line_map_geometry projection
+      note: Index into assembled_polyline; used for slicing polyline and mapping gradient.
+  detector_boundaries:
+    principle: Detectors emit PotentialWaypoint[] only. Internal structures (zones, indices, intermediate calculations) stay inside detector.
+    serpentine_detector:
+      internal:
+      - zones array
+      - sustainedZones
+      - switchbackZones
+      - startIndex
+      - endIndex
+      - computeTurninessProfile
+      - smoothProfile
+      - computeGradient
+      - detectEdges
+      - assembleZonesFromEdges
+      output: PotentialWaypoint[] with trigger serpentine_start or serpentine_end. Metadata includes complexity, distanceFromOriginKm, zoneLengthKm for downstream filtering.
+    highway_change_detector:
+      internal:
+      - step indices
+      - ref tracking state
+      output: PotentialWaypoint[] with trigger highway_change
+  resilience:
+    minimal_contract:
+      required:
+      - 'origin: { lat, lng, label }'
+      - 'destination: { lat, lng, label }'
+      optional: All other inputs are optional.
+    detector_contract:
+    - Each detector returns PotentialWaypoint[] (may be empty).
+    - Detectors do not throw. On errors they return [] + warning.
+    - Detectors do not expose internal data structures.
+    generator_guarantee:
+    - Waypoint generator always returns at least [origin, destination].
+    - Waypoint generator MUST remove any non-[origin|destination|user_poi] waypoints located within urban exclusion zones near origin and destination (even if emitted by detectors).
+    - Waypoint generator MUST sort potentials by route position (polylineIndex) BEFORE any filtering/merging operations.
+    - 'Decisions of cityBoundaryFilter are FINAL: serpentine tails rule MUST NOT restore removed potentials.'
+    start_finish_regime:
+      purpose: Deterministic definition of origin/destination urban exclusion zones (blind zones) to enforce urbanExclusion rules.
+      definitions:
+        registry_city: See GLOSSARY.registry_city
+      build_inputs:
+      - resources/mx_cities_gates.yaml
+      - resources/mx_cities_casetas.yaml
+      build_output:
+        artifact_term: city_polygon_index_artifact
+        path: resources/_generated/city_polygon_index.(ts|json)
+        runtime_rule: Runtime MUST read ONLY the build artifact; MUST NOT parse YAML inputs.
+      build_validation:
+      - Build MUST fail on any coordinate with 2 decimal digits.
+      - 3 decimals allowed as draft; MUST NOT be auto-padded.
+      polygon_construction:
+        input_points: All unique gate points (lat/lng) for a given city_id from BOTH datasets.
+        algorithm: convex_hull
+        determinism:
+        - Deduplicate points by exact (lat,lng).
+        - Sort points by (lng asc, lat asc) before hull computation.
+        - If <3 unique points -> polygon omitted for this city_id (fallback applies).
+        - cities[] sorted by city_id asc in output artifact.
+      membership:
+        rule: Registry city membership is defined ONLY by presence of city_id in datasets; city_ids is derived from artifact.
+      lookup:
+        rule: If origin/destination point-in-polygon matches any city polygon -> that polygon is the urban exclusion zone.
+        tie_breaker: If multiple polygons contain point -> choose the polygon with smallest area.
+      fallback:
+        rule: If no polygon matched OR polygon missing -> use circle zone around point.
+        radius_params:
+          origin: originUrbanExclusionKm
+          destination: destinationUrbanExclusionKm
+        defaults:
+        - Standard preset MUST default originUrbanExclusionKm=10 and destinationUrbanExclusionKm=10.
+      invariants:
+      - UrbanExclusion MUST be evaluated against the zone from this regime.
+      - No alternative heuristics for city boundaries are allowed outside this regime.
+      - Runtime MUST NOT parse YAML datasets; only build scripts may.
+  params:
+    single_source_of_truth: supabase/functions/v2-upd-route-details/waypoint-config.ts
+    schema:
+      filters:
+      - minConfidence
+      - minPriority
+      spacing:
+      - minDistanceKm
+      - minStepDistance
+      - maxWaypoints
+      merging:
+      - sameTriggerMergeDistance
+      serpentineTails:
+      - maxGapKm
+      - tailLengthRatio
+      - minRestZoneLengthKm
+      - enforceMonotonicity (DEPRECATED - not used in gradient edge detection)
+      cityBoundaryFilter:
+      - bufferKm
+      - minClearBoundaryZoneKm
+      highwayChange:
+      - minStepDistanceMetersForRef
+      - persistSteps
+      - persistDistanceMeters
+      - minStepsBetweenAcceptedChanges
+      - ignoreManeuversWithoutRef
+      - normalize.canonicalizeMxPrefix
+      - normalize.keepDSuffix
+      - anchorSearchWindowPartIndex
+      urbanExclusion:
+      - originUrbanExclusionKm
+      - destinationUrbanExclusionKm
+      - 'allowTriggersInUrbanExclusion (MUST include: [''origin'',''destination'',''user_poi''])'
+  presets:
+  - name: detailed
+    intent: maximum detail
+    hint: 50-100 points, 3-5 km segments
+  - name: standard
+    intent: balanced default
+    hint: 20-50 points, 5-10 km segments
+  - name: simplified
+    intent: coarse overview
+    hint: 10-20 points, 20-50 km segments
+  tuning_process:
+    experiments_prefix: exp-XXX-*
+    steps:
+    - Copy standard preset into new exp-XXX preset.
+    - Change exactly one parameter.
+    - Test on route set.
+    - Record outcome in preset comment.
+    - Promote into main presets if successful.
+ROUTE_PIPELINE_CANON:
+  version: '1.3'
+  date: '2026-02-04'
+  scope:
+    function_dir: supabase/functions/v2-upd-route-details/
+  principles:
+  - 'Minimal contract: origin + destination only. Everything else optional.'
+  - Defensive processing on each stage.
+  - 'Graceful degradation: route still builds when enrichments are missing.'
+  - 'Detector internals do not leak: only PotentialWaypoint[] crosses detector boundary.'
+  stages:
+  - id: 0.routeWaypoints
+    name: Route waypoints baseline
+    output: routeWaypoints = [origin, ...intermediates?, destination]
+    notes:
+    - Optional enrichment sources may be disabled and MUST NOT block the pipeline.
+  - id: 1.mapbox_directions
+    name: Mapbox Directions
+    input: routeWaypoints (>=2)
+    output:
+      coordinates: PolylinePoint[]
+      legs: Leg[]
+      distanceMeters: number
+      durationSeconds: number
+    failure: Mapbox unavailable -> critical error (throw).
+  - id: 2.detect_potentials
+    name: Independent detectors -> PotentialWaypoint[]
+    output: PotentialWaypoint[] (merged from all detectors)
+    detectors:
+      serpentine:
+        input: polyline (directions.coordinates) + serpentineTails config
+        output: PotentialWaypoint[] with trigger serpentine_start/serpentine_end. Metadata includes complexity, distanceFromOriginKm, zoneLengthKm.
+        internal: Zone detection via gradient edge analysis stays inside detector. Not exposed.
+        process:
+        - Compute turniness profile along route (WINDOW_SIZE based on tailLengthRatio)
+        - Smooth profile (SMOOTHING_WINDOW=5)
+        - Compute gradient of smoothed profile (SAMPLING_STEP=5)
+        - 'Detect edges: up-edges (zone start) and down-edges (zone end) via gradient threshold'
+        - Assemble zones from edge pairs (filter by minRestZoneLengthKm)
+        - Merge fragmented zones (maxGapKm)
+        - Emit PotentialWaypoint pairs (start/end) with metadata
+        failure: No serpentines -> [] ; detector error -> [] + warning.
+      highway_change:
+        input: steps[] (hint) + polyline (anchoring)
+        output: PotentialWaypoint[] with trigger highway_change
+        rules:
+        - Step index is not a waypoint anchor.
+        - 'RoadRefSet extraction priority: step.ref -> step.codes/routeCodes -> banner instructions -> parse from step.name (low confidence).'
+        - Config-driven normalization (MX/MEX, D suffix).
+        - 'Ignore short connectors: step.distanceMeters < minStepDistanceMetersForRef.'
+        - 'Persistence: new ref must hold persistSteps or persistDistanceMeters.'
+        - 'Debounce: minStepsBetweenAcceptedChanges between accepted changes.'
+        - 'Anchor: step maneuver location + nearest PolyLinePartIndex (search window).'
+        failure: No ref/codes -> [] ; one highway whole route -> [] ; error -> [] + warning.
+      system:
+        output: PotentialWaypoint[] with origin + destination (priority 10, confidence 1.0)
+  - id: 3.generate_waypoints_and_segments
+    name: Waypoint + Segment generation
+    input:
+    - PotentialWaypoint[] (from all detectors)
+    - Polyline
+    - WaypointGenerationParams (waypoint-config.ts)
+    process:
+    - Sort potentials by position along route (polylineIndex or nearest-point) BEFORE any filtering/merging
+    - Filter by confidence + priority
+    - Apply cityBoundaryFilter (see GLOSSARY)
+    - Serpentine tails rule (monotonicity + rest thresholds) using metadata.complexity — MUST NOT restore potentials removed by cityBoundaryFilter
+    - Load city_polygon_index_artifact and compute origin/destination urban exclusion zones per WAYPOINT_SYSTEM_CANON.start_finish_regime; apply urbanExclusion filter (remove non-allowlist triggers inside these zones)
+    - Merge same trigger within sameTriggerMergeDistance
+    - Apply spacing (minDistanceKm, minStepDistance)
+    - Limit maxWaypoints
+    - Generate Waypoint[] and Segment[] together
+    output:
+    - Waypoint[]
+    - Segment[]
+    invariants:
+    - segments.length == waypoints.length - 1
+    - segments[].complexity derived from PotentialWaypoint[].metadata.complexity where trigger is serpentine_*
+    - 'cityBoundaryFilter decisions are FINAL: serpentine tails rule MUST NOT restore removed potentials'
+    - 'Segment complexity uses stateful propagation: activeComplexity=1 baseline, set by serpentine_start, reset by serpentine_end; segments between inherit activeComplexity'
+    guarantees:
+    - Always returns at least [origin, destination] and one segment
+    - Stage 3 MUST NOT parse YAML datasets; only reads build artifact.
+  - id: 4.route_line_map_geometry
+    name: RouteLineMapGeometry generation (map gradient)
+    input:
+      required:
+      - Polyline
+      optional:
+      - Segment[]
+    output: RouteLineMapGeometry
+    rule:
+    - Does not compute complexity from geometry. Projects existing Segment[].complexity data.
+    modes:
+      canonical: Segment[] present -> complexity from Segment[].complexity
+      none: no Segment[] -> complexity = null for all points
+    failure: Error -> empty array; map shows no gradient.
+  - id: 5.database_write
+    name: Database write with partial updates allowed
+    policy:
+    - Write what exists; never block on missing enrichments.
+    - When Segment[] exist, route_line_map_geometry is overwritten with canonical projection.
+    variants:
+      partial:
+        writes:
+        - assembled_polyline
+        - waypoints
+        - assembled_segments
+        - route_line_map_geometry (canonical)
+      ready:
+        writes:
+        - assembled_polyline
+        - waypoints
+        - assembled_segments
+        - route_line_map_geometry
+        - summary
+    revs:
+    - details_rev++ on each successful update
+    - geometry_rev++ only if polyline changed
+  terminology:
+    allowed:
+    - Polyline
+    - PolylinePoint
+    - Waypoint
+    - PotentialWaypoint
+    - Segment
+    - RouteLineMapGeometry
+    forbidden:
+    - boundary (API term; allowed only inside detectors)
+    - micropoint (deprecated; use RouteLineMapGeometry)
+    - coordinate / point (ambiguous; specify PolylinePoint or lat/lng)
+    - step index (not used as anchor)
+    - serpentineZones (internal to detector; use PotentialWaypoint with serpentine_* trigger)
+    - sustainedZones (internal to detector)
+    - switchbackZones (internal to detector)
+    - startIndex / endIndex (internal to detector; use lat/lng)
+    - SerpentineZone (not a canonical type)
+  file_structure:
+    root: supabase/functions/v2-upd-route-details/
+    mandatory_files:
+    - index.ts
+    - types.ts
+    - waypoint-config.ts
+    - waypoint-detection.ts
+    - waypoint-generator.ts
+    - serpentine-detector-v2.ts
+    - highway-change-detector.ts
+    - route-line-map-geometry.ts
+    - mapbox.ts
+    - geometry-hash.ts
+  dependencies:
+    forbidden:
+    - waypoint-generator imports detectors
+    - detectors import each other
+    - any module imports detector internal types (zones, indices)
+    allowed_flow: all detectors -> PotentialWaypoint[] -> waypoint-detection -> waypoint-generator
+RESOURCES:
+  v2-preview:
+    provider: supabase
+    function: v2-preview
+    adapter: routeService.createRoute
+    auth:
+      requires: false
+    schemas:
+      params: '{ origin: {label, lat, lng}, destination: {label, lat, lng}, departure_date, outbound_style, locale, include_tolls_metric }'
+      returns: '{ routeId: uuid }'
+    mode: SKELETON-ONLY
+    notes: 'Skeleton-only: returns routeId, triggers async details build.'
+  updRouteDetails:
+    provider: supabase
+    function: v2-upd-route-details
+    adapter: routeService.updRouteDetails
+    auth:
+      requires: false
+    schemas:
+      params: '{ routeId: uuid }'
+      returns: '{ success: boolean, details_rev: number, geometry_rev: number }'
+    idempotent: true
+    lock_based: true
+  getRouteMeta:
+    provider: supabase
+    function: v2-route-meta
+    adapter: routeService.getRouteMeta
+    auth:
+      requires: false
+    schemas:
+      params: '{ routeId: uuid }'
+      returns: '{ id, origin, destination, is_skeleton, details_status, details_error?, details_rev, geometry_rev, details_attempts, details_started_at?, details_last_attempt_at?, updated_at }'
+    notes: Polling endpoint. Returns route table metadata only.
+  getRouteDetails:
+    provider: supabase
+    function: v2-route-details
+    adapter: routeService.getRouteDetails
+    auth:
+      requires: false
+    schemas:
+      params: '{ routeId: uuid, rev?: number }'
+      returns: '{ rev, polyline_points, waypoints, route_line_map_geometry, segments, summary }'
+    notes: 'Fetch specific revision from route_assembly table.
+
+      route_line_map_geometry: 100-200 technical rendering points for map color-coding.
+
+      '
+  setWorkspace:
+    provider: supabase
+    function: v2-workspace-upsert
+    adapter: workspaceService.setWorkspace
+    auth:
+      requires: true
+  getWorkspace:
+    provider: supabase
+    function: v2-workspace-get
+    adapter: workspaceService.getWorkspace
+    auth:
+      requires: false
+  getCurrentUser:
+    provider: service-layer
+    adapter: authService.getCurrentUser
+    auth:
+      requires: false
+  signIn:
+    provider: service-layer
+    adapter: authService.signIn
+    auth:
+      requires: false
+  signOut:
+    provider: service-layer
+    adapter: authService.signOut
+    auth:
+      requires: true
+  geocodeForward:
+    provider: mapbox
+    api: geocoding
+    adapter: mapboxService.geocodeForward
+    purpose: Convert place name to coordinates
+  geocodeReverse:
+    provider: mapbox
+    api: geocoding-reverse
+    adapter: mapboxService.geocodeReverse
+    purpose: Convert coordinates to place name
+  getDirections:
+    provider: mapbox
+    api: directions
+    adapter: mapboxService.getDirections
+    purpose: Get route geometry for Map rendering
+APPLICATIONS:
+  wizard:
+    route: /
+    description: Route planning wizard with origin/destination input
+    usesResources:
+    - v2-preview
+    - getCurrentUser
+    - signIn
+    - signOut
+    - geocodeForward
+    - geocodeReverse
+    exits:
+      generateRoute:
+        trigger: ui:wizard.generate
+        calls: v2-preview
+        provides:
+          routeId: uuid
+        transition: wizard->route
+  routePage:
+    route: /route/:routeId
+    description: Route visualization with timeline and map
+    usesResources:
+    - getRouteMeta
+    - getRouteDetails
+    - updRouteDetails
+    - getCurrentUser
+    - signIn
+    - signOut
+    - getDirections
+    exits:
+      reset:
+        trigger: ui:route.reset
+        transition: route->wizard
+TRANSITIONS:
+  wizard->route:
+    from: wizard
+    to: routePage
+    via:
+      routeId: uuid
+    triggerRef: APPLICATIONS.wizard.exits.generateRoute
+  route->wizard:
+    from: routePage
+    to: wizard
+    via: {}
+    triggerRef: APPLICATIONS.routePage.exits.reset
+MOUNT_POINTS:
+  slots:
+    wizard:
+      fileRef: PATHS.slots.wizardPage
+      stubMarkerRef: PATHS.slotMarkers.wizard.stub
+      mountedMarkerRef: PATHS.slotMarkers.wizard.mounted
+    timeline:
+      fileRef: PATHS.slots.timeline
+      stubMarkerRef: PATHS.slotMarkers.timeline.stub
+      mountedMarkerRef: PATHS.slotMarkers.timeline.mounted
+  invariants:
+  - mount.slot.baseline.before
+  - mount.slot.mounted.after
+MAPPER_PLAN:
+  version: '0.3'
+  artifacts:
+    rootIndexHtml:
+      kind: html-doc
+      sourceRef: PATHS.app.styleIndexTemplate
+      outputRef: PATHS.app.rootIndexHtml
+    wizardModule:
+      kind: react-module
+      sourceDirRef: PATHS.canon.wizardDir
+      outputDirRef: PATHS.mount.components
+      exportName: WizardApp
+    timelineModule:
+      kind: react-module
+      sourceDirRef: PATHS.canon.timelineDir
+      outputDirRef: PATHS.mount.components
+      exportName: TimelineApp
+  phases:
+  - id: reset
+    kind: reset-to-baseline
+  - id: style.sync-index
+    kind: copy-file
+  - id: wizard.process
+    kind: pipeline
+  - id: timeline.process
+    kind: pipeline
+  - id: bind
+    kind: pipeline
+  - id: validate
+    kind: validate-repo
+FRIDA_META:
+  version: '1.0'
+  date: '2026-01-10'
+  status: active
+  portability: standalone
+  dependencies:
+    runtime: []
+    build:
+    - tsx
+    - yaml
+    - handlebars
+    - glob
+  purpose: "Universal AI development framework.\nProvides: agent profiling, zone-based permissions, \ncontext generation, antipattern enforcement.\n"
+  exports:
+    kernel: zerohuman-frida-kernel.md (this file)
+    generator: scripts/frida-gen.ts
+    templates_frida: scripts/templates/frida/**
+    templates_docs: scripts/docs-gen/templates/**
+    workflow: .github/workflows/canon-sync.yml
+FRIDA_PRINCIPLES:
+  development_sequence:
+    name: Canon → Antipattern → Development
+    steps:
+      1_CANON:
+        what: Formal description of WHAT must exist
+        where: Wiki contract:* blocks
+        mandatory: true
+      2_ANTIPATTERN:
+        what: Formal description of WHAT IS FORBIDDEN
+        where: Generated AGENTS.md files, policy docs
+        mandatory: true
+        generated_from: ZONES, GUARDS, INVARIANTS
+      3_DEVELOPMENT:
+        what: Implementation strictly within canon and antipattern
+        precondition: Antipattern must exist BEFORE development starts
+    violation: Skipping steps = architecture violation
+  single_source_of_truth:
+    location: Wiki
+    rule: All contract:* blocks live ONLY in wiki
+    artifacts: Generated 1:1, no manual edits
+    enforcement: CI checks for drift
+  context_minimization:
+    principle: Agent reads only relevant constraints
+    mechanism: Nested AGENTS.md pattern
+    benefit: Reduced token usage, focused context
+  fail_fast:
+    principle: Block development if antipattern missing
+    mechanism: Pre-task validation in agent protocol
+    benefit: Prevent architectural violations early
+FRIDA_PROTOCOL:
+  agent_lifecycle:
+    1_ROUTE:
+      trigger: User provides task description
+      action: Match keywords against TASK_PROFILES
+      output: Selected profile ID
+    2_LOAD_PROFILE:
+      input: Profile ID
+      action: Load .specs/profiles/{id}.xml
+      output: Permissions, invariants, constraints
+    3_VALIDATE_ANTIPATTERN:
+      action:
+      - Resolve target zone via contract:ZONES (most specific matching path).
+      - Read canonical Zone AGENTS.md at `{zone.agentsPath}/AGENTS.md`.
+      - 'If missing → HALT: request contract update + run frida:gen.'
+      notes:
+      - Do NOT assume AGENTS.md must exist in leaf directory. Canonical location is zone.agentsPath.
+      - 'Optional upward search is allowed only within zone boundary if explicitly enabled (default: OFF).'
+    4_EXECUTE:
+      constraints:
+      - Read only from security.read_allow paths
+      - Write only to security.edit_allow paths
+      - Never touch security.forbid paths
+      invariants: Check all profile invariants before/after
+    5_VERIFY:
+      action: Run npm run verify
+      on_fail: Rollback, report violation
+  interaction_modes:
+    architect:
+      role: System Architect
+      trigger: High-level feature request or business intent
+      protocol:
+        1_ANALYZE: Identify affected domain (App vs Kernel)
+        2_TRANSLATE: Convert intent to contract changes
+        3_CONTEXT_ENGINEER: Review agent capabilities for task
+        4_PROPOSE: Output exact wiki changes needed
+        5_NO_CHATTER: Explain contract changes, not code
+      goal: Minimize human cognitive load
+    developer:
+      role: Implementation Agent
+      trigger: Specific coding task with profile assigned
+      protocol:
+        1_READ_AGENTS_MD: Load zone-specific constraints
+        2_CHECK_PERMISSIONS: Verify file access allowed
+        3_IMPLEMENT: Write code within boundaries
+        4_VERIFY: Run verification commands
+      goal: Execute within strict boundaries
+  forbidden_actions:
+  - pattern: Edit files outside edit_allow
+    response: REDIRECT to correct location
+  - pattern: Import from forbidden zones
+    response: HALT with guard violation
+  - pattern: Skip antipattern check
+    response: HALT with missing antipattern error
+  - pattern: Add functionality not in canon
+    response: HALT with scope violation
+FRIDA_RUN_REPORTING:
+  version: '1.0'
+  policy:
+    required_on:
+    - SUCCESS
+    - HALTED
+    output_format:
+      carrier: markdown fenced code block
+      language: yaml
+    invariants:
+    - Report MUST include profile_id.
+    - Report MUST include changed files list (modified/created/deleted). Use empty arrays if none.
+    - Report MUST include verification.result (PASS|FAIL|SKIPPED) and commands list.
+    - If status=HALTED, report MUST include decision_trace and recovery.
+  schemas:
+    SuccessReport:
+      frida_report: 1
+      status: SUCCESS
+      task_ref: string | optional
+      profile_id: string
+      zone_id: string | optional
+      working_dir: string | optional
+      inputs:
+        prompt_summary: string (1-2 sentences)
+        canon_files_read: string[] (only files actually read)
+        constraints_adopted: string[]
+      changes:
+        modified: string[]
+        created: string[]
+        deleted: string[]
+      verification:
+        commands: string[]
+        result: PASS|FAIL|SKIPPED
+        notes: string | optional
+      summary:
+        what_done: string[]
+        risks_or_debt: string[] | optional
+        followups: string[] | optional
+    HaltReport:
+      frida_report: 1
+      status: HALTED
+      halt_code: string
+      summary: string
+      profile_id: string | optional
+      zone_id: string | optional
+      working_dir: string | optional
+      decision_trace: object[] (step, input, decision, why, result)
+      recovery: string[]
+FRIDA_SCHEMAS:
+  Zone:
+    description: Defines a file system zone with permissions
+    required:
+    - path
+    properties:
+      path:
+        type: string
+        description: Glob pattern for zone files
+        example: src/components/**
+      readOnly:
+        type: boolean
+        default: false
+      whyReadOnly:
+        type: string
+      consequence:
+        type: string
+      redirectPath:
+        type: string
+      howToChange:
+        type: string
+      forbiddenOps:
+        type: array[string]
+      purpose:
+        type: string
+      agentsPath:
+        type: string
+        description: Where to generate AGENTS.md
+      agentsTemplate:
+        type: string
+        enum:
+        - readonly
+        - mapper
+        - notouch
+        - service
+  TaskProfile:
+    description: Defines an agent role with permissions
+    required:
+    - description
+    - keywords
+    - role
+    - security
+    properties:
+      description:
+        type: string
+      keywords:
+        type: array[string]
+      role:
+        type: string
+        enum:
+        - FRONTEND_AGENT
+        - BACKEND_AGENT
+        - DESIGN_AGENT
+        - QA_AGENT
+        - ARCHITECT_AGENT
+      security:
+        type: object
+        properties:
+          read_allow:
+            type: array[string]
+          edit_allow:
+            type: array[string]
+          forbid:
+            type: array[string]
+          edit_forbid:
+            type: array[string]
+          forbiddenAction:
+            type: string
+            enum:
+            - REDIRECT
+            - HALT
+            default: REDIRECT
+          redirects:
+            type: array[Redirect]
+      invariants:
+        type: array[string]
+        description: IDs referencing INVARIANTS block
+  Invariant:
+    description: Development rule that must always hold
+    required:
+    - id
+    - text
+    properties:
+      id:
+        type: string
+        pattern: '[A-Z]+_[0-9]+'
+      text:
+        type: string
+        description: MUST/MUST NOT statement
+      category:
+        type: string
+        enum:
+        - architecture
+        - data
+        - visual
+        - security
+  Guard:
+    description: Normative constraint with enforcement
+    required:
+    - id
+    - kind
+    - statement
+    properties:
+      id:
+        type: string
+      kind:
+        type: string
+        enum:
+        - meta
+        - structural
+        - prohibition
+        - invariant
+        - consistency
+        - policy
+      statement:
+        type: string
+FRIDA_GENERATOR:
+  purpose: Generate agent context from contract data
+  command: npm run frida:gen
+  script: scripts/frida-gen.ts
+  inputs:
+    primary:
+    - path: contract/canon.cbmd.yaml
+      contains: ZONES, TASK_PROFILES, INVARIANTS, GUARDS
+  outputs:
+    bootloader:
+      path: AGENTS.md
+      template: templates/frida/bootloader.hbs
+    router:
+      path: .specs/ROUTER.xml
+      template: templates/frida/router.xml.hbs
+    profiles:
+      path: .specs/profiles/{profile_id}.xml
+      template: templates/frida/profile.xml.hbs
+    zone_agents:
+      path: '{zone.agentsPath}/AGENTS.md'
+      templates:
+        readonly: docs-gen/templates/agents-readonly-zone.hbs
+        mapper: docs-gen/templates/agents-mapper.hbs
+        notouch: docs-gen/templates/agents-no-touch.hbs
+        service: docs-gen/templates/agents-service-layer.hbs
+    policy_docs:
+    - path: docs/policy/BOUNDARIES.md
+      template: docs-gen/templates/boundaries.hbs
+    - path: docs/policy/IMMUTABILITY.md
+      template: docs-gen/templates/immutability.hbs
+    reference:
+      path: docs/reference/API_REFERENCE.md
+      template: docs-gen/templates/api-reference.hbs
+  algorithm:
+    1_LOAD: Read contract/canon.cbmd.yaml, validate required blocks
+    2_NORMALIZE: Apply path normalization (aliases, deprecated)
+    3_RESOLVE: Expand invariant references in profiles
+    4_GENERATE: Apply Handlebars templates in order
+    5_WRITE: Atomic writes with AUTO-GENERATED header
+FRIDA_GENERATOR_SPEC:
+  language: TypeScript
+  runner: tsx
+  structure:
+    config:
+      ROOT_DIR: path.resolve(__dirname, '..')
+      CONTRACT_PATH: contract/canon.cbmd.yaml
+      WIKI_DIR: ../{project}.wiki
+      TEMPLATES_FRIDA: scripts/templates/frida
+      TEMPLATES_DOCS: scripts/docs-gen/templates
+      SPECS_DIR: .specs
+      PROFILES_DIR: .specs/profiles
+      AUTO_GENERATED_HEADER: <!-- AUTO-GENERATED FROM CONTRACT - DO NOT EDIT MANUALLY -->
+    classes:
+      PathNormalizer:
+        purpose: Normalize paths using aliases and deprecated mappings
+        constructor: Takes PATHS block from contract
+        methods:
+          normalize: Returns { canonical, deprecated } for input path
+          getCount: Returns number of mappings
+    functions:
+      loadContract:
+        returns: Contract object from YAML
+        validates: ZONES, TASK_PROFILES, INVARIANTS exist
+      extractZones:
+        input: contract.ZONES
+        returns: Array of Zone objects with formatted names
+      isZoneCovered:
+        input: allowedPath, zonePath, agentsPath
+        purpose: Check if zone is covered by allowed path pattern
+        algorithm: "Extract prefixes from paths (remove glob wildcards)\nCheck if:\n  - Zone path matches allowed (e.g. 'src/services/**' covers 'src/services/**')\n  - AGENTS.md path matches allowed (e.g. 'scripts/mapper/**' covers 'scripts/mapper/AGENTS.md')\n  - Subpath matches (e.g. 'src/mount/wizard/**' covers zone 'src/mount/**')\n"
+        returns: boolean
+      processProfile:
+        input: profile id, data, contract, normalizer
+        actions:
+        - Normalize all paths in security block
+        - 'AUTO-ADD AGENTS.md paths: For each zone covered by profile''s allowed paths, add ''{zone.agentsPath}/AGENTS.md'' to read_allow'
+        - Resolve invariant IDs to full text
+        - Join keywords array to comma-separated string
+        - Log count of auto-added AGENTS.md paths
+        returns: Processed profile for template
+        note: This ensures agents can always read AGENTS.md files in zones they work with
+      generateZoneAgents:
+        input: zones array, contract
+        actions:
+        - For each zone with agentsPath
+        - Select template by agentsTemplate field
+        - Build context object for template
+        - Write to {agentsPath}/AGENTS.md
+        templates:
+          readonly: zoneName, forbiddenOps, whyReadOnly, consequence, howToChange
+          mapper: zoneName, purpose, constraints, verification
+          notouch: zoneName, whyReadOnly
+          service: zoneName, purpose, constraints, verification, contractsRequired, noDirectSupabase, testRequirements
+    main_sequence:
+    - registerHelpers() - formatPath, join, eq
+    - loadContract()
+    - validateContract()
+    - new PathNormalizer(contract.PATHS)
+    - extractZones(contract)
+    - profiles = processProfile() for each TASK_PROFILES
+    - write bootloader.hbs → AGENTS.md
+    - write router.xml.hbs → .specs/ROUTER.xml
+    - write profile.xml.hbs → .specs/profiles/{id}.xml for each profile
+    - generateZoneAgents(zones, contract)
+    - write boundaries.hbs → docs/policy/BOUNDARIES.md
+    - write immutability.hbs → docs/policy/IMMUTABILITY.md
+    - write api-reference.hbs → docs/reference/API_REFERENCE.md
+    - print summary
+    handlebars_helpers:
+      formatPath: Replace backslashes with forward slashes
+      join: Join array with delimiter
+      eq: Equality comparison for conditionals
+FRIDA_TPL_BOOTLOADER:
+  file: scripts/templates/frida/bootloader.hbs
+  purpose: Root AGENTS.md - entry point for all agents
+  variables:
+  - generatedAt
+  - profileCount
+  - zoneCount
+  content: "# FRIDA AGENT PROTOCOL (v3.0)\n\n\U0001F6D1 **STOP AND READ.** This repository operates under the FRIDA Framework.\nYou MUST follow the bootstrapping sequence below before executing ANY task.\n\n---\n\n## PHASE 1: INITIALIZATION\n\n1. **ACKNOWLEDGE ROLE:** You are an AI development agent operating within defined boundaries.\n2. **LOAD ROUTER:** Read `.specs/ROUTER.xml` immediately.\n3. **IDENTIFY CONTEXT:**\n   - Analyze your current task/prompt\n   - Match keywords against profiles in ROUTER.xml\n   - If no match found → use profile `governance`\n\n## PHASE 2: CONTEXT LOADING\n\n1. **READ PROFILE:** Load the XML file from `.specs/profiles/{profile_id}.xml`\n2. **ADOPT CONSTRAINTS:** \n   - `<allowed_paths>` define where you CAN read/write\n   - `<forbidden_paths>` are ABSOLUTE — never access these\n   - `<invariants>` MUST be satisfied\n\n3. **READ ZONE AGENTS.MD (CANONICAL):**\n   - Resolve zone using contract:ZONES (most specific match for your working path)\n   - Read `{zone.agentsPath}/AGENTS.md`\n\
+    \   - If missing → HALT and request contract update + `npm run frida:gen`\n   \n   > **NOTE:** AGENTS.md is not required to exist in the leaf directory of your task.\n   > The canonical location is `{zone.agentsPath}` as defined in contract:ZONES.\n\n## PHASE 3: EXECUTION\n\n0. **DEPLOYMENT RULE:** Never deploy Edge Functions manually. Only push changes. Deployment is performed by GitHub Actions workflows.\n\n1. Perform task using ONLY allowed paths\n2. Verify output against profile invariants\n3. Run `npm run verify` before completing\n\n## PHASE 4: COMPLETION\n\n1. **EMIT FRIDA RUN REPORT** (see contract:FRIDA_RUN_REPORTING)\n   - MUST emit on both SUCCESS and HALT\n   - Use YAML format in markdown fenced code block\n   - Include changed files list and verification status\n2. Keep a short human summary after the YAML block\n3. Note any constraint violations encountered\n4. Suggest contract updates if needed\n\n---\n\n## Quick Reference\n\n| Profile | Keywords | Role |\n|---------|----------|------|\n\
+    {{#each profiles}}\n| {{id}} | {{keywords}} | {{role}} |\n{{/each}}\n\n---\n\n## Development Sequence"
+FRIDA_TPL_ROUTER:
+  file: scripts/templates/frida/router.xml.hbs
+  purpose: Maps keywords to profile files
+  variables:
+  - profiles: Array of { id, role, keywords }
+  content: "<frida_router>\n  <protocol>\n    1. ANALYZE user prompt for keywords.\n    2. MATCH keywords to a <profile>.\n    3. READ the file specified in 'context_path'.\n    4. ADOPT the role and constraints.\n    5. EXECUTE task.\n  </protocol>\n\n  <profiles>\n    {{#each profiles}}\n    <profile id=\"{{id}}\">\n      <role>{{role}}</role>\n      <keywords>{{keywords}}</keywords>\n      <context_path>.specs/profiles/{{id}}.xml</context_path>\n    </profile>\n    {{/each}}\n  </profiles>\n</frida_router>"
+FRIDA_TPL_PROFILE:
+  file: scripts/templates/frida/profile.xml.hbs
+  purpose: Per-agent permissions and constraints
+  variables:
+  - id, role, description
+  - security: '{ read_allow, edit_allow, forbid, edit_forbid, forbiddenAction, redirects }'
+  - resolvedInvariants: Array of { id, text }
+  - contexts: Optional context variations
+  content: "<agent_instruction id=\"{{id}}\">\n  <role>{{role}}</role>\n  <description>{{description}}</description>\n  \n  {{#if context}}\n  <active_context>{{context}}</active_context>\n  {{/if}}\n  \n  <security_clearance>\n    <allowed_paths>\n      {{#each security.read_allow}}\n      <path mode=\"read\">{{this}}</path>\n      {{/each}}\n      {{#each security.edit_allow}}\n      <path mode=\"edit\">{{this}}</path>\n      {{/each}}\n    </allowed_paths>\n    <forbidden_paths action=\"{{security.forbiddenAction}}\">\n      {{#each security.forbid}}\n      <path>{{this}}</path>\n      {{/each}}\n      {{#each security.edit_forbid}}\n      <path mode=\"no-edit\">{{this}}</path>\n      {{/each}}\n    </forbidden_paths>\n    {{#if security.redirects}}\n    {{#if security.redirects.length}}\n    <redirects>\n      {{#each security.redirects}}\n      <redirect from=\"{{from}}\" to=\"{{to}}\">\n        <reason>{{reason}}</reason>\n        {{#if guide}}<guide>{{guide}}</guide>{{/if}}\n    \
+    \  </redirect>\n      {{/each}}\n    </redirects>\n    {{/if}}\n    {{/if}}\n  </security_clearance>\n\n  <invariants>\n    {{#each resolvedInvariants}}\n    <invariant id=\"{{id}}\">{{text}}</invariant>\n    {{/each}}\n  </invariants>\n\n  {{#if contexts}}\n  <available_contexts>\n    {{#each contexts}}\n    <context id=\"{{@key}}\">\n      <trigger>{{trigger}}</trigger>\n      <additional_permissions>\n        {{#each additional_read}}\n        <path mode=\"read\">{{this}}</path>\n        {{/each}}\n        {{#each additional_edit}}\n        <path mode=\"edit\">{{this}}</path>\n        {{/each}}\n      </additional_permissions>\n      <reason>{{reason}}</reason>\n    </context>\n    {{/each}}\n  </available_contexts>\n  {{/if}}\n\n  <workflow_constraints>\n    <constraint>Do NOT hallucinate files outside of allowed_paths.</constraint>\n    <constraint>Check invariants before outputting code.</constraint>\n    <constraint>If path is forbidden, check for redirect before halting.</constraint>\n\
+    \  </workflow_constraints>\n</agent_instruction>"
+FRIDA_TPL_AGENTS_READONLY:
+  file: scripts/docs-gen/templates/agents-readonly.hbs
+  purpose: AGENTS.md for read-only zones
+  variables:
+  - zoneName
+  - forbiddenOps: Array of strings
+  - whyReadOnly
+  - consequence
+  - howToChange
+  content: '# {{zoneName}} - AGENTS.md
+
+
+    ## CRITICAL CONSTRAINT
+
+
+    ЗАПРЕЩЕНО:
+
+    {{#each forbiddenOps}}
+
+    - {{this}}
+
+    {{/each}}
+
+
+    ## WHY
+
+
+    {{whyReadOnly}}
+
+
+    {{#if consequence}}
+
+    **What happens if violated:**
+
+    {{consequence}}
+
+    {{/if}}
+
+
+    ## HOW TO CHANGE
+
+
+    {{howToChange}}
+
+
+    ## COMPLETION REPORT
+
+
+    After finishing (or halting), you MUST emit FRIDA Run Report (contract:FRIDA_RUN_REPORTING). Include changed files and verification status.'
+FRIDA_TPL_AGENTS_MAPPER:
+  file: scripts/docs-gen/templates/agents-mapper.hbs
+  purpose: AGENTS.md for editable zones with verification workflow
+  variables:
+  - zoneName
+  - purpose
+  - constraints: Array of strings
+  - verification
+  content: '# {{zoneName}} - AGENTS.md
+
+
+    ## PURPOSE
+
+
+    {{purpose}}
+
+
+    ## CONSTRAINTS
+
+
+    {{#each constraints}}
+
+    - {{this}}
+
+    {{/each}}
+
+
+    ## VERIFICATION
+
+
+    After making changes, always run:
+
+    ```bash
+
+    {{verification}}'
+FRIDA_TPL_AGENTS_NOTOUCH:
+  file: scripts/docs-gen/templates/agents-notouch.hbs
+  purpose: AGENTS.md for strictly forbidden zones
+  variables:
+  - zoneName
+  - whyReadOnly
+  content: '# {{zoneName}} - AGENTS.md
+
+
+    ## ABSOLUTE PROHIBITION
+
+
+    **DO NOT TOUCH ANY FILES IN THIS DIRECTORY**
+
+
+    ## REASON
+
+
+    {{whyReadOnly}}
+
+
+    These files are:
+
+    - Generated by external process
+
+    - Synchronized automatically
+
+    - Not part of manual development workflow
+
+
+    ## IF YOU NEED TO CHANGE SOMETHING
+
+
+    These files cannot be changed directly. If you need to modify behavior:
+
+
+    1. Check if the change should be in the mapper layer
+
+    2. Check if the change should be in the contract (wiki)
+
+    3. Consult with the team before attempting any modifications
+
+
+    **Any manual edits will be lost on next sync.**
+
+
+    ## COMPLETION REPORT
+
+
+    After finishing (or halting), you MUST emit FRIDA Run Report (contract:FRIDA_RUN_REPORTING). Include changed files and verification status.'
+FRIDA_TPL_AGENTS_SERVICE:
+  file: scripts/docs-gen/templates/agents-service.hbs
+  purpose: AGENTS.md for service layer zone
+  variables:
+  - zoneName: string (formatted from zone key)
+  - purpose: string (from zone.purpose)
+  - constraints: Array of strings (from zone.constraints)
+  - verification: string (from zone.verification)
+  - contractsRequired: boolean
+  - noDirectSupabase: boolean
+  - testRequirements: Array of strings
+  content: "# {{zoneName}} - AGENTS.md\n\n{{#if purpose}}\n## PURPOSE\n\n{{purpose}}\n{{/if}}\n\n## ARCHITECTURE RULES\n\n{{#if contractsRequired}}\n### Contracts Required\n\nAll service functions must use typed contracts from `src/services/v2/contracts/`.\n\n**Pattern:**\n```typescript\nimport type { WorkspaceData } from '../contracts/workspace';\n\nexport async function getWorkspace(params): Promise<WorkspaceData> {\n  // implementation\n}"
+FRIDA_TPL_BOUNDARIES:
+  file: scripts/docs-gen/templates/boundaries.hbs
+  purpose: Human-readable zone boundaries documentation
+  variables:
+  - zones: Array of Zone objects
+  content: "# Boundaries\n\nThis document defines the boundaries between different zones in the codebase.\n\n## Zones\n\n{{#each zones}}\n### {{name}}\n\n**Path:** `{{formatPath path}}`  \n**Status:** {{#if readOnly}}READ-ONLY{{else}}READ-WRITE{{/if}}\n\n{{#if readOnly}}\n**Why read-only:** {{whyReadOnly}}\n\n**Forbidden operations:**\n{{#each forbiddenOps}}\n- {{this}}\n{{/each}}\n\n**How to make changes:** {{#if redirectPath}}Modify `{{formatPath redirectPath}}` instead{{else}}Follow designated process{{/if}}\n{{/if}}\n\n---\n{{/each}}\n\n## Cross-Zone Rules\n\n1. **No imports from read-only zones to read-write zones** - Read-only zones are source-of-truth\n2. **No legacy imports in active zones** - Use `/legacy/**` only for archived code\n3. **UI never imports Supabase directly** - Always go through SERVICE_LAYER\n\n## Enforcement\n\nThese boundaries are enforced by:\n- `npm run verify` gates\n- Pre-commit hooks  \n- CI checks on pull requests"
+FRIDA_TPL_IMMUTABILITY:
+  file: scripts/docs-gen/templates/immutability.hbs
+  purpose: Documentation of read-only zones
+  variables:
+  - readOnlyZones: Array of Zone objects with readOnly=true
+  content: '# Immutability
+
+
+    This document describes read-only zones and the reasons for their immutability.
+
+
+    ## Read-Only Zones
+
+
+    {{#each readOnlyZones}}
+
+    ### {{name}}
+
+
+    **Path:** `{{formatPath path}}`
+
+
+    #### Why read-only?
+
+
+    {{whyReadOnly}}
+
+
+    #### What happens if you edit these files?
+
+
+    {{consequence}}
+
+
+    #### How to make legitimate changes?
+
+
+    {{howToChange}}
+
+
+    ---
+
+    {{/each}}
+
+
+    ## General Principle
+
+
+    Read-only zones serve as **sources of truth** that are managed by automated processes.
+
+
+    Manual edits to these zones:
+
+    1. Will be **overwritten** on next sync/build
+
+    2. Create **inconsistency** with source of truth
+
+    3. Make **debugging harder**'
+FRIDA_TPL_API_REFERENCE:
+  file: scripts/docs-gen/templates/api-reference.hbs
+  purpose: API documentation from contract:RESOURCES
+  variables:
+  - resources: Object from contract:RESOURCES
+  content: "# API Reference\n\nThis document provides a comprehensive reference for all resources and APIs.\n\n{{#each resources}}\n## {{@key}}\n\n**Provider:** `{{provider}}`  \n{{#if function}}**Function:** `{{function}}`{{/if}}  \n{{#if adapter}}**Adapter:** `{{adapter}}`{{/if}}\n\n{{#if schemas.params}}**Parameters:** `{{schemas.params}}`{{/if}}  \n{{#if schemas.returns}}**Returns:** `{{schemas.returns}}`{{/if}}\n\n{{#if notes}}**Notes:** {{notes}}{{/if}}\n\n---\n{{/each}}\n\n## Using This Reference\n\nThis reference is auto-generated from contract:RESOURCES in wiki.\nTo update: edit `zerohuman-contract-app.md`, run `npm run frida:gen`."
+FRIDA_SYNC_WORKFLOW:
+  file: .github/workflows/canon-sync.yml
+  purpose: Synchronize wiki contract:* blocks to repository
+  trigger: See 'content' block below (single source of truth)
+  sources:
+  - zerohuman-contract-app.md
+  - zerohuman-frida-kernel.md
+  - zerohuman-contract-project.md
+  output: contract/canon.cbmd.yaml
+  content: "name: Canon Sync (wiki -> /contract)\n\non:\n  schedule:\n    - cron: \"17 * * * *\"\n  push:\n    branches: [main]\n    paths:\n      - \"contract/**\"\n\npermissions:\n  contents: write\n\nconcurrency:\n  group: canon-sync\n  cancel-in-progress: false\n\njobs:\n  sync:\n    if: github.event_name == 'schedule' || github.actor != 'github-actions[bot]'\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Checkout repo\n        uses: actions/checkout@v4\n        with:\n          ref: main\n          fetch-depth: 0\n\n      - name: Align workspace with origin/main\n        run: |\n          set -euo pipefail\n          git fetch origin main\n          git switch main\n          git reset --hard origin/main\n\n      - name: Clone wiki\n        run: |\n          rm -rf /tmp/wiki\n          git clone --depth 1 \"https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git\" /tmp/wiki\n\n      - name: Generate canonArtifact from wiki\n        run:\
+    \ |\n          python -m pip install --quiet pyyaml\n          python - <<'PY'\n          import re\n          from pathlib import Path\n          import yaml\n\n          sources = [\n            \"zerohuman-contract-app.md\", \n            \"zerohuman-frida-kernel.md\", \n            \"zerohuman-contract-project.md\"\n          ]\n          \n          wiki_root = Path(\"/tmp/wiki\")\n          out = Path(\"contract/canon.cbmd.yaml\")\n          blocks = {}\n          \n          start_re = re.compile(r\"^\\s*```yaml\\s+contract:([A-Za-z0-9_.-]+)\\s*$\")\n          end_re = re.compile(r\"^\\s*```\\s*$\")\n\n          for filename in sources:\n            fpath = wiki_root / filename\n            if not fpath.exists():\n               print(f\"⚠️ Warning: {filename} not found, skipping.\")\n               continue\n            \n            lines = fpath.read_text(encoding=\"utf-8\").splitlines()\n            i = 0\n            while i < len(lines):\n              m = start_re.match(lines[i])\n\
+    \              if not m:\n                i += 1\n                continue\n\n              key = m.group(1)\n              if key in blocks:\n                raise SystemExit(f\"❌ Duplicate block '{key}' in {filename}\")\n\n              i += 1\n              buf = []\n              while i < len(lines) and not end_re.match(lines[i]):\n                buf.append(lines[i])\n                i += 1\n\n              if i >= len(lines):\n                raise SystemExit(f\"❌ Unclosed fence for {key}\")\n\n              raw = \"\\n\".join(buf).strip()\n              data = yaml.safe_load(raw) if raw else {}\n              blocks[key] = data if data else {}\n              i += 1\n\n          out.parent.mkdir(parents=True, exist_ok=True)\n          out.write_text(yaml.safe_dump(blocks, sort_keys=False, allow_unicode=True), encoding=\"utf-8\")\n          print(f\"✅ Wrote {out} with {len(blocks)} blocks.\")\n          PY\n\n      - name: Detect diff\n        id: diff\n        run: |\n       \
+    \   if [ -n \"$(git status --porcelain -- contract/canon.cbmd.yaml)\" ]; then\n            echo \"changed=true\" >> \"$GITHUB_OUTPUT\"\n          else\n            echo \"changed=false\" >> \"$GITHUB_OUTPUT\"\n          fi\n\n      - name: Commit and push\n        if: steps.diff.outputs.changed == 'true'\n        run: |\n          git config user.name \"github-actions[bot]\"\n          git config user.email \"41898282+github-actions[bot]@users.noreply.github.com\"\n          git add contract/canon.cbmd.yaml\n          git commit -m \"chore(canon): sync from wiki\"\n          git push origin HEAD:main"
+FRIDA_RECOVERY:
+  purpose: Restore Frida tooling files from this wiki document
+  trigger: Files missing, corrupted, or porting to new project
+  procedure:
+    step_1_templates:
+      description: Extract and write template files
+      source_blocks:
+      - FRIDA_TPL_BOOTLOADER
+      - FRIDA_TPL_ROUTER
+      - FRIDA_TPL_PROFILE
+      - FRIDA_TPL_AGENTS_READONLY
+      - FRIDA_TPL_AGENTS_MAPPER
+      - FRIDA_TPL_AGENTS_NOTOUCH
+      - FRIDA_TPL_AGENTS_SERVICE
+      - FRIDA_TPL_BOUNDARIES
+      - FRIDA_TPL_IMMUTABILITY
+      - FRIDA_TPL_API_REFERENCE
+      action: "For each FRIDA_TPL_* block:\n  1. Read the 'file' field → target path\n  2. Read the 'content' field → file content (it's a multiline string after |)\n  3. Create directories if needed\n  4. Write content to target path\n"
+      example: "Block FRIDA_TPL_BOOTLOADER has:\n  file: \"scripts/templates/frida/bootloader.hbs\"\n  content: |  \n    # FRIDA AGENT PROTOCOL...\n\nAction: write the content to scripts/templates/frida/bootloader.hbs\n"
+    step_2_workflow:
+      description: Extract and write GitHub workflow
+      source_block: FRIDA_SYNC_WORKFLOW
+      action: '1. Read ''file'' field → ".github/workflows/canon-sync.yml"
+
+        2. Read ''content'' field → workflow YAML
+
+        3. Write to .github/workflows/canon-sync.yml
+
+        '
+    step_3_generator:
+      description: Write generator script from specification
+      source_block: FRIDA_GENERATOR_SPEC
+      action: "1. Read FRIDA_GENERATOR_SPEC block\n2. Write TypeScript code that implements:\n   - Config constants from 'structure.config'\n   - PathNormalizer class from 'structure.classes.PathNormalizer'\n   - Functions from 'structure.functions'\n   - Main sequence from 'structure.main_sequence'\n   - Handlebars helpers from 'structure.handlebars_helpers'\n3. Save to scripts/frida-gen.ts\n"
+      note: This is the only file that requires code generation, not copy
+    step_4_dependencies:
+      description: Install npm dependencies
+      action: "npm install tsx yaml handlebars glob --save-dev\n\nAdd to package.json scripts:\n  \"frida:gen\": \"tsx scripts/frida-gen.ts\"\n"
+    step_5_verify:
+      description: Test the restored tooling
+      action: "npm run frida:gen\n\nExpected output:\n  - AGENTS.md in project root\n  - .specs/ROUTER.xml\n  - .specs/profiles/*.xml\n  - Zone AGENTS.md files\n  - docs/policy/*.md\n  - docs/reference/API_REFERENCE.md\n"
+  file_mapping:
+    templates_frida:
+      FRIDA_TPL_BOOTLOADER: scripts/templates/frida/bootloader.hbs
+      FRIDA_TPL_ROUTER: scripts/templates/frida/router.xml.hbs
+      FRIDA_TPL_PROFILE: scripts/templates/frida/profile.xml.hbs
+    templates_docs:
+      FRIDA_TPL_AGENTS_READONLY: scripts/docs-gen/templates/agents-readonly.hbs
+      FRIDA_TPL_AGENTS_MAPPER: scripts/docs-gen/templates/agents-mapper.hbs
+      FRIDA_TPL_AGENTS_NOTOUCH: scripts/docs-gen/templates/agents-notouch.hbs
+      FRIDA_TPL_AGENTS_SERVICE: scripts/docs-gen/templates/agents-service.hbs
+      FRIDA_TPL_BOUNDARIES: scripts/docs-gen/templates/boundaries.hbs
+      FRIDA_TPL_IMMUTABILITY: scripts/docs-gen/templates/immutability.hbs
+      FRIDA_TPL_API_REFERENCE: scripts/docs-gen/templates/api-reference.hbs
+    workflow:
+      FRIDA_SYNC_WORKFLOW: .github/workflows/canon-sync.yml
+    generator:
+      FRIDA_GENERATOR_SPEC: scripts/frida-gen.ts
+FRIDA_NOTES:
+  design_decisions:
+  - decision: XML for profiles, not JSON/YAML
+    reason: Better IDE support, explicit structure, familiar to agents
+  - decision: Nested AGENTS.md pattern
+    reason: Context minimization, agents read closest file
+  - decision: Wiki as single source
+    reason: Human-editable, versioned, diff-friendly
+  - decision: Templates stored in wiki as YAML content blocks
+    reason: Full reproducibility from wiki alone
+  reproducibility:
+    principle: Wiki contains everything needed to rebuild tooling
+    includes:
+    - Data schemas (FRIDA_SCHEMAS)
+    - Generator specification (FRIDA_GENERATOR_SPEC)
+    - All templates (FRIDA_TPL_*)
+    - Sync workflow (FRIDA_SYNC_WORKFLOW)
+    excludes:
+    - Actual TypeScript code (derived from spec)
+FRIDA_BOOTSTRAP:
+  purpose: Specification for the 'frida:gen' script. Enables regeneration of Agent Context.
+  source_of_truth: Frida Kernel (TASK_PROFILES, INVARIANTS)
+  target_artifacts:
+  - .specs/ROUTER.xml
+  - .specs/profiles/*.xml
+  - AGENTS.md
+  algorithm:
+    1_LOAD: Read Contract. Extract YAML blocks TASK_PROFILES, INVARIANTS.
+    2_ROUTER: Generate ROUTER.xml mapping keywords to profile files.
+    3_PROFILES: Generate per-agent XML with <permissions> and expanded <constraints>.
+    4_BOOT: Update AGENTS.md with protocol and router link.
+META:
+  version: '0.12'
+  date: '2026-01-18'
+  status: active
+  sourceOfTruth: wiki
+  composition:
+  - 'Domain Model: [[zerohuman-contract-app]]'
+  - 'AI Framework: [[zerohuman-frida-kernel]]'
+  - 'Project Config: [[zerohuman-contract-project]]'
+  scope:
+  - 'UI: Wizard + Route Page (FullscreenMap + OverlayTimeline)'
+  - 'Route: v2-preview ASYNC-DETAILS (Skeleton-only creation)'
+  - 'Route Page layout: Static Host (Map+Actions) + Mounted Timeline'
+  - 'LLM: Motorcycle Scenic Segmenter, Mapbox: geometry executor'
+  - 'State machine: idle | running | ready | error (strict transitions)'
+  - 'Segmentation: Topology Cache (Road Ref + Junctions) + Progressive Loading'
+  guardRefs:
+  - canon.source.wiki
+  - canon.artifact.no-manual-edits
+  - canon.not.runtime
+DOCS:
+  humanWiki:
+    canonicalPage: zerohuman-contract-app
+    homePage: Home
+    relatedPages:
+    - zerohuman-frida-kernel
+    - zerohuman-contract-project
+  sourceOfTruth:
+    kind: wiki
+    ruleGuardRef: canon.source.wiki
+  canon:
+    artifactRef: PATHS.contract.canonArtifact
+    ruleGuardRef: canon.artifact.no-manual-edits
+    generationRule: 'canon.cbmd.yaml is generated from wiki contract:* blocks.
+
+      Sources: zerohuman-contract-app.md, zerohuman-frida-kernel.md, zerohuman-contract-project.md
+
+      '
+  procedures:
+    SYNC:
+      intent: Refresh /contract/** from wiki (source of truth)
+      triggers:
+      - kind: schedule
+        ref: contract:FRIDA_SYNC_WORKFLOW.content (canonical cron)
+      - kind: push
+        paths:
+        - contract/**
+      reads:
+      - GitHub wiki repo (<repo>.wiki.git)
+      - zerohuman-contract-app.md
+      - zerohuman-frida-kernel.md
+      - zerohuman-contract-project.md
+      writes:
+      - contract/canon.cbmd.yaml
+      outputPolicy:
+      - 'If diff exists: commit with message ''chore(canon): sync from wiki'''
+      - No enrichment. No interpretation.
+    CHECK:
+      intent: Prevent drift by auditing repo against canonArtifact
+      triggers:
+      - kind: ci
+        events:
+        - pull_request
+        - push
+      validates:
+      - contract:VALIDATION_RULES_FRIDA.repoGuards
+  format:
+    name: CBMD
+    version: '0.3'
+  notes:
+  - Canon is governance data. Not imported by application at runtime.
+  - Wiki → repo sync only. Reverse direction only for bootstrap/recovery.
+LAYERS:
+  UI:
+    responsibilities:
+    - UI rendering
+    - State orchestration
+    - User interaction handling
+  SERVICE_LAYER:
+    responsibilities:
+    - Transport (HTTP, WebSocket)
+    - Type definitions
+    - Logging
+    - Error normalization
+  BUSINESS_LOGIC:
+    responsibilities:
+    - Edge Functions
+    - Domain rules
+    - Data validation
+  DATABASE:
+    responsibilities:
+    - Persistence
+    - Row Level Security
+  callGraph:
+    allowed:
+    - UI -> SERVICE_LAYER
+    - SERVICE_LAYER -> BUSINESS_LOGIC
+    - BUSINESS_LOGIC -> DATABASE
+    forbidden:
+    - UI -> BUSINESS_LOGIC
+    - UI -> DATABASE
+    - SERVICE_LAYER -> DATABASE
+PATHS:
+  canon:
+    wizardDir: /dist/aistudio/wizard
+    wizardVisualDir: /dist/aistudio/style
+    timelineDir: /dist/aistudio/timeline
+    wizard: /src/mount/components/wizard
+    timeline: /src/mount/components/timeline
+    map: /src/components/map/Map.tsx
+    debugPanel: /src/components/debug/DebugPanel.tsx
+  sources:
+    aistudioRoot: /dist/aistudio
+    aistudioStyleIndex: /dist/aistudio/style/index.html
+  tooling:
+    mapperScriptsRoot: /scripts/mapper
+    fridaGenerator: /scripts/frida-gen.ts
+    docsGenerator: /scripts/docs-gen/generate-derived-docs.ts
+  app:
+    rootIndexHtml: /index.html
+    styleIndexTemplate: /dist/aistudio/style/index.html
+  slots:
+    wizardPage: /src/pages/WizardPage.tsx
+    timeline: /src/pages/RoutePage/Timeline.tsx
+    indexCss: /src/index.css
+  mount:
+    root: /src/mount
+    pages: /src/mount/pages
+    components: /src/mount/components
+    styles: /src/mount/styles
+    assets: /src/mount/assets
+  contract:
+    canonArtifact: /contract/canon.cbmd.yaml
+  specs:
+    root: /.specs
+    router: /.specs/ROUTER.xml
+    profiles: /.specs/profiles
+  slotMarkers:
+    wizard:
+      stub: WizardPageStub
+      mounted: WizardAppMount
+    timeline:
+      stub: TimelineStub
+      mounted: TimelineApp
+GUARDS:
+  version: '0.6'
+  guards:
+  - id: canon.source.wiki
+    kind: meta
+    statement: Source of truth is ONLY contract:* blocks in wiki pages.
+  - id: canon.artifact.no-manual-edits
+    kind: meta
+    statement: Files in /contract/** are generated. No manual edits.
+  - id: canon.not.runtime
+    kind: meta
+    statement: Canon and artifacts are not imported by application at runtime.
+  - id: repo.docs.only-md
+    kind: structural
+    statement: Docs zone allows only markdown documents.
+  - id: layers.callgraph
+    kind: structural
+    statement: Inter-layer calls must follow LAYERS.callGraph.
+  - id: contract.refs.resources-exist
+    kind: structural
+    statement: All resourceRef references in contract:* blocks MUST resolve to an existing resource definition.
+  - id: contract.refs.transitions-exist
+    kind: structural
+    statement: All transitionRef references in contract:* blocks MUST resolve to an existing transition in the declared state machines.
+  - id: contract.refs.triggerref-resolve
+    kind: structural
+    statement: All triggerRef references in contract:* blocks MUST resolve to an existing trigger definition (boundary triggers, mapper triggers, CI triggers).
+  - id: contract.refs.paths-exist
+    kind: structural
+    statement: All PATHS.* references in contract:* blocks MUST resolve to existing filesystem paths in the repository.
+  - id: repo.no-legacy-refs
+    kind: prohibition
+    statement: Active code MUST NOT reference legacy/ directory.
+  - id: data.no-legacy-access
+    kind: prohibition
+    statement: Active services and queries MUST NOT access databases or tables with names starting with 'legacy'.
+  - id: repo.no-forbidden-tokens
+    kind: prohibition
+    statement: Forbidden tokens (mock/initial) MUST NOT exist in mounted code.
+  - id: mock.initial.strip
+    kind: prohibition
+    statement: Mock initial conditions MUST be stripped during surgeon phase.
+  - id: ui.no-direct-supabase
+    kind: prohibition
+    statement: UI MUST NOT import Supabase client directly. Use service layer.
+  - id: index.html.no-manual-edits
+    kind: prohibition
+    statement: Root /index.html MUST NOT be edited manually. Regenerated by mapper from AI Studio template.
+  - id: deploy.edge.github-actions-only
+    kind: policy
+    statement: Edge Functions MUST be deployed ONLY via GitHub Actions workflows. Direct/manual deploy is forbidden.
+  - id: deploy.edge.no-direct-cli
+    kind: prohibition
+    statement: Agents MUST NOT attempt direct Edge Functions deployment (CLI, API, dashboard). Only push code; CI deploys.
+  - id: upd-route-details.tuning.config-only
+    kind: policy
+    statement: Route tuning MUST modify only supabase/functions/v2-upd-route-details/waypoint-config.ts (preset/parameter values). Route tuning MUST NOT modify generator/detector mechanics. If mechanics change is required -> HALT and request route_algorithm_optimization.
+  - id: v2-preview.skeleton-only
+    kind: policy
+    statement: v2-preview MUST return only routeId and trigger async details build. No inline route data.
+  - id: v2-preview.status-running
+    kind: policy
+    statement: Concurrent updRouteDetails MUST be rejected with 409 if status='running'.
+  - id: v2-preview.llm-empty-reject
+    kind: policy
+    statement: v2-preview MUST reject requests when LLM returns empty llm_segments.
+  - id: v2-preview.return-routeid-only
+    kind: policy
+    statement: 'v2-preview response schema: { routeId: uuid } only. No route data inline.'
+  - id: skeleton.road-refs-count
+    kind: policy
+    statement: Skeleton llm_segments MUST contain at least one road_ref for the route.
+  - id: skeleton.road-refs-format
+    kind: policy
+    statement: road_ref format MUST be normalized (MEX prefix, D suffix where applicable).
+  - id: skeleton.ui.only-origin-destination
+    kind: invariant
+    statement: UI MUST NOT display intermediate points when is_skeleton=true. Only origin and destination on map.
+  - id: upd-route-details.minimal-calls
+    kind: invariant
+    statement: updRouteDetails MUST minimize external API calls. Use llm_segments waypoints for Mapbox routing.
+  - id: upd-route-details.atomicity
+    kind: invariant
+    statement: updRouteDetails MUST write details atomically in single transaction.
+  - id: upd-route-details.lock-atomic
+    kind: invariant
+    statement: Concurrent updRouteDetails MUST be rejected with 409 if status='running'.
+  - id: upd-route-details.idempotent-ready
+    kind: policy
+    statement: updRouteDetails MUST be idempotent. Re-running on ready route returns existing data.
+  - id: ui.retry-button-on-error
+    kind: policy
+    statement: UI MUST show retry button when details_status='error'.
+  - id: ui.loading-indicator-skeleton
+    kind: policy
+    statement: UI MUST show loading indicator while details_status='running' or is_skeleton=true.
+  - id: timeline.update-on-details-rev
+    kind: invariant
+    statement: Timeline updates ONLY when details_rev changes. Map unaffected if geometry_rev unchanged.
+  - id: map.update-on-geometry-rev
+    kind: invariant
+    statement: Map updates ONLY when geometry_rev changes. No viewport reset on same geometry.
+  - id: mount.slot.baseline.before
+    kind: policy
+    statement: Before mounting, slot MUST contain baseline stub component.
+  - id: mount.slot.mounted.after
+    kind: policy
+    statement: After mounting, slot MUST contain mounted component with correct export name.
+  - id: upd-route-details.waypoints.no-urban-near-ends
+    kind: policy
+    statement: 'Waypoint generator MUST NOT emit intermediate waypoints inside origin/destination urban exclusion zones. Allowed inside these zones only: origin, destination, user_poi. Any other detected potential waypoints in these zones MUST be removed.'
+  - id: canon.observability.run-report-required
+    kind: policy
+    statement: Agents MUST emit FRIDA Run Report on both SUCCESS and HALT (see contract:FRIDA_RUN_REPORTING). Report MUST include changed files list and verification status.
+VALIDATION_RULES_APP:
+  v2PreviewGuards:
+  - guardRef: v2-preview.skeleton-only
+  - guardRef: v2-preview.status-running
+  - guardRef: v2-preview.llm-empty-reject
+  - guardRef: v2-preview.return-routeid-only
+  skeletonGuards:
+  - guardRef: skeleton.road-refs-count
+  - guardRef: skeleton.road-refs-format
+  - guardRef: skeleton.ui.only-origin-destination
+  - guardRef: upd-route-details.minimal-calls
+  - guardRef: upd-route-details.atomicity
+  - guardRef: upd-route-details.lock-atomic
+  - guardRef: upd-route-details.idempotent-ready
+  - guardRef: upd-route-details.waypoints.no-urban-near-ends
+  uiGuards:
+  - guardRef: ui.retry-button-on-error
+  - guardRef: ui.loading-indicator-skeleton
+  - guardRef: timeline.update-on-details-rev
+  - guardRef: map.update-on-geometry-rev
+  mountGuards:
+  - guardRef: mount.slot.baseline.before
+  - guardRef: mount.slot.mounted.after
+VALIDATION_RULES_FRIDA:
+  contractConsistency:
+  - guardRef: contract.refs.resources-exist
+  - guardRef: contract.refs.transitions-exist
+  - guardRef: contract.refs.triggerref-resolve
+  - guardRef: contract.refs.paths-exist
+  repoGuards:
+  - guardRef: canon.source.wiki
+  - guardRef: canon.artifact.no-manual-edits
+  - guardRef: canon.not.runtime
+  - guardRef: repo.docs.only-md
+  - guardRef: repo.no-legacy-refs
+  - guardRef: data.no-legacy-access
+  - guardRef: repo.no-forbidden-tokens
+  - guardRef: mock.initial.strip
+  - guardRef: index.html.no-manual-edits
+  - guardRef: deploy.edge.github-actions-only
+  - guardRef: deploy.edge.no-direct-cli
+  layerGuards:
+  - guardRef: layers.callgraph
+  - guardRef: ui.no-direct-supabase
+ZONES:
+  uiComponents:
+    path: src/components/**
+    readOnly: false
+    purpose: Handwritten host UI components and glue. Generated UI lives in src/mount/**.
+    agentsPath: src/components
+    agentsTemplate: mapper
+    constraints:
+    - 'Host-only: may import from src/mount/**. src/mount/** MUST NOT import from src/components/**.'
+    - Must follow LAYERS.callGraph and ui.no-direct-supabase.
+    verification: npm run -s verify
+  mountedCode:
+    path: src/mount/**
+    readOnly: true
+    whyReadOnly: Output of mapper transformation
+    consequence: Overwritten on every mapper run
+    redirectPath: scripts/mapper/
+    howToChange: Modify surgeon-*.ts or styler-*.ts
+    forbiddenOps:
+    - any direct edits
+    agentsPath: src/mount
+    agentsTemplate: readonly
+  mapperScripts:
+    path: scripts/mapper/**
+    readOnly: false
+    purpose: Surgical transformation of AI Studio code to kaTai services
+    agentsPath: scripts/mapper
+    agentsTemplate: mapper
+    constraints:
+    - Only modify mapping logic, not component structure
+    - Keep visual output identical to AI Studio version
+    - Test with npm run mapper:all after changes
+    verification: npm run mapper:all && npm run -s verify
+  aiStudioGenerated:
+    path: dist/aistudio/**
+    readOnly: true
+    whyReadOnly: External sync from AI Studio platform
+    consequence: Complete loss of AI Studio synchronization
+    howToChange: Update in AI Studio, sync to repo
+    forbiddenOps:
+    - any edits
+    - any modifications
+    - any file operations
+    agentsPath: dist/aistudio
+    agentsTemplate: notouch
+  serviceLayer:
+    path: src/services/**
+    readOnly: false
+    purpose: Transport adapters, typing, business logic interface
+    agentsPath: src/services
+    agentsTemplate: service
+    constraints:
+    - Use contracts/** for type definitions
+    - No direct Supabase imports in UI
+    - All functions must have tests
+    verification: npm run -s verify
+    contractsRequired: true
+    noDirectSupabase: true
+    testRequirements:
+    - Unit tests for all service functions
+    - Mock external dependencies
+    guardRefs:
+    - layers.callgraph
+    - ui.no-direct-supabase
+  supabaseFunctions:
+    path: supabase/functions/**
+    readOnly: false
+    purpose: Edge Functions for business logic
+    agentsPath: supabase/functions
+    agentsTemplate: service
+    constraints:
+    - Follow Edge Function patterns
+    - Use shared types from contracts
+    - Handle errors explicitly
+    - DO NOT deploy functions manually. Push code only; GitHub Actions deploys.
+    verification: supabase functions serve
+  agentTasks:
+    path: tasks/**
+    readOnly: false
+    purpose: Task inbox and packs for agents. Tasks are immutable instructions. Agents may only update README checklists.
+    agentsPath: tasks
+    agentsTemplate: mapper
+    constraints:
+    - Agents MUST NOT edit tasks/TASK-*.md (tasks are immutable).
+    - Agents MAY edit only tasks/**/README.md (checklists / progress).
+    - 'If a task needs change: create a new task file; do not patch old one.'
+    - On SUCCESS, agent MUST append the same SuccessReport YAML block to tasks/**/README.md under section 'Agent Run Log' (if section missing — create it).
+    verification: n/a
+  resourcesData:
+    path: resources/*.yaml
+    readOnly: true
+    whyReadOnly: Human-authored datasets. Build-only inputs.
+    agentsPath: resources
+    agentsTemplate: readonly
+    constraints:
+    - Build-only. Runtime/edge functions MUST NOT parse these YAML files.
+    - Any schema change requires canon update (GLOSSARY + start_finish_regime).
+    verification: npm run build
+  resourcesGenerated:
+    path: resources/_generated/**
+    readOnly: false
+    purpose: Build artifacts used by runtime (edge functions) and pipeline. Deterministic, machine-generated.
+    agentsPath: resources/_generated
+    agentsTemplate: service
+    constraints:
+    - Only build scripts may write. Runtime reads.
+    - Artifacts MUST be deterministic (same input => same bytes).
+TASK_PROFILES:
+  wizard_logic:
+    description: Frontend tasks related to Wizard flow and state
+    keywords:
+    - wizard
+    - geolocation
+    - mapbox
+    - steps
+    - origin
+    - destination
+    - form
+    - input
+    role: FRONTEND_AGENT
+    security:
+      read_allow:
+      - scripts/mapper/surgeon-wizard.ts
+      - scripts/mapper/styler-wizard.ts
+      - src/mount/components/wizard/**
+      - src/contracts/**
+      - src/contracts/**
+      - dist/aistudio/**
+      - tasks/**
+      edit_allow:
+      - scripts/mapper/surgeon-wizard.ts
+      - scripts/mapper/styler-wizard.ts
+      - tasks/README.md
+      - tasks/**/README.md
+      forbid:
+      - src/services/**
+      - supabase/**
+      edit_forbid:
+      - dist/aistudio/**
+      - src/mount/**
+      - tasks/TASK-*.md
+      - tasks/**/TASK-*.md
+      forbiddenAction: REDIRECT
+      redirects:
+      - from: src/mount/**
+        to: scripts/mapper/surgeon-wizard.ts
+        reason: Edit mapper instead of mounted code
+    invariants:
+    - geo_auto
+    - geo_fallback
+    - mapper_only
+    - visual_mimicry
+  route_tuning:
+    description: 'Route algorithm tuning: presets/experiments in waypoint-config.ts only. NO mechanics edits.'
+    keywords:
+    - tuning
+    - preset
+    - presets
+    - experiment
+    - exp-
+    - parameters
+    - waypoint-config
+    - minConfidence
+    - minPriority
+    - minDistanceKm
+    - maxWaypoints
+    role: BACKEND_AGENT
+    security:
+      read_allow:
+      - supabase/functions/v2-upd-route-details/**
+      - src/contracts/**
+      - tasks/**
+      edit_allow:
+      - supabase/functions/v2-upd-route-details/waypoint-config.ts
+      - tasks/README.md
+      - tasks/**/README.md
+      edit_forbid:
+      - supabase/functions/v2-upd-route-details/index.ts
+      - supabase/functions/v2-upd-route-details/types.ts
+      - supabase/functions/v2-upd-route-details/waypoint-detection.ts
+      - supabase/functions/v2-upd-route-details/waypoint-generator.ts
+      - supabase/functions/v2-upd-route-details/serpentine-detector-v2.ts
+      - supabase/functions/v2-upd-route-details/highway-change-detector.ts
+      - supabase/functions/v2-upd-route-details/route-line-map-geometry.ts
+      - supabase/functions/v2-upd-route-details/mapbox.ts
+      - supabase/functions/v2-upd-route-details/geometry-hash.ts
+      - tasks/TASK-*.md
+      - tasks/**/TASK-*.md
+      forbiddenAction: REDIRECT
+      redirects:
+      - from: supabase/functions/v2-upd-route-details/waypoint-generator.ts
+        to: supabase/functions/v2-upd-route-details/waypoint-config.ts
+        reason: Tuning MUST NOT change mechanics. Change config/presets only.
+      - from: supabase/functions/v2-upd-route-details/*detector*.ts
+        to: supabase/functions/v2-upd-route-details/waypoint-config.ts
+        reason: Tuning MUST NOT change detector mechanics. Change config/presets only.
+      - from: supabase/functions/v2-upd-route-details/waypoint-detection.ts
+        to: supabase/functions/v2-upd-route-details/waypoint-config.ts
+        reason: Tuning MUST NOT change detection mechanics. Change config/presets only.
+      - from: supabase/functions/v2-upd-route-details/**
+        to: supabase/functions/v2-upd-route-details/waypoint-config.ts
+        reason: Tuning MUST NOT change mechanics. Change config/presets only.
+    invariants:
+    - route_tuning_config_only
+    - deploy_github_actions_only
+    - no_scope_creep
+  timeline_logic:
+    description: Frontend tasks for Route Timeline, Map visualization, interactivity
+    keywords:
+    - timeline
+    - route
+    - segments
+    - stops
+    - display
+    - map
+    - mapbox
+    - interaction
+    - highlight
+    role: FRONTEND_AGENT
+    security:
+      read_allow:
+      - src/types/**
+      - src/services/**
+      - scripts/mapper/surgeon-timeline.ts
+      - src/mount/pages/RoutePage.tsx
+      - src/pages/RoutePage/**
+      - src/mount/pages/RoutePage.tsx
+      - src/pages/RoutePage/**
+      - src/components/map/**
+      - tasks/**
+      edit_allow:
+      - scripts/mapper/surgeon-timeline.ts
+      - src/pages/RoutePage/**
+      - src/components/map/**
+      - tasks/README.md
+      - tasks/**/README.md
+      edit_forbid:
+      - dist/aistudio/**
+      - src/mount/**
+      - tasks/TASK-*.md
+      - tasks/**/TASK-*.md
+    forbiddenAction: REDIRECT
+    redirects:
+    - from: src/mount/components/timeline/**
+      to: scripts/mapper/surgeon-timeline.ts
+      reason: Timeline component structure is managed by surgeon script. Do not edit installed file directly.
+    invariants:
+    - mapper_only
+    - backend_boundary
+    - timeline_data_source
+    - timeline_map_sync
+    - data_reality
+    - segment_waypoint_primacy
+  visual_design:
+    description: Global styles, CSS, Tailwind. Analyze visual source and replicate appearance.
+    keywords:
+    - css
+    - style
+    - design
+    - tailwind
+    - layout
+    - visual
+    - appearance
+    - theme
+    role: DESIGN_AGENT
+    security:
+      read_allow:
+      - dist/aistudio/**
+      - scripts/mapper/styler-*.ts
+      - scripts/mapper/surgeon-*.ts
+      - src/index.css
+      - src/components/**
+      - src/mount/**
+      - index.html
+      - src/main.tsx
+      - src/main.tsx
+      - src/App.tsx
+      - tasks/**
+      edit_allow:
+      - scripts/mapper/styler-*.ts
+      - scripts/mapper/surgeon-*.ts
+      - src/index.css
+      - tasks/README.md
+      - tasks/**/README.md
+      forbid:
+      - src/services/**
+      - supabase/**
+      edit_forbid:
+      - dist/aistudio/**
+      - src/mount/**
+      - index.html
+      - src/main.tsx
+      - src/App.tsx
+      - tasks/TASK-*.md
+      - tasks/**/TASK-*.md
+    invariants:
+    - visual_mimicry
+    - mapper_only
+  backend_core:
+    description: Backend service logic, database, Edge Functions
+    keywords:
+    - supabase
+    - auth
+    - database
+    - service
+    - api
+    - rls
+    - row level security
+    - migration
+    - schema
+    - edge function
+    role: BACKEND_AGENT
+    security:
+      read_allow:
+      - src/services/**
+      - supabase/functions/**
+      - supabase/migrations/**
+      - src/contracts/**
+      - src/contracts/**
+      - .github/workflows/**
+      - tasks/**
+      edit_allow:
+      - src/services/**
+      - supabase/functions/**
+      - supabase/functions/**
+      - supabase/migrations/**
+      - src/contracts/**
+      - tasks/README.md
+      - tasks/**/README.md
+      forbid:
+      - src/components/**
+      - src/mount/**
+      - legacy/**
+      edit_forbid:
+      - .github/**
+      - tasks/TASK-*.md
+      - tasks/**/TASK-*.md
+    invariants:
+    - backend_boundary
+    - data_reality
+    - cache_zero
+    - deploy_github_actions_only
+    - segment_waypoint_primacy
+  qa_engineer:
+    description: Writing and maintaining tests (Unit, E2E, Regression)
+    keywords:
+    - test
+    - e2e
+    - vitest
+    - spec
+    - verify
+    - regression
+    - quality
+    - coverage
+    - fixture
+    role: QA_AGENT
+    security:
+      read_allow:
+      - tests/**
+      - e2e/**
+      - src/**
+      - src/**
+      - scripts/**
+      - tasks/**
+      edit_allow:
+      - tests/**
+      - e2e/**
+      - tasks/README.md
+      - tasks/**/README.md
+      forbid:
+      - contract/**
+      - dist/aistudio/**
+      - tasks/TASK-*.md
+      - tasks/**/TASK-*.md
+    invariants:
+    - data_reality
+  governance:
+    description: Managing rules, contracts, documentation, Frida configuration
+    keywords:
+    - wiki
+    - contract
+    - canon
+    - rules
+    - policy
+    - agents.md
+    - frida
+    - governance
+    - documentation
+    role: ARCHITECT_AGENT
+    security:
+      read_allow:
+      - contract/**
+      - docs/**
+      - scripts/docs-gen/**
+      - scripts/frida-gen.ts
+      - scripts/templates/**
+      - scripts/templates/**
+      - .github/workflows/**
+      - tasks/**
+      edit_allow:
+      - scripts/docs-gen/**
+      - scripts/frida-gen.ts
+      - scripts/templates/**
+      - tasks/README.md
+      - tasks/**/README.md
+      forbid:
+      - src/**
+      - supabase/**
+      edit_forbid:
+      - contract/**
+      - .github/**
+      - tasks/TASK-*.md
+      - tasks/**/TASK-*.md
+    invariants: []
+    note: Contract edits happen in wiki, not repo
+INVARIANTS:
+  geo_auto:
+    id: GEO_01
+    text: MUST auto-detect origin on mount via navigator.geolocation
+    category: data
+  geo_fallback:
+    id: GEO_02
+    text: MUST fallback to 'El Angel' coords (19.4326, -99.1332) on geolocation error OR if user-provided coordinates are outside Mexico borders
+    category: data
+  mapper_only:
+    id: ARCH_01
+    text: MUST NOT edit src/mount directly. Edit scripts/mapper/surgeon-*.ts instead
+    category: architecture
+  backend_boundary:
+    id: ARCH_02
+    text: UI MUST call backend only via SERVICE_LAYER (src/services). UI MUST NOT import Supabase client directly. UI MUST NOT bypass service layer.
+    category: architecture
+  timeline_data_source:
+    id: DATA_01
+    text: Timeline MUST render data passed via props/adapter. MUST remove any static mock data from source.
+    category: data
+  timeline_map_sync:
+    id: UX_01
+    text: Timeline selection MUST drive Map highlighting in read-only mode. No persistence, no backend side effects.
+    category: visual
+  visual_mimicry:
+    id: VIS_01
+    text: MUST analyze visual source (dist/aistudio) and replicate EXTERNAL APPEARANCE. Do not blind-copy CSS.
+    category: visual
+  data_reality:
+    id: DATA_02
+    text: Services MUST fail with error rather than return mock/fallback data. No 'fake it till you make it'.
+    category: data
+  cache_zero:
+    id: ARCH_03
+    text: Frontend/session caching is FORBIDDEN. UI MUST fetch fresh data per request. Does NOT apply to backend cache_ground (persistent topology knowledge).
+    category: architecture
+  repo_clean:
+    id: ARCH_04
+    text: Active code MUST NOT import from 'legacy/'. Legacy code MUST be isolated.
+    category: architecture
+  no_scope_creep:
+    id: ARCH_05
+    text: MUST NOT add functionality not specified in task. Minimal implementation only.
+    category: architecture
+  error_explicit:
+    id: DATA_03
+    text: All async operations MUST have explicit error handling. No silent failures.
+    category: data
+  route_tuning_config_only:
+    id: ARCH_07
+    text: Route tuning MUST change only waypoint-config.ts parameter values (presets/experiments). Route tuning MUST NOT modify waypoint generator/detector mechanics. If mechanics change is needed -> HALT and request route_algorithm_optimization task.
+    category: architecture
+  index_from_template:
+    id: ARCH_06
+    text: Root /index.html MUST be regenerated from dist/aistudio/style/index.html on every mapper run. Manual edits forbidden.
+    category: architecture
+  deploy_github_actions_only:
+    id: DEPLOY_01
+    text: MUST NOT deploy Edge Functions manually. Deployment is performed only by GitHub Actions.
+    category: security
+  skeleton_ui_no_intermediate:
+    id: SKEL_01
+    text: UI MUST NOT display intermediate points when is_skeleton=true. Only origin and destination on map.
+    category: data
+  upd_route_minimal_calls:
+    id: SKEL_03
+    text: updRouteDetails MUST minimize external API calls. Use llm_segments waypoints for Mapbox routing.
+    category: architecture
+  segments_boundary_driven:
+    id: SKEL_04
+    text: Segments MUST be created by boundary triggers (highway_change, scenery_change, serpentine_cluster), NOT by distance or time quotas.
+    category: data
+  details_rev_timeline:
+    id: SKEL_05
+    text: Timeline updates ONLY when details_rev changes. Map unaffected if geometry_rev unchanged.
+    category: visual
+  geometry_rev_map:
+    id: SKEL_06
+    text: Map updates ONLY when geometry_rev changes. No viewport reset on same geometry.
+    category: visual
+  upd_route_atomicity:
+    id: SKEL_07
+    text: updRouteDetails MUST write details atomically in single transaction.
+    category: data
+  upd_route_lock:
+    id: SKEL_08
+    text: Concurrent updRouteDetails MUST be rejected with 409 if status='running'.
+    category: architecture
+  segment_waypoint_primacy:
+    id: ROUTE_01
+    text: Waypoints первичны. Сегменты — производные (отрезки между waypoints). Добавление waypoint = разделение. Удаление waypoint = объединение.
+    category: data
+MAPPER_COMPONENTS:
+  description: Components processed by mapper in kaTai
+  version: '0.6'
+  components:
+    wizard:
+      sourceRef: PATHS.canon.wizardDir
+      outputRef: PATHS.mount.components/wizard
+      styleRef: PATHS.canon.wizardVisualDir
+      slotRef: PATHS.slots.wizardPage
+      exportName: WizardApp
+    timeline:
+      sourceRef: PATHS.canon.timelineDir
+      outputRef: PATHS.mount.components/timeline
+      styleRef: null
+      slotRef: PATHS.slots.timeline
+      exportName: TimelineApp
+  forbidden:
+    mockData:
+    - INITIAL_POINTS
+    - INITIAL_SEGMENTS
+    imports:
+      wizard:
+      - generateRoute from geminiService
+      timeline:
+      - calculateSegmentDetails from geminiService
+    state:
+      wizard:
+      - routeData
+      - setRouteData
+      timeline:
+      - handleCalculateSegment
+      - isCalculating
+  required:
+    wizard:
+      props:
+      - onComplete
+      - onError
+      exports:
+      - WizardApp
+    timeline:
+      props:
+      - routeId
+      - onSave
+      - onShare
+      - onReset
+      exports:
+      - TimelineApp
+TOOLING:
+  scripts:
+    mapper:
+      command: npm run mapper:all
+      runs:
+      - scripts/mapper/surgeon-wizard.ts
+      - scripts/mapper/surgeon-timeline.ts
+      - scripts/mapper/styler-wizard.ts
+      - scripts/mapper/styler-timeline.ts
+    frida:
+      command: npm run frida:gen
+    verify:
+      command: npm run verify
+  ci:
+    workflows:
+      canon_sync:
+        file: .github/workflows/canon-sync.yml
+      verify:
+        file: .github/workflows/verify.yml
+INTERACTION_PROTOCOL:
+  architect_mode:
+    steps:
+      1_ANALYZE: Identify affected domain
+      2_TRANSLATE: Convert intent to contract changes
+      3_CONTEXT_ENGINEER: Review agent capabilities
+      4_CONSISTENCY_CHECK: Verify contract-to-task consistency
+      5_PROPOSE: Output exact wiki changes
+  developer_mode:
+    steps:
+      1_LOAD_PROFILE: Read profile XML
+      2_READ_AGENTS_MD: Read zone-specific AGENTS.md
+      3_CHECK_PERMISSIONS: Verify edit_allow
+      4_CHECK_INVARIANTS: Review profile invariants
+      5_IMPLEMENT: Minimal implementation
+      6_VERIFY: Run npm run verify
+FUNCTIONS_REGISTRY:
+  edge_functions:
+    v2-preview:
+      path: supabase/functions/v2-preview/
+      entry: index.ts
+      purpose: Creates route skeleton with LLM segmentation, triggers async details build
+    v2-upd-route-details:
+      path: supabase/functions/v2-upd-route-details/
+      entry: index.ts
+      purpose: Async route details builder (lock-based, idempotent). Validates waypoints via Mapbox, generates polyline and segments.
+    v2-route-meta:
+      path: supabase/functions/v2-route-meta/
+      entry: index.ts
+      purpose: Polling endpoint for route build status and revision tracking
+    v2-route-details:
+      path: supabase/functions/v2-route-details/
+      entry: index.ts
+      purpose: Returns assembled route data (polyline, waypoints, segments) by revision
+  notes:
+  - Добавляй сюда все новые supabase/functions/** при создании.
+  - Этот реестр используется для генерации reference docs.
+  - 'Deployment: только через GitHub Actions (см. contract:GUARDS.deploy.edge.github-actions-only).'
