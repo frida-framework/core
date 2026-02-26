@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadCanonDocument } from './canon-path.ts';
+import { loadContractDocument } from './contract-path.ts';
 
 const FIXED_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 
@@ -33,7 +33,7 @@ interface OverlayEdge {
 interface OverlayResult {
     meta: {
         generatedAt: string;
-        canonSha256: string;
+        contractSha256: string;
         visualSchemaVersion: string | null;
         source: string;
         nodeCount: number;
@@ -142,21 +142,27 @@ function resolvePathRef(pathsBlock: AnyObject, ref: string): string | null {
     if (typeof cursor === 'string') {
         return cursor;
     }
-    if (isObjectLike(cursor) && typeof cursor.canonical === 'string') {
-        return cursor.canonical;
+    if (isObjectLike(cursor) && typeof cursor.contractical === 'string') {
+        return cursor.contractical;
     }
     return null;
 }
 
 export function resolveVisualOverlayPath(contract: AnyObject): string {
-    const fromConfig = resolvePathRef(contract?.PATHS, contract?.FRIDA_CONFIG?.visual?.overlay_outputFileRef);
+    const fromConfig = resolvePathRef(
+        contract?.PATHS,
+        contract?.FRIDA_CONFIG?.visual?.overlay_pathRef || contract?.FRIDA_CONFIG?.visual?.overlay_outputFileRef
+    );
     if (fromConfig) {
         return fromConfig;
+    }
+    if (typeof contract?.PATHS?.fridaContract?.visualOverlayFile === 'string') {
+        return contract.PATHS.fridaContract.visualOverlayFile;
     }
     if (typeof contract?.PATHS?.frida?.visualOverlayFile === 'string') {
         return contract.PATHS.frida.visualOverlayFile;
     }
-    return '.frida/visual-schema.overlay.json';
+    return '.frida/contract/visual/canon-overlay.json';
 }
 
 function matchSelector(root: AnyObject, selector: string): SelectorMatch[] {
@@ -333,10 +339,10 @@ interface SchemaDerivedConfig {
 }
 
 function findSchemaPath(): string | null {
-    // Walk up from __dirname to find schemas/frida-canon.schema.json
+    // Walk up from __dirname to find schemas/frida-contract.schema.json
     let dir = path.resolve(__dirname);
     for (let i = 0; i < 5; i++) {
-        const candidate = path.join(dir, 'schemas', 'frida-canon.schema.json');
+        const candidate = path.join(dir, 'schemas', 'frida-contract.schema.json');
         if (fs.existsSync(candidate)) {
             return candidate;
         }
@@ -522,12 +528,12 @@ export function extractVisualSchemaOverlay(
         schemaVersion = visualSchema.version || null;
         lodConfig = visualSchema.lod || {};
     } else {
-        // Schema-driven mode: derive config from frida-canon.schema.json
+        // Schema-driven mode: derive config from frida-contract.schema.json
         const derived = deriveVisualConfigFromSchema();
         if (!derived) {
             throw new Error(
                 'No VISUAL_SCHEMA block found and unable to derive config from schema. ' +
-                'Ensure schemas/frida-canon.schema.json exists with x-frida-entity annotations.'
+                'Ensure schemas/frida-contract.schema.json exists with x-frida-entity annotations.'
             );
         }
         mappingNodes = derived.nodes;
@@ -664,9 +670,9 @@ export function extractVisualSchemaOverlay(
     return {
         meta: {
             generatedAt,
-            canonSha256: sha256(contractRaw),
+            contractSha256: sha256(contractRaw),
             visualSchemaVersion: schemaVersion,
-            source: options.sourcePath || path.posix.join('contract', 'canon.cbmd.yaml'),
+            source: options.sourcePath || path.posix.join('contract', 'contract.cbmd.yaml'),
             nodeCount: nodes.length,
             edgeCount: edges.length,
         },
@@ -698,7 +704,7 @@ function toAbsolutePath(rootDir: string, relativeOrAbsolute: string): string {
 
 function parseVisualArgs(args: string[]): {
     action: 'build' | 'check';
-    canonPath: string | null;
+    contractPath: string | null;
     outputPath: string | null;
     stdout: boolean;
     dryRun: boolean;
@@ -715,23 +721,23 @@ function parseVisualArgs(args: string[]): {
 
     return {
         action,
-        canonPath: readFlag('--canon'),
+        contractPath: readFlag('--contract'),
         outputPath: readFlag('--out'),
         stdout: args.includes('--stdout'),
         dryRun: args.includes('--dry-run'),
     };
 }
 
-function loadContract(rootDir: string, canonPath: string | null): { raw: string; contract: AnyObject; canonPath: string } {
-    const loaded = loadCanonDocument(rootDir, canonPath || undefined);
-    return { raw: loaded.raw, contract: loaded.parsed as AnyObject, canonPath: loaded.canonPath };
+function loadContract(rootDir: string, contractPath: string | null): { raw: string; contract: AnyObject; contractPath: string } {
+    const loaded = loadContractDocument(rootDir, contractPath || undefined);
+    return { raw: loaded.raw, contract: loaded.parsed as AnyObject, contractPath: loaded.contractPath };
 }
 
 function runVisualBuild(rootDir: string, parsedArgs: ReturnType<typeof parseVisualArgs>): number {
-    const { raw, contract, canonPath } = loadContract(rootDir, parsedArgs.canonPath);
+    const { raw, contract, contractPath } = loadContract(rootDir, parsedArgs.contractPath);
     assertVisualContractConsistency(raw, contract);
     const overlay = extractVisualSchemaOverlay(contract, raw, {
-        sourcePath: path.relative(rootDir, canonPath).replace(/\\/g, '/'),
+        sourcePath: path.relative(rootDir, contractPath).replace(/\\/g, '/'),
     });
 
     const outputRelative = parsedArgs.outputPath || resolveVisualOverlayPath(contract);
@@ -754,10 +760,10 @@ function runVisualBuild(rootDir: string, parsedArgs: ReturnType<typeof parseVisu
 }
 
 function runVisualCheck(rootDir: string, parsedArgs: ReturnType<typeof parseVisualArgs>): number {
-    const { raw, contract, canonPath } = loadContract(rootDir, parsedArgs.canonPath);
+    const { raw, contract, contractPath } = loadContract(rootDir, parsedArgs.contractPath);
     assertVisualContractConsistency(raw, contract);
 
-    const sourcePath = path.relative(rootDir, canonPath).replace(/\\/g, '/');
+    const sourcePath = path.relative(rootDir, contractPath).replace(/\\/g, '/');
     const first = extractVisualSchemaOverlay(contract, raw, { generatedAt: FIXED_TIMESTAMP, sourcePath });
     const second = extractVisualSchemaOverlay(contract, raw, { generatedAt: FIXED_TIMESTAMP, sourcePath });
     if (JSON.stringify(first) !== JSON.stringify(second)) {

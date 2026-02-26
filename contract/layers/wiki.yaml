@@ -1,0 +1,32 @@
+# Wiki mechanics definition for Frida apps
+# Extracted from app contract to engine layer for unified SSOT management.
+
+FRIDA_WIKI_MECHANICS:
+  purpose: "Defines Single Source of Truth runtime-config mode for application contracts and associated wiki synchronization mechanics."
+  config_flag:
+    key: "APP_CONTRACT_SSOT"
+    location: ".frida/config.yaml (runtime config file, top-level key)"
+    values:
+      - "REPO.LOCAL": "Application contract is maintained locally in the repository. Wiki synchronization and wiki-driven consistency controls are disabled/skipped."
+      - "REPO.WIKI": "Application contract behavior is wiki-driven. Wiki sync mechanisms and consistency controls remain active."
+  local_ssot:
+    app_contract_source: ".frida/inbox/app-contract/**"
+    frida_consumer_source: ".frida/inbox/app-contract/**"
+    working_copy: ".frida/contract/app/**"
+    legacy_surface: "contract/** (legacy compatibility surface; not SSOT, not substantial)"
+    fallback_to_legacy_contract: false
+  repo_wiki_sync:
+    raw_sync_target: ".frida/inbox/wiki-raw/**"
+    normalized_local_ssot: ".frida/inbox/app-contract/**"
+    frida_consumer_source: ".frida/inbox/app-contract/**"
+    working_copy: ".frida/contract/app/**"
+    legacy_surface: "contract/** (legacy compatibility surface; transitional only)"
+    writer: "GitHub Actions workflow"
+    note: "Wiki sync writes into inbox; Frida generation/bootstrap reads only inbox app-contract source and never falls back to contract/**."
+  schema_blocks:
+    DOCS:
+      description: "Optional block in application contract storing wiki definitions used when APP_CONTRACT_SSOT=REPO.WIKI."
+      properties:
+        humanWiki: "Wiki pages definition"
+        sourcesModel: "Tiered specification of source authorities"
+        procedures: "SYNC triggers to refresh artifacts from wiki"

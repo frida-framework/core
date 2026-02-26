@@ -1,29 +1,29 @@
 # ─── LAYER 1: IDENTITY & META ────────────────────────────────────────────────
 
-CANON_META:
+CONTRACT_META:
   _visibility: private
-  id: frida-canon-meta
+  id: frida-contract-meta
   version: 2.0.0
   owner: frida-core
-  updated_at: "2026-02-19"
+  updated_at: "2026-02-26"
   scope:
     repository: hanszel/frida
     package: "@hanszel/core"
     purpose: >-
       Schema-driven generation engine, zone enforcement, visual overlay extraction,
-      agent session control, and project scaffold for Frida-managed repositories.
-  source_ref: FRIDA_CORE_CANON
+      agent session control, and warm-first Frida bootstrap/reconcile with explicit demo seeding mode.
+  source_ref: FRIDA_CORE_CONTRACT
 
-CANON_UNIQUENESS:
+CONTRACT_UNIQUENESS:
   _visibility: private
-  id: frida-canon-uniqueness-policy
+  id: frida-contract-uniqueness-policy
   version: 1.0.0
   first_rule: true
-  rule: "Any canon entity MUST be declared exactly once."
+  rule: "Any contract entity MUST be declared exactly once."
   control:
     enforcement: warn_only
     fail_on_duplicate: false
-    warning_code: CANON_DUPLICATE_ENTITY
+    warning_code: CONTRACT_DUPLICATE_ENTITY
   strictness_freeze:
     change_requires_explicit_owner_instruction: true
     note: "Strictness level changes require explicit owner approval."
@@ -36,14 +36,14 @@ meta:
   version: 1.0.0
   schemaVersion: "2.0"
   mode: schema
-  canonArtifactRef: "PATHS.contract.coreCanonFile"
+  contractArtifactRef: "PATHS.contract.coreContractFile"
 
 core:
   id: frida-assembly-core
   version: 1.0.0
-  canonicalSourceBlocks:
-    - CANON_META
-    - CANON_UNIQUENESS
+  contracticalSourceBlocks:
+    - CONTRACT_META
+    - CONTRACT_UNIQUENESS
     - FRIDA_SCHEMA_SUPPORT
     - FRIDA_ARCHITECTURE_DECISIONS
     - FRIDA_FOUNDATION_PRINCIPLES
@@ -53,6 +53,8 @@ core:
     - FRIDA_REFS
     - FRIDA_CONFIG
     - FRIDA_RUNTIME_CONFIG
+    - FRIDA_ROOT_LAYOUT_POLICY
+    - FRIDA_CONFIG_FIELD_DOCS
     - ZONES
     - FRIDA_TASK_PROFILES
     - FRIDA_ENFORCEMENT
@@ -70,7 +72,9 @@ core:
     - FRIDA_INTERFACE_UPDATE_SPEC
     - FRIDA_INTERFACE_UPDATE_CODE
     - FRIDA_INTERFACE_TASKSET
-    - FRIDA_SCAFFOLD
+    - FRIDA_CONTRACT_BOOTSTRAP
+    - FRIDA_BOOTSTRAP_SURFACE_POLICY
+    - FRIDA_BOOTSTRAP_PACKAGE_MANIFEST
   selectorGrammar: jsonpath-lite
   generatorPipelineContracts:
     - "schema-validate"
@@ -80,13 +84,25 @@ core:
     - "run-adapter-generators"
     - "emit-manifest"
   pathRefs:
-    canonArtifact: "contract/core.canon.yaml"
+    contractArtifact: "contract/core.contract.yaml"
     templatesFrida: "templates/frida"
     templatesDocs: "templates/docs-gen"
   outputContracts:
-    - ".frida/profiles/*.xml"
-    - ".frida/AGENTS.md"
-    - ".frida/docs/policy/*.md"
-    - ".frida/docs/reference/*.md"
+    - "AGENTS.md"
+    - ".frida/contract/specs/ROUTER.xml"
+    - ".frida/contract/profiles/*.xml"
+    - ".frida/contract/AGENTS.md"
+    - ".frida/contract/docs/policy/*.md"
+    - ".frida/contract/docs/reference/*.md"
+    - ".specs/ROUTER.xml"
+    - ".specs/profiles/*.xml"
+    - "docs/policy/*.md"
+    - "docs/reference/*.md"
     - ".frida/config.yaml"
-    - ".frida/frida.adapter.generated.json"
+    - ".frida/config.template.yaml"
+    - ".frida/contract/app/**"
+    - ".frida/contract/frida/**"
+    - ".frida/contract/artifacts/frida.ir.json"
+    - ".frida/contract/artifacts/frida.permissions.json"
+    - ".frida/contract/artifacts/frida.graph.mmd"
+    - ".frida/contract/artifacts/frida.adapter.generated.json"

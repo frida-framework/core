@@ -1,24 +1,24 @@
-# ─── FRIDA CANON INDEX ────────────────────────────────────────────────────────
-# Modular entry point for the Frida core canon.
+# ─── FRIDA CONTRACT INDEX ────────────────────────────────────────────────────────
+# Modular entry point for the Frida core contract.
 # Each layer is a separate YAML file in contract/layers/.
 # Blocks list declares all top-level keys exported by the layer.
 # ──────────────────────────────────────────────────────────────────────────────
 
 schema_version: "1.0"
-canon_id: "FRIDA_CORE_CANON"
-version: "2.0.0"
+contract_id: "FRIDA_CORE_CONTRACT"
+version: "2.2.0"
 
 layers:
   - id: identity
     path: contract/layers/identity.yaml
     visibility: private
     keywords:
-      - canon-meta
+      - contract-meta
       - uniqueness
       - core-assembly
     blocks:
-      - CANON_META
-      - CANON_UNIQUENESS
+      - CONTRACT_META
+      - CONTRACT_UNIQUENESS
       - meta
       - core
 
@@ -38,20 +38,31 @@ layers:
     path: contract/layers/infrastructure.yaml
     visibility: mixed
     keywords:
-      - paths
-      - config
       - zones
       - assembly
       - refs
       - routing
     blocks:
-      - FRIDA_CONFIG_SPEC
       - FRIDA_ASSEMBLY_PROTOCOL
       - FRIDA_REFS
+      - ZONES
+
+  - id: core-configuration
+    path: contract/layers/core-configuration.yaml
+    visibility: mixed
+    keywords:
+      - config
+      - settings
+      - paths
+      - runtime-config
+      - docs
+    blocks:
       - PATHS
+      - FRIDA_CONFIG_SPEC
       - FRIDA_CONFIG
       - FRIDA_RUNTIME_CONFIG
-      - ZONES
+      - FRIDA_ROOT_LAYOUT_POLICY
+      - FRIDA_CONFIG_FIELD_DOCS
 
   - id: agent-framework
     path: contract/layers/agent-framework.yaml
@@ -95,11 +106,23 @@ layers:
       - buildtime
       - generator
       - mapper
-      - scaffold
     blocks:
       - FRIDA_GENERATOR
       - FRIDA_MAPPER_MODEL
-      - FRIDA_SCAFFOLD
+
+  - id: bootstrap
+    path: contract/layers/bootstrap.yaml
+    visibility: public
+    keywords:
+      - bootstrap
+      - reconcile
+      - warm
+      - deploy
+      - package-manifest
+    blocks:
+      - FRIDA_CONTRACT_BOOTSTRAP
+      - FRIDA_BOOTSTRAP_SURFACE_POLICY
+      - FRIDA_BOOTSTRAP_PACKAGE_MANIFEST
 
   - id: visualization
     path: contract/layers/visualization.yaml
@@ -116,7 +139,6 @@ layers:
     visibility: mixed
     keywords:
       - management
-      - translation
       - guard-spec
       - antitask
     blocks:
@@ -124,6 +146,17 @@ layers:
       - FRIDA_INVARIANT_SPEC
       - FRIDA_ANTITASK_SPEC
       - FRIDA_INTERFACE_VERIFY
+      - CONTRACT_MANAGEMENT_INTERFACE
       - FRIDA_INTERFACE_UPDATE_SPEC
       - FRIDA_INTERFACE_UPDATE_CODE
       - FRIDA_INTERFACE_TASKSET
+
+  - id: wiki
+    path: contract/layers/wiki.yaml
+    visibility: public
+    keywords:
+      - wiki
+      - ssot
+      - synchronization
+    blocks:
+      - FRIDA_WIKI_MECHANICS

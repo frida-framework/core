@@ -1,14 +1,14 @@
 
 
-export interface FridaCanonSchema {
+export interface FridaContractSchema {
   meta: {
     schemaVersion: string;
     mode: 'schema';
-    canonArtifactRef?: string;
+    contractArtifactRef?: string;
     [key: string]: unknown;
   };
   core: {
-    canonicalSourceBlocks: string[];
+    contracticalSourceBlocks: string[];
     selectorGrammar: 'jsonpath-lite';
     generatorPipelineContracts: string[];
     pathRefs: Record<string, string>;
@@ -50,8 +50,8 @@ export interface GenerationTelemetry {
 
 export interface GeneratorContext {
   rootDir: string;
-  canon: Record<string, any>;
-  schemaModel: FridaCanonSchema;
+  contract: Record<string, any>;
+  schemaModel: FridaContractSchema;
   sources: ResolvedSourceMap;
   telemetry: GenerationTelemetry;
 }
@@ -64,14 +64,14 @@ export interface GeneratorSpec {
   run: (context: GeneratorContext) => Promise<void> | void;
 }
 
-export interface CanonNormalizationResult {
-  model: FridaCanonSchema;
+export interface ContractNormalizationResult {
+  model: FridaContractSchema;
   telemetry: GenerationTelemetry;
 }
 
 export interface RunFridaCoreOptions {
   rootDir?: string;
-  canonPath?: string;
+  contractPath?: string;
   strictSchema?: boolean;
 }
 
@@ -84,19 +84,23 @@ export interface MigrationIssue {
 
 export type BlockVisibility = 'public' | 'private';
 
-export interface CanonLayerSpec {
+export interface ContractLayerSpec {
   id: string;
   path: string;
   visibility: BlockVisibility | 'mixed';
   blocks: string[];
 }
 
-export interface CanonIndex {
-  canon_index: {
+export interface ContractIndex {
+  schema_version?: string;
+  contract_id?: string;
+  version?: string;
+  layers?: ContractLayerSpec[];
+  contract_index?: {
     version: string;
     schema: string;
     assembled_schema?: string;
     monolith_fallback?: string;
-    layers: CanonLayerSpec[];
+    layers: ContractLayerSpec[];
   };
 }

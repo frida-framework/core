@@ -1,0 +1,469 @@
+version: "1.1"
+manifest_id: frida-bootstrap-package-manifest
+assets_root: "."
+entries:
+  - id: frida_root
+    target: ".frida"
+    kind: dir
+    ownership_class: engine_static
+    apply_mode: ensure_dir
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_root
+    target: ".frida/contract"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_specs_root
+    target: ".frida/contract/specs"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_profiles_root
+    target: ".frida/contract/profiles"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_docs_root
+    target: ".frida/contract/docs"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_internal_root
+    target: ".frida/contract/internal"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_artifacts_root
+    target: ".frida/contract/artifacts"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_cache_root
+    target: ".frida/contract/cache"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_app_mirror_root
+    target: ".frida/contract/app"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_frida_mirror_root
+    target: ".frida/contract/frida"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_visual_root
+    target: ".frida/contract/visual"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_contract_playbooks_root
+    target: ".frida/contract/playbooks"
+    kind: dir
+    ownership_class: engine_static
+    apply_mode: ensure_dir
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+      - demo
+
+  - id: legacy_specs_root
+    target: ".specs"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_docs_policy_root
+    target: "docs/policy"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_docs_reference_root
+    target: "docs/reference"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_specs_root
+    target: ".frida/specs"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_profiles_root
+    target: ".frida/profiles"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_docs_root
+    target: ".frida/docs"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_internal_root
+    target: ".frida/internal"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_playbooks_root
+    target: ".frida/playbooks"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_visual_root
+    target: ".frida/visual"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_cache_root
+    target: ".frida/cache"
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_runtime_config_file
+    target: ".frida/config.yaml"
+    kind: file
+    ownership_class: user_owned
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_runtime_config_template
+    target: ".frida/config.template.yaml"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_reports
+    target: ".frida/reports"
+    kind: dir
+    ownership_class: user_data
+    apply_mode: ensure_dir
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_inbox_root
+    target: ".frida/inbox"
+    kind: dir
+    ownership_class: user_data
+    apply_mode: ensure_dir
+    preserve_globs:
+      - ".frida/inbox/**"
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_inbox_app_contract
+    target: ".frida/inbox/app-contract"
+    kind: dir
+    ownership_class: user_data
+    apply_mode: ensure_dir
+    preserve_globs:
+      - ".frida/inbox/app-contract/**"
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_inbox_wiki_raw
+    target: ".frida/inbox/wiki-raw"
+    kind: dir
+    ownership_class: user_data
+    apply_mode: ensure_dir
+    preserve_globs:
+      - ".frida/inbox/wiki-raw/**"
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_inbox_meta
+    target: ".frida/inbox/meta"
+    kind: dir
+    ownership_class: user_data
+    apply_mode: ensure_dir
+    preserve_globs:
+      - ".frida/inbox/meta/**"
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_bootloader_agents
+    target: "AGENTS.md"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_bootloader_agents_internal
+    target: ".frida/contract/AGENTS.md"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_generated_ir
+    target: ".frida/contract/artifacts/frida.ir.json"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_generated_permissions
+    target: ".frida/contract/artifacts/frida.permissions.json"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_generated_graph
+    target: ".frida/contract/artifacts/frida.graph.mmd"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
+
+  - id: frida_generated_adapter_index
+    target: ".frida/contract/artifacts/frida.adapter.generated.json"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_bootloader_agents_file
+    target: ".frida/AGENTS.md"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_generated_ir_file
+    target: ".frida/frida.ir.json"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_generated_permissions_file
+    target: ".frida/frida.permissions.json"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_generated_graph_file
+    target: ".frida/frida.graph.mmd"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_generated_adapter_index_file
+    target: ".frida/frida.adapter.generated.json"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: legacy_frida_visual_overlay_file
+    target: ".frida/visual-schema.overlay.json"
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+
+  - id: playbook_canon_update
+    source: "templates/management/AGENT-canon-update.md"
+    target: ".frida/contract/playbooks/AGENT-canon-update.md"
+    kind: file
+    ownership_class: engine_static
+    apply_mode: copy
+    sha256: "sha256:a9454dad156d51bdece08e313a2d12b8acc2e69e976100c6660e3968e60c69e6"
+    modes:
+      - warm
+      - cold-engine
+      - demo
+
+  - id: playbook_canon_repair
+    source: "templates/management/AGENT-canon-repair.md"
+    target: ".frida/contract/playbooks/AGENT-canon-repair.md"
+    kind: file
+    ownership_class: engine_static
+    apply_mode: copy
+    sha256: "sha256:2e2d0ed0f6201dc9efa4b9a9ad3284a8596f22d1570e9509e34677f58f9b0e58"
+    modes:
+      - warm
+      - cold-engine
+      - demo
+
+  - id: playbook_repo_audit
+    source: "templates/management/AGENT-repo-audit.md"
+    target: ".frida/contract/playbooks/AGENT-repo-audit.md"
+    kind: file
+    ownership_class: engine_static
+    apply_mode: copy
+    sha256: "sha256:365b1859f3c582e183f884ce9d0c886bca77298c64b3e0d9baa0854bf03c810a"
+    modes:
+      - warm
+      - cold-engine
+      - demo
+
+  - id: playbook_task_formulation
+    source: "templates/management/AGENT-task-formulation.md"
+    target: ".frida/contract/playbooks/AGENT-task-formulation.md"
+    kind: file
+    ownership_class: engine_static
+    apply_mode: copy
+    sha256: "sha256:25ade2b2754a79e2f308abd23d7677a259d26bec5c404dee16fab534d485adc6"
+    modes:
+      - warm
+      - cold-engine
+      - demo

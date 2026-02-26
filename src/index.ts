@@ -1,6 +1,7 @@
 export { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
 export { runFridaVisualCli } from './visual.ts';
 export { runFridaInitCli } from './init.ts';
+export { runFridaBootstrapCli } from './bootstrap.ts';
 export { runFridaReportCli } from './report.ts';
 export {
   runFridaCheckCli,
@@ -11,11 +12,11 @@ export {
 } from './zone-check.ts';
 export { runFridaHashCli } from './template-hash.ts';
 export { runFridaBuildCli } from './build.ts';
-export { loadCanonDocument, resolveCanonPath } from './canon-path.ts';
+export { loadContractDocument, resolveContractPath } from './contract-path.ts';
 export type {
-  CanonNormalizationResult,
-  CanonLayerSpec,
-  CanonIndex,
+  ContractNormalizationResult,
+  ContractLayerSpec,
+  ContractIndex,
   GeneratorSpec,
   SourceSelectorSpec,
   RunFridaCoreOptions,

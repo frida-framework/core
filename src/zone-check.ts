@@ -2,13 +2,13 @@
  * FRIDA Check CLI v1.0
  * 
  * Single source of truth for zone resolution and AGENTS.md validation.
- * Implements canonical algorithm from contract:FRIDA_LIFECYCLE.3_VALIDATE_ANTIPATTERN
+ * Implements contractical algorithm from contract:FRIDA_LIFECYCLE.3_VALIDATE_ANTIPATTERN
  * 
  * Usage:
  *   frida-check zone --path <working_dir> [--format yaml|json|text] [--trace]
  * 
  * Exit codes:
- *   0 - Success: canonical AGENTS.md exists
+ *   0 - Success: contractical AGENTS.md exists
  *   1 - Error: zone resolved but AGENTS.md missing
  *   2 - Error: zone could not be resolved
  */
@@ -17,7 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import { fileURLToPath } from 'url';
-import { loadCanonDocument } from './canon-path.ts';
+import { loadContractDocument } from './contract-path.ts';
 
 // === CONFIG ===
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
@@ -75,8 +75,8 @@ function resolvePathRef(contract: Record<string, any>, ref: string): string | nu
     if (typeof cursor === 'string') {
         return cursor;
     }
-    if (cursor && typeof cursor === 'object' && typeof cursor.canonical === 'string') {
-        return cursor.canonical;
+    if (cursor && typeof cursor === 'object' && typeof cursor.contractical === 'string') {
+        return cursor.contractical;
     }
 
     return null;
@@ -93,8 +93,8 @@ function resolvePathLike(contract: Record<string, any>, value: unknown): string 
 }
 
 // === CONTRACT LOADER ===
-export function loadZones(canonPath?: string): Map<string, Zone> {
-    const loaded = loadCanonDocument(ROOT_DIR, canonPath);
+export function loadZones(contractPath?: string): Map<string, Zone> {
+    const loaded = loadContractDocument(ROOT_DIR, contractPath);
     const contract = loaded.parsed;
     const zones = new Map<string, Zone>();
 
@@ -177,7 +177,7 @@ function matchesZonePath(workingDir: string, zonePattern: string): boolean {
 
 /**
  * Resolve zone for a given working directory.
- * Uses "most specific matching path" algorithm from canon.
+ * Uses "most specific matching path" algorithm from contract.
  * 
  * IMPORTANT: Zone MUST NOT be inferred from profile allowlists, scope, or working_dir guess.
  * Zone is resolved ONLY by matching path against contract:ZONES entries.
@@ -253,15 +253,15 @@ export function getExpectedAgentsMd(zone: Zone): string {
 }
 
 /**
- * Validate that canonical AGENTS.md exists for the zone containing working_dir.
+ * Validate that contractical AGENTS.md exists for the zone containing working_dir.
  */
-export function validateZoneAgentsMd(workingDir: string, canonPath?: string): ValidationResult {
+export function validateZoneAgentsMd(workingDir: string, contractPath?: string): ValidationResult {
     const trace: DecisionStep[] = [];
 
     // Load zones from contract
     let zones: Map<string, Zone>;
     try {
-        zones = loadZones(canonPath);
+        zones = loadZones(contractPath);
     } catch (err) {
         return {
             zone_id: null,
@@ -308,7 +308,7 @@ export function validateZoneAgentsMd(workingDir: string, canonPath?: string): Va
         expected_agents_md: expectedAgentsMd,
         exists,
         decision_trace: trace,
-        error: exists ? undefined : `Canonical AGENTS.md missing: ${expectedAgentsMd}`,
+        error: exists ? undefined : `Contractical AGENTS.md missing: ${expectedAgentsMd}`,
     };
 }
 
@@ -316,7 +316,7 @@ export function validateZoneAgentsMd(workingDir: string, canonPath?: string): Va
 interface CliArgs {
     command: string;
     path: string;
-    canonPath: string | null;
+    contractPath: string | null;
     format: 'yaml' | 'json' | 'text';
     trace: boolean;
 }
@@ -325,7 +325,7 @@ function parseArgs(args: string[]): CliArgs {
     const result: CliArgs = {
         command: 'zone',
         path: '',
-        canonPath: null,
+        contractPath: null,
         format: 'text',
         trace: false,
     };
@@ -338,8 +338,8 @@ function parseArgs(args: string[]): CliArgs {
 
         if (arg === 'zone') {
             result.command = 'zone';
-        } else if (arg === '--canon' && i + 1 < args.length) {
-            result.canonPath = args[++i];
+        } else if (arg === '--contract' && i + 1 < args.length) {
+            result.contractPath = args[++i];
         } else if (arg === '--path' && i + 1 < args.length) {
             result.path = args[++i];
         } else if (arg === '--format' && i + 1 < args.length) {
@@ -400,19 +400,19 @@ function showHelp(): void {
 FRIDA Check CLI v1.0
 
 Usage:
-  frida-check zone --path <working_dir> [--canon <path>] [--format yaml|json|text] [--trace]
+  frida-check zone --path <working_dir> [--contract <path>] [--format yaml|json|text] [--trace]
 
 Commands:
   zone    Resolve zone for a path and validate AGENTS.md
 
 Options:
   --path <dir>     Working directory or file path to check
-  --canon <path>   Canon file path (default resolution chain)
+  --contract <path>   Contract file path (default resolution chain)
   --format <fmt>   Output format: yaml, json, or text (default: text)
   --trace          Include decision trace in output
 
 Exit codes:
-  0  Success: canonical AGENTS.md exists
+  0  Success: contractical AGENTS.md exists
   1  Error: zone resolved but AGENTS.md missing
   2  Error: zone could not be resolved
 
@@ -430,7 +430,7 @@ export async function runFridaCheckCli(argv: string[] = process.argv.slice(2)): 
         return args.command ? 2 : 0;
     }
 
-    const result = validateZoneAgentsMd(args.path, args.canonPath || undefined);
+    const result = validateZoneAgentsMd(args.path, args.contractPath || undefined);
     console.log(formatOutput(result, args.format, args.trace));
 
     if (!result.zone_id) {

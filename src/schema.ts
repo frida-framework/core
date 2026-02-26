@@ -3,17 +3,17 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import type { CanonNormalizationResult, FridaCanonSchema, GenerationTelemetry, MigrationIssue } from './types.ts';
+import type { ContractNormalizationResult, FridaContractSchema, GenerationTelemetry, MigrationIssue } from './types.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const SCHEMA_PATH = path.resolve(MODULE_DIR, '../schemas/frida-canon.schema.json');
+const SCHEMA_PATH = path.resolve(MODULE_DIR, '../schemas/frida-contract.schema.json');
 
 function readSchema(schemaPath = SCHEMA_PATH): Record<string, unknown> {
   const raw = fs.readFileSync(schemaPath, 'utf-8');
   return JSON.parse(raw);
 }
 
-export function validateFridaSchemaModel(model: FridaCanonSchema, schemaPath = SCHEMA_PATH): void {
+export function validateFridaSchemaModel(model: FridaContractSchema, schemaPath = SCHEMA_PATH): void {
   const AjvCtor: any = (Ajv2020 as any).default || Ajv2020;
   const addFormatsFn: any = (addFormats as any).default || addFormats;
   const ajv = new AjvCtor({ allErrors: true, strict: false });
@@ -24,7 +24,7 @@ export function validateFridaSchemaModel(model: FridaCanonSchema, schemaPath = S
     const message = (validate.errors || [])
       .map((error: any) => `${error.instancePath || '/'} ${error.message || 'invalid'}`)
       .join('; ');
-    throw new Error(`frida-canon schema validation failed: ${message}`);
+    throw new Error(`frida-contract schema validation failed: ${message}`);
   }
 }
 
@@ -47,14 +47,14 @@ const LEGACY_PATH_FIELDS: Array<{ field: string; ref: string }> = [
   { field: 'templates_docs', ref: 'templates_docsRef' },
 ];
 
-export function normalizeCanonModel(contract: Record<string, any>): CanonNormalizationResult {
+export function normalizeContractModel(contract: Record<string, any>): ContractNormalizationResult {
   const warnings: string[] = [];
   const deprecatedFields: string[] = [];
 
   const hasSchemaShape = typeof contract.meta === 'object' && !!contract.meta && typeof contract.core === 'object' && !!contract.core;
 
   if (!hasSchemaShape) {
-    throw new Error("schema-native canon required: top-level 'meta' and 'core' blocks are missing");
+    throw new Error("schema-native contract required: top-level 'meta' and 'core' blocks are missing");
   }
 
   const fridaPaths = contract?.FRIDA_CONFIG?.paths || {};
@@ -75,7 +75,7 @@ export function normalizeCanonModel(contract: Record<string, any>): CanonNormali
     warnings.push("meta.mode must be 'schema' in wave 2 strict mode.");
   }
 
-  const model = contract as unknown as FridaCanonSchema;
+  const model = contract as unknown as FridaContractSchema;
 
   return {
     model,

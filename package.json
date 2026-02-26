@@ -30,11 +30,12 @@
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"
     },
-    "./schemas/frida-canon.schema.json": "./schemas/frida-canon.schema.json"
+    "./schemas/frida-contract.schema.json": "./schemas/frida-contract.schema.json"
   },
   "files": [
     "dist", 
     "schemas",
+    "contract",
     "templates",
     "README.md"
   ],

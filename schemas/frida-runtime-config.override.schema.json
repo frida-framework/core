@@ -1,17 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.frida.dev/frida-runtime-config.schema.json",
-  "title": "Frida Runtime Config",
+  "$id": "https://schemas.frida.dev/frida-runtime-config.override.schema.json",
+  "title": "Frida Runtime Config Override",
+  "description": "User-owned partial runtime config overrides from .frida/config.yaml",
   "type": "object",
-  "required": [
-    "version",
-    "APP_CONTRACT_SSOT",
-    "reporting"
-  ],
   "properties": {
     "version": {
-      "type": "string",
-      "const": "1.1"
+      "type": "string"
     },
     "APP_CONTRACT_SSOT": {
       "type": "string",
@@ -22,13 +17,6 @@
     },
     "reporting": {
       "type": "object",
-      "required": [
-        "collect_in_repo",
-        "repo_path",
-        "file_ext",
-        "filename_pattern",
-        "exists_check"
-      ],
       "properties": {
         "collect_in_repo": {
           "type": "boolean",
@@ -51,8 +39,8 @@
           "const": false
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     }
   },
-  "additionalProperties": false
+  "additionalProperties": true
 }

@@ -4,11 +4,11 @@ import * as yaml from 'yaml';
 import { fileURLToPath } from 'url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import { loadCanonDocument } from './canon-path.ts';
+import { loadContractDocument } from './contract-path.ts';
 import {
   buildJobReportFileName,
-  getCanonReportingSettings,
-  readRuntimeConfig,
+  getContractReportingSettings,
+  resolveEffectiveRuntimeConfig,
   resolveJobReportDirectory,
   RUNTIME_CONFIG_REL_PATH,
   toRuntimeConfig,
@@ -23,7 +23,7 @@ type ReportStatus = 'SUCCESS' | 'HALTED';
 interface ReportArgs {
   command: 'check' | 'path' | 'write' | 'help';
   file: string | null;
-  canonPath: string | null;
+  contractPath: string | null;
   profileId: string;
   taskOrRun: string;
   status: ReportStatus;
@@ -47,7 +47,7 @@ function parseArgs(args: string[]): ReportArgs {
     return {
       command: 'help',
       file: null,
-      canonPath: null,
+      contractPath: null,
       profileId: 'unknown_profile',
       taskOrRun: 'run',
       status: 'SUCCESS',
@@ -58,7 +58,7 @@ function parseArgs(args: string[]): ReportArgs {
   return {
     command: subcommand === 'check' || subcommand === 'path' || subcommand === 'write' ? subcommand : 'help',
     file: readFlag('--file'),
-    canonPath: readFlag('--canon'),
+    contractPath: readFlag('--contract'),
     profileId: readFlag('--profile') || 'unknown_profile',
     taskOrRun: readFlag('--task') || 'run',
     status,
@@ -87,31 +87,33 @@ function createValidator(schemaPath: string): (payload: unknown) => { ok: boolea
   };
 }
 
-function loadActiveReportingPath(rootDir: string, canonPath?: string): {
+function loadActiveReportingPath(rootDir: string, contractPath?: string): {
   activePath: string;
-  canonPathValue: string;
+  contractPathValue: string;
   runtimePathValue: string | null;
 } {
-  const canon = loadCanonDocument(rootDir, canonPath);
-  const canonSettings = getCanonReportingSettings(canon.parsed);
-  const runtimeConfig = readRuntimeConfig(rootDir);
-
-  if (runtimeConfig) {
-    const runtimeValidation = createValidator(RUNTIME_CONFIG_SCHEMA_PATH)(runtimeConfig);
-    if (!runtimeValidation.ok) {
-      throw new Error(`Runtime config validation failed (${RUNTIME_CONFIG_REL_PATH}): ${runtimeValidation.message}`);
-    }
-    return {
-      activePath: runtimeConfig.reporting.repo_path,
-      canonPathValue: canonSettings.repoPath,
-      runtimePathValue: runtimeConfig.reporting.repo_path,
-    };
+  const contract = loadContractDocument(rootDir, contractPath);
+  const contractSettings = getContractReportingSettings(contract.parsed);
+  const runtimeResolved = resolveEffectiveRuntimeConfig(rootDir, contractSettings);
+  const runtimeValidation = createValidator(RUNTIME_CONFIG_SCHEMA_PATH)(runtimeResolved.effectiveConfig);
+  if (!runtimeValidation.ok) {
+    throw new Error(`Runtime config validation failed (${RUNTIME_CONFIG_REL_PATH}): ${runtimeValidation.message}`);
   }
+  for (const warning of runtimeResolved.warnings) {
+    console.warn(`⚠️  ${warning}`);
+  }
+  const rawRuntimePath = (() => {
+    const raw = runtimeResolved.rawConfig as any;
+    if (!raw || typeof raw !== 'object') return null;
+    const reporting = raw.reporting;
+    if (!reporting || typeof reporting !== 'object') return null;
+    return typeof reporting.repo_path === 'string' ? reporting.repo_path : null;
+  })();
 
   return {
-    activePath: canonSettings.repoPath,
-    canonPathValue: canonSettings.repoPath,
-    runtimePathValue: null,
+    activePath: runtimeResolved.effectiveConfig.reporting.repo_path,
+    contractPathValue: contractSettings.repoPath,
+    runtimePathValue: rawRuntimePath,
   };
 }
 
@@ -130,7 +132,7 @@ function buildJobReportPayload(
     created_at: new Date().toISOString(),
     inputs: {
       prompt_summary: summaryText,
-      canon_files_read: [],
+      contract_files_read: [],
       constraints_adopted: [],
     },
     changes: {
@@ -164,8 +166,8 @@ function showHelp(): void {
 
 Usage:
   frida-core report check --file <path>
-  frida-core report path [--canon <path>]
-  frida-core report write [--canon <path>] [--profile <id>] [--task <name>] [--status SUCCESS|HALTED] [--summary <text>]
+  frida-core report path [--contract <path>]
+  frida-core report write [--contract <path>] [--profile <id>] [--task <name>] [--status SUCCESS|HALTED] [--summary <text>]
   frida-core report help
 `);
 }
@@ -187,16 +189,16 @@ function runCheck(filePath: string): number {
   return 0;
 }
 
-function runPath(canonPath: string | null): number {
-  const resolved = loadActiveReportingPath(process.cwd(), canonPath || undefined);
+function runPath(contractPath: string | null): number {
+  const resolved = loadActiveReportingPath(process.cwd(), contractPath || undefined);
   console.log(`report.path.active=${resolved.activePath}`);
-  console.log(`report.path.canon=${resolved.canonPathValue}`);
+  console.log(`report.path.contract=${resolved.contractPathValue}`);
   console.log(`report.path.runtime=${resolved.runtimePathValue || 'n/a'}`);
   return 0;
 }
 
 function runWrite(args: ReportArgs): number {
-  const resolved = loadActiveReportingPath(process.cwd(), args.canonPath || undefined);
+  const resolved = loadActiveReportingPath(process.cwd(), args.contractPath || undefined);
   const outputDir = resolveJobReportDirectory(process.cwd(), {
     collectInRepo: true,
     repoPath: resolved.activePath,
@@ -217,7 +219,7 @@ function runWrite(args: ReportArgs): number {
   const runtimeValidation = createValidator(RUNTIME_CONFIG_SCHEMA_PATH)(
     toRuntimeConfig({
       collectInRepo: true,
-      repoPath: '.frida/job-reports',
+      repoPath: '.frida/reports',
       fileExt: '.yaml',
       filenamePattern: '<unixtime_ms>_<profile_id>_<task_or_run>.yaml',
       existsCheck: false,
@@ -251,7 +253,7 @@ export async function runFridaReportCli(args: string[] = []): Promise<number> {
     }
 
     if (parsed.command === 'path') {
-      return runPath(parsed.canonPath);
+      return runPath(parsed.contractPath);
     }
 
     if (parsed.command === 'write') {
@@ -265,4 +267,3 @@ export async function runFridaReportCli(args: string[] = []): Promise<number> {
     return 1;
   }
 }
-

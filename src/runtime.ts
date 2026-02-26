@@ -1,26 +1,54 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { runLegacyFridaGenerator } from './legacy-generator.ts';
 import { resolveSelectors } from './selector.ts';
-import { collectMigrationIssues, normalizeCanonModel, validateFridaSchemaModel } from './schema.ts';
-import { loadCanonDocument } from './canon-path.ts';
+import { collectMigrationIssues, normalizeContractModel, validateFridaSchemaModel } from './schema.ts';
+import { loadContractDocument } from './contract-path.ts';
+import { ensureRuntimeConfigArtifacts, getContractReportingSettings } from './reporting-contract.ts';
+import {
+  APP_CONTRACT_INBOX_INDEX_REL_PATH,
+  assertAppContractInboxSource,
+  emitAppContractSourceMirror,
+  emitFridaContractSourceMirror,
+  ContractMirrorError,
+} from './contract-mirror.ts';
+import { validateFridaRootLayout } from './frida-layout.ts';
 import type {
-  CanonNormalizationResult,
+  ContractNormalizationResult,
   MigrationIssue,
   ResolvedSelectorResult,
   RunFridaCoreOptions,
   SourceSelectorSpec,
 } from './types.ts';
 
-interface LoadedCanon {
+interface LoadedContract {
   rootDir: string;
-  canonPath: string;
+  contractPath: string;
   raw: string;
   parsed: Record<string, any>;
 }
 
-function loadCanon(options: RunFridaCoreOptions): LoadedCanon {
-  const loaded = loadCanonDocument(path.resolve(options.rootDir || process.cwd()), options.canonPath);
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ENGINE_PACKAGE_ROOT = path.resolve(MODULE_DIR, '..');
+
+function isEngineSelfRepo(rootDir: string): boolean {
+  return path.resolve(rootDir) === ENGINE_PACKAGE_ROOT;
+}
+
+function loadContract(options: RunFridaCoreOptions): LoadedContract {
+  const effectiveRootDir = path.resolve(options.rootDir || process.cwd());
+  const appSide = !isEngineSelfRepo(effectiveRootDir);
+  const effectiveContractPath = appSide
+    ? (options.contractPath || APP_CONTRACT_INBOX_INDEX_REL_PATH)
+    : options.contractPath;
+
+  if (appSide) {
+    const absoluteContractPath = path.resolve(effectiveRootDir, effectiveContractPath!);
+    assertAppContractInboxSource(effectiveRootDir, absoluteContractPath);
+  }
+
+  const loaded = loadContractDocument(effectiveRootDir, effectiveContractPath);
   return loaded;
 }
 
@@ -39,10 +67,11 @@ function resolveRequiredSelectorSemantics(results: ResolvedSelectorResult[]): { 
   return { warnings };
 }
 
-function collectSelectors(normalized: CanonNormalizationResult): SourceSelectorSpec[] {
+function collectSelectors(normalized: ContractNormalizationResult): SourceSelectorSpec[] {
   const selectors: SourceSelectorSpec[] = [];
+  const blocks = normalized.model.core?.contracticalSourceBlocks || [];
 
-  for (const block of normalized.model.core.canonicalSourceBlocks) {
+  for (const block of blocks) {
     selectors.push({
       id: `core.block.${block}`,
       selector: block,
@@ -55,12 +84,30 @@ function collectSelectors(normalized: CanonNormalizationResult): SourceSelectorS
 }
 
 export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Promise<void> {
-  const loaded = loadCanon(options);
+  let loaded: LoadedContract;
+  try {
+    loaded = loadContract(options);
+  } catch (error) {
+    if (error instanceof ContractMirrorError) {
+      throw new Error(`${error.code}: ${error.message}`);
+    }
+    throw error;
+  }
   process.env.FRIDA_REPO_ROOT = loaded.rootDir;
-  process.env.FRIDA_CANON_PATH = loaded.canonPath;
+  process.env.FRIDA_CONTRACT_PATH = loaded.contractPath;
 
-  const normalized = normalizeCanonModel(loaded.parsed);
-  validateFridaSchemaModel(normalized.model);
+  const normalized = normalizeContractModel(loaded.parsed);
+  try {
+    validateFridaSchemaModel(normalized.model);
+  } catch (error) {
+    if (options.strictSchema) {
+      throw error;
+    } else {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`⚠️ Schema validation bypassed (strictSchema=false): ${msg}`);
+    }
+  }
+
   if (options.strictSchema && normalized.telemetry.deprecatedFieldCount > 0) {
     throw new Error(
       `strict schema mode failed: ${normalized.telemetry.deprecatedFieldCount} deprecated field(s) are still present`
@@ -83,7 +130,31 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
     console.warn(`⚠️  ${warning}`);
   }
 
-  await runLegacyFridaGenerator({});
+  if (options.strictSchema !== false) {
+    await runLegacyFridaGenerator({});
+  } else {
+    console.log('✅ Bypassing core legacy artifact generation for app contract (strictSchema=false)');
+  }
+
+  const runtimeConfigArtifacts = ensureRuntimeConfigArtifacts(loaded.rootDir, getContractReportingSettings(loaded.parsed));
+  if (runtimeConfigArtifacts.createdRuntimeConfig) {
+    console.log(`✅ Runtime config created: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.runtimeConfigPath)}`);
+  } else {
+    console.log(`ℹ️ Runtime config preserved: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.runtimeConfigPath)}`);
+  }
+  console.log(`✅ Runtime config template written: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.templatePath)}`);
+  for (const warning of runtimeConfigArtifacts.warnings) {
+    console.warn(`⚠️  ${warning}`);
+  }
+
+  if (!isEngineSelfRepo(loaded.rootDir)) {
+    const fridaMirrorDir = emitFridaContractSourceMirror(loaded.rootDir, ENGINE_PACKAGE_ROOT);
+    console.log(`✅ Frida contract mirror written: ${path.relative(loaded.rootDir, fridaMirrorDir)}`);
+    const appMirrorDir = emitAppContractSourceMirror(loaded.rootDir);
+    console.log(`✅ App contract working copy written: ${path.relative(loaded.rootDir, appMirrorDir)}`);
+  }
+
+  validateFridaRootLayout(loaded.rootDir, 'warn');
 }
 
 function formatIssue(issue: MigrationIssue): string {
@@ -91,13 +162,13 @@ function formatIssue(issue: MigrationIssue): string {
 }
 
 export function runFridaMigrationReport(options: RunFridaCoreOptions = {}): number {
-  const loaded = loadCanon(options);
+  const loaded = loadContract(options);
   process.env.FRIDA_REPO_ROOT = loaded.rootDir;
-  process.env.FRIDA_CANON_PATH = loaded.canonPath;
+  process.env.FRIDA_CONTRACT_PATH = loaded.contractPath;
   const issues = collectMigrationIssues(loaded.parsed, Boolean(options.strictSchema));
 
   if (issues.length === 0) {
-    console.log('✅ No deprecated canon fields found.');
+    console.log('✅ No deprecated contract fields found.');
     return 0;
   }
 

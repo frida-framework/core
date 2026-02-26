@@ -1,0 +1,234 @@
+# ─── LAYER 7: BOOTSTRAP ─────────────────────────────────────────────────────
+# Purpose: Bootstrap and reconcile semantics for Frida-managed surfaces.
+# Warm-first repair/redeploy rules live here; buildtime layer keeps generator/mapper only.
+
+FRIDA_CONTRACT_BOOTSTRAP:
+  _visibility: public
+  id: frida-contract-bootstrap
+  version: 2.0.0
+  purpose: "Warm-first bootstrap/reconcile for Frida-managed surfaces with explicit demo bootstrap mode."
+  command: "frida-core bootstrap"
+  activation:
+    manual_only: true
+    trigger: "Explicit CLI invocation only."
+    auto_invocation_forbidden_from:
+      - "frida-core gen"
+      - "frida-core build"
+      - "frida-core init"
+      - "frida-core check"
+      - "frida-core visualize"
+      - "frida-core report"
+      - "frida-core migration-report"
+  modes:
+    warm:
+      default: true
+      entrypoint: "frida-core bootstrap --target <dir>"
+      purpose: "Reconcile an existing Frida deployment to package-reference state and regenerate Frida artifacts."
+      requires_frida_markers: true
+      requires_app_contract_inbox: true
+      app_contract_writes: forbidden
+      prune_unknown_in_managed_scopes: true
+      preserve_defaults:
+        - ".frida/config.yaml"
+        - ".frida/reports/**"
+        - ".frida/inbox/**"
+      post_actions:
+        run_generation: true
+      on_missing_frida:
+        action: HALT
+        error_code: FRIDA_NOT_DEPLOYED
+        redirect: "Use --mode cold-engine for explicit engine onboarding or --mode demo for demo/reference seeding."
+    cold_engine:
+      explicit_only: true
+      entrypoint: "frida-core bootstrap --target <dir> --mode cold-engine"
+      purpose: "First-time engine onboarding in an app repository without touching app-contract files."
+      requires_frida_markers: false
+      requires_app_contract_inbox: true
+      app_contract_writes: forbidden
+      prune_unknown_in_managed_scopes: true
+      post_actions:
+        run_generation: true
+      on_existing_frida:
+        action: HALT
+        error_code: FRIDA_ALREADY_DEPLOYED
+        redirect: "Use warm mode (default) for reconcile/repair."
+    demo:
+      explicit_only: true
+      zero_deploy_only: true
+      entrypoint: "frida-core bootstrap --target <dir> --mode demo"
+      purpose: "Deploy reference demo assets (visualizer + demo seed) when package demo assets are available."
+      app_contract_writes: allowed_demo_seed_only
+      on_existing_frida_or_contract:
+        action: HALT
+        error_code: DEMO_MODE_ZERO_DEPLOY_REQUIRED
+    component_reconcile:
+      compat_aliases:
+        - component_restore
+      entrypoint: "frida-core bootstrap --component <name> [--target <dir>]"
+      purpose: "Scoped reconcile/restore for selected bootstrap-managed components."
+      idempotent: true
+      default_prune_scope: false
+      app_contract_writes: forbidden
+      supported_components:
+        - all
+        - playbooks
+        - generated
+        - bootloader
+        - runtime-config-template
+  target_detection:
+    model: strong_marker_any
+    frida_present_when_any:
+      - ".frida/config.template.yaml"
+      - ".frida/contract/specs/ROUTER.xml"
+      - ".frida/specs/ROUTER.xml (legacy pre-contract-layout marker)"
+      - ".specs/ROUTER.xml (legacy compatibility marker)"
+      - ".frida/contract/profiles/*"
+      - ".frida/profiles/* (legacy pre-contract-layout marker)"
+      - ".specs/profiles/* (legacy compatibility marker)"
+      - "AGENTS.md (FRIDA bootloader signature)"
+      - ".frida/contract/AGENTS.md (FRIDA bootloader signature, canonical internal mirror)"
+      - ".frida/AGENTS.md (FRIDA bootloader signature, legacy compatibility marker)"
+    note: "Marker inconsistency is expected under drift; warm reconcile repairs it."
+  reconcile_policy:
+    package_is_reference: true
+    managed_surface_source: hybrid_contract_policy_plus_package_manifest
+    mutate_only_manifest_declared_surfaces: true
+    ownership_classesRef: "FRIDA_BOOTSTRAP_SURFACE_POLICY.ownership_classes"
+    package_manifestRef: "FRIDA_BOOTSTRAP_PACKAGE_MANIFEST"
+  app_contract_policy:
+    source_of_truth: ".frida/inbox/app-contract/**"
+    fallback_to_legacy_contract: false
+    legacy_contract_surface: "contract/** (legacy compatibility surface; not substantial SSOT artifact)"
+    rule: "Frida engine MUST NOT modify app-contract files in warm or cold-engine modes."
+    explicit_demo_exception: "Demo mode may write demo app-contract seed only."
+    postgen_contract_path: ".frida/inbox/app-contract/contract.index.yaml"
+    on_missing_or_invalid_inbox:
+      action: HALT
+      errors:
+        - APP_CONTRACT_INBOX_MISSING
+        - APP_CONTRACT_INBOX_INVALID
+        - APP_CONTRACT_INBOX_EMPTY
+  root_layout_policyRef: "FRIDA_ROOT_LAYOUT_POLICY"
+  runtime_refs:
+    runtime_config_fileRef: "FRIDA_RUNTIME_CONFIG.file"
+    runtime_config_template_fileRef: "FRIDA_RUNTIME_CONFIG.template_file"
+    ssot_flag_ref: "FRIDA_WIKI_MECHANICS.config_flag"
+  errors:
+    - FRIDA_NOT_DEPLOYED
+    - FRIDA_ALREADY_DEPLOYED
+    - BOOTSTRAP_PACKAGE_MANIFEST_MISSING
+    - BOOTSTRAP_PACKAGE_MANIFEST_INVALID
+    - BOOTSTRAP_PACKAGE_HASH_MISMATCH
+    - APP_CONTRACT_WRITE_FORBIDDEN
+    - DEMO_MODE_ZERO_DEPLOY_REQUIRED
+    - BOOTSTRAP_RECONCILE_PLAN_CONFLICT
+    - BOOTSTRAP_POSTGEN_FAILED
+    - APP_CONTRACT_INBOX_MISSING
+    - APP_CONTRACT_INBOX_INVALID
+    - APP_CONTRACT_INBOX_EMPTY
+  recovery:
+    warm: "frida-core bootstrap --target <dir>"
+    cold_engine: "frida-core bootstrap --target <dir> --mode cold-engine"
+    component: "frida-core bootstrap --component <name> [--target <dir>]"
+  note: >-
+    Demo bootstrap deliverables remain package-specific. Warm/cold-engine bootstrap
+    are engine-surface reconciliation flows and must not mutate app-contract data.
+
+FRIDA_BOOTSTRAP_SURFACE_POLICY:
+  _visibility: public
+  id: frida-bootstrap-surface-policy
+  version: 1.0.0
+  threat_model:
+    drift_assumption: "Agent drift may modify any file at any time."
+    consequence: "Bootstrap reconcile cannot assume only missing files; changed and extra files must be handled explicitly."
+  scope_boundary:
+    mutate_only_manifest_declared_surfaces: true
+    outside_manifest_scopes: untouched
+    app_contract_writes_outside_demo_mode: forbidden
+  ownership_classes:
+    engine_static:
+      meaning: "Package-distributed static files copied from manifest-declared sources."
+      overwrite_policy: overwrite
+      prune_eligible: true
+    engine_generated:
+      meaning: "Artifacts generated by Frida commands from contract data."
+      overwrite_policy: regenerate
+      prune_eligible: true
+    user_owned:
+      meaning: "User-maintained runtime config file."
+      overwrite_policy: preserve
+      prune_eligible: false
+    user_data:
+      meaning: "User/runtime history or audit data kept in Frida-managed directories."
+      overwrite_policy: preserve
+      prune_eligible: false
+    demo_only:
+      meaning: "Assets allowed only in explicit demo bootstrap mode."
+      overwrite_policy: mode_gated
+      prune_eligible: true
+  preserve_defaults:
+    paths:
+      - ".frida/config.yaml"
+      - ".frida/reports/**"
+      - ".frida/inbox/**"
+    rationale: "Preserve user-owned runtime config, accumulated audit reports, and protected inbox SSOT/sync payloads during strict reconcile."
+  root_layout:
+    policyRef: "FRIDA_ROOT_LAYOUT_POLICY"
+    bootstrap_postgen_mode: fail
+    rule: "Warm/cold-engine bootstrap post-generation MUST pass strict `.frida` root allowlist validation."
+  prune_semantics:
+    full_warm_and_cold_engine: "Unknown files are pruned only inside manifest-declared prune scopes."
+    component_reconcile_default: "No full-scope prune by default; component reconcile is scoped and idempotent."
+  target_markers:
+    detection_mode: strong_marker_any
+    markers:
+      - ".frida/config.template.yaml"
+      - ".frida/contract/specs/ROUTER.xml"
+      - ".frida/specs/ROUTER.xml (legacy pre-contract-layout marker)"
+      - ".specs/ROUTER.xml (legacy compatibility marker)"
+      - ".frida/contract/profiles/*"
+      - ".frida/profiles/* (legacy pre-contract-layout marker)"
+      - ".specs/profiles/* (legacy compatibility marker)"
+      - "AGENTS.md FRIDA bootloader signature"
+      - ".frida/contract/AGENTS.md FRIDA bootloader signature"
+      - ".frida/AGENTS.md FRIDA bootloader signature (legacy compatibility marker)"
+  post_reconcile:
+    run_generation: true
+    purpose: "One-command clean Frida: reconcile package/static surfaces then regenerate engine-generated artifacts."
+
+FRIDA_BOOTSTRAP_PACKAGE_MANIFEST:
+  _visibility: public
+  id: frida-bootstrap-package-manifest
+  version: 1.0.0
+  manifest_pathRef: "PATHS.bootstrap.manifestFile"
+  schema_pathRef: "PATHS.bootstrap.manifestSchemaFile"
+  hash_algorithm: sha256
+  manifest_format: yaml
+  manifest_contract:
+    package_is_reference: true
+    legacy_surface_compatibility:
+      enabled: true
+      note: "Manifest may include canonical .frida/contract/* surfaces plus legacy compatibility projections (.specs/*, docs/policy, docs/reference) and legacy pre-contract-layout .frida/* cleanup scopes during migration."
+    entries_describe:
+      - source
+      - target
+      - kind
+      - ownership_class
+      - apply_mode
+      - modes
+      - prune_scope
+      - cleanup_only
+      - preserve_globs
+    copy_entries_require_hash: true
+  validation:
+    schema_required: true
+    hash_check_copy_entries: true
+    on_missing_manifest: fail_hard
+    on_invalid_manifest: fail_hard
+    on_hash_mismatch: fail_hard
+  enforcement:
+    mode: fail_hard_before_writes
+    error_codes:
+      missing: BOOTSTRAP_PACKAGE_MANIFEST_MISSING
+      invalid: BOOTSTRAP_PACKAGE_MANIFEST_INVALID
+      hash_mismatch: BOOTSTRAP_PACKAGE_HASH_MISMATCH

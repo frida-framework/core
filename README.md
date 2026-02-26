@@ -27,7 +27,7 @@ The canon is split into 9 layers. Each layer has `keywords` for contextual looku
 | `agent-framework` | mixed | agent, routing, profiles, invariants, guards, session |
 | `reporting` | private | report, validation, consistency, verification |
 | `cli` | public | CLI, commands, hash, integrity, integration |
-| `buildtime` | public | generator, mapper, scaffold |
+| `buildtime` | public | generator, mapper, bootstrap |
 | `visualization` | public | visual, overlay, LOD, edges, graph, determinism |
 | `management` | mixed | guard-spec, antitask, verify, update, taskset |
 
@@ -40,6 +40,7 @@ frida-core gen                    # validate + normalize + generate
 frida-core build                  # assemble canon → dist/canon.assembled.yaml
 frida-core build --public         # public blocks only → dist/canon.public.yaml
 frida-core check --path <dir>     # resolve zone for a directory
+frida-core bootstrap --target <dir>  # explicit zero-deploy bootstrap (guarded)
 frida-core visualize [--check]    # build or check visual overlay
 frida-core hash --check           # verify template integrity
 frida-core init                   # normalize reporting config

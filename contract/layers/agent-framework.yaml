@@ -8,23 +8,23 @@ FRIDA_TASK_PROFILES:
     role: ARCHITECT_AGENT
     keywords:
       - governance
-      - canon
+      - contract
       - frida
     invariants: []
     security:
       read_allow:
         - "tasks/**"
-        - ".frida/job-reports/*.yaml"
+        - ".frida/reports/*.yaml"
       edit_allow:
         - "tasks/inbox/**"
       create_allow:
-        - ".frida/job-reports/*.yaml"
+        - ".frida/reports/*.yaml"
       forbid:
         - ".frida/**"
       edit_forbid:
         - "tasks/TASK-*.md"
         - "tasks/**/TASK-*.md"
-        - ".frida/job-reports/*.yaml"
+        - ".frida/reports/*.yaml"
   task_setter:
     role: TASK_SETTER_AGENT
     keywords:
@@ -36,10 +36,10 @@ FRIDA_TASK_PROFILES:
     security:
       read_allow:
         - "tasks/**"
-        - ".frida/job-reports/*.yaml"
+        - ".frida/reports/*.yaml"
       create_allow:
         - "tasks/TASK-*.md"
-        - ".frida/job-reports/*.yaml"
+        - ".frida/reports/*.yaml"
       edit_allow: []
       forbid:
         - ".frida/**"
@@ -52,14 +52,15 @@ FRIDA_TASK_PROFILES:
       - review
       - audit
     invariants:
-      - canon_not_runtime
+      - contract_not_runtime
     security:
       read_allow:
         - "**"
       edit_allow: []
       create_allow:
-        - ".frida/job-reports/*.yaml"
-      forbid: []
+        - ".frida/reports/*.yaml"
+      forbid:
+        - ".frida/inbox/**"
       edit_forbid:
         - "**"
 
@@ -68,17 +69,17 @@ FRIDA_ENFORCEMENT:
   id: frida-enforcement
   version: 1.0.0
   invariants:
-    - id: canon_entity_single_declaration
-      text: "Any canon entity SHOULD be declared exactly once; duplicates emit warning."
+    - id: contract_entity_single_declaration
+      text: "Any contract entity SHOULD be declared exactly once; duplicates emit warning."
       scope: kernel
     - id: visual_overlay_only
-      text: "Visual artifacts are derived overlays and must not become source-of-truth canon state."
+      text: "Visual artifacts are derived overlays and must not become source-of-truth contract state."
       scope: kernel
     - id: visual_on_demand
       text: "Visual artifacts are refreshed only by explicit visual commands."
       scope: kernel
     - id: visual_determinism
-      text: "Same canon input MUST produce identical visual overlay output."
+      text: "Same contract input MUST produce identical visual overlay output."
       scope: kernel
     - id: temp_dot_temp_only
       text: "Temporary files MUST reside in .temp/ directories and never in working tree root."
@@ -92,14 +93,29 @@ FRIDA_ENFORCEMENT:
     - id: no_scope_creep
       text: "Agent MUST NOT exceed the scope defined by its profile security permissions."
       scope: kernel
-    - id: canon_not_runtime
-      text: "Canon is a build-time/design-time artifact. Runtime state MUST NOT be stored in canon."
+    - id: contract_not_runtime
+      text: "Contract is a build-time/design-time artifact. Runtime state MUST NOT be stored in contract."
       scope: kernel
     - id: agent_session_exclusive
       text: "Only one agent session token may be active per branch at any time."
       scope: kernel
-    - id: scaffold_idempotent
-      text: "Scaffold command is idempotent. Re-running restores missing components without duplicating existing ones."
+    - id: bootstrap_component_restore_idempotent
+      text: "Explicit bootstrap component-reconcile/component-restore mode is idempotent and restores or normalizes selected components without duplication."
+      scope: kernel
+    - id: bootstrap_manual_only
+      text: "Contract bootstrap MUST run only via explicit bootstrap CLI invocation and MUST NOT be auto-invoked by other commands."
+      scope: kernel
+    - id: bootstrap_warm_first_default
+      text: "Default contract bootstrap mode is warm reconcile for an existing Frida deployment; missing Frida markers must HALT with explicit cold/demo redirect."
+      scope: kernel
+    - id: bootstrap_demo_zero_deploy_only
+      text: "Demo bootstrap mode is explicit-only and zero-deploy-only."
+      scope: kernel
+    - id: bootstrap_no_app_contract_writes
+      text: "Warm and cold-engine bootstrap modes MUST NOT modify app-contract files."
+      scope: kernel
+    - id: frida_inbox_no_agent_access
+      text: "Agents MUST NOT directly read or modify `.frida/inbox/**`; work must use `.frida/contract/app/**` working copy surfaces."
       scope: kernel
     - id: zone_resolution_path_only
       text: "Zone is resolved ONLY by path matching, never by profile keywords or heuristics."
@@ -110,8 +126,8 @@ FRIDA_ENFORCEMENT:
     - id: report_on_every_run
       text: "Every agent run MUST produce a job report, regardless of outcome."
       scope: kernel
-    - id: path_ref_dominance
-      text: "Ref-suffixed path keys dominate literal path values in case of conflict."
+    - id: strict_path_refs
+      text: "Literal paths are forbidden outside the PATHS block. Keys MUST end in *Ref."
       scope: kernel
     - id: schema_version_fixed
       text: >-
@@ -148,21 +164,21 @@ FRIDA_ENFORCEMENT:
     - id: no_interface_spec
       text: "UI/CLI interfaces are out of contract scope and may evolve independently."
   policies:
-    - id: GUARD_CANON_SCHEMA_FIRST
+    - id: GUARD_CONTRACT_SCHEMA_FIRST
       kind: chain
-      statement: "Canon processing must remain schema-first."
+      statement: "Contract processing must remain schema-first."
       enforcement: hard
-    - id: GUARD_CANON_SOURCE_DECLARED
+    - id: GUARD_CONTRACT_SOURCE_DECLARED
       kind: chain
-      statement: "Canon source is limited to files declared in PATHS and canonicalSourceBlocks."
+      statement: "Contract source is limited to files declared in PATHS and contracticalSourceBlocks."
       enforcement: hard
-    - id: GUARD_CANON_NOT_RUNTIME
+    - id: GUARD_CONTRACT_NOT_RUNTIME
       kind: ban
-      statement: "Canon MUST NOT contain runtime state or mutable data."
+      statement: "Contract MUST NOT contain runtime state or mutable data."
       enforcement: hard
     - id: GUARD_ARTIFACT_NO_MANUAL_EDITS
       kind: nail
-      statement: "Generated artifacts (.frida/profiles/, .frida/AGENTS.md, .frida/docs/) must not be manually edited."
+      statement: "Generated artifacts (.frida/contract/profiles/, .frida/contract/AGENTS.md, .frida/contract/docs/) and compat mirrors (.specs/, docs/policy/, docs/reference/) must not be manually edited."
       enforcement: warn
     - id: GUARD_WORKSPACE_TEMP_ONLY
       kind: ban
@@ -170,11 +186,15 @@ FRIDA_ENFORCEMENT:
       enforcement: hard
     - id: GUARD_FRIDA_INTERNAL_NO_AGENT
       kind: ban
-      statement: "Agent MUST NOT directly modify .frida/internal/ contents."
+      statement: "Agent MUST NOT directly modify .frida/contract/internal/ contents."
+      enforcement: hard
+    - id: GUARD_FRIDA_INBOX_NO_AGENT
+      kind: ban
+      statement: "Agents MUST NOT directly access `.frida/inbox/**`; inbox is protected inbound/SSOT surface."
       enforcement: hard
     - id: GUARD_SESSION_REPORT_REQUIRED
       kind: chain
-      statement: "Every agent run MUST produce a job report in .frida/job-reports/."
+      statement: "Every agent run MUST produce a job report in .frida/reports/."
       enforcement: warn
     - id: GUARD_VISUAL_DETERMINISM
       kind: drift
@@ -182,15 +202,23 @@ FRIDA_ENFORCEMENT:
       enforcement: hard
     - id: GUARD_ZONE_AGENTS_MD
       kind: chain
-      statement: "Each zone MUST have a canonical AGENTS.md at its agentsPath."
+      statement: "Each zone MUST have a contractical AGENTS.md at its agentsPath."
       enforcement: warn
     - id: GUARD_TEMPLATE_INTEGRITY
       kind: nail
       statement: "Template hash manifest must validate; drift returns non-zero."
       enforcement: hard
-    - id: GUARD_SCAFFOLD_IDEMPOTENT
+    - id: GUARD_BOOTSTRAP_EXPLICIT_ONLY
       kind: chain
-      statement: "Scaffold re-run must not duplicate existing components."
+      statement: "Bootstrap is manual-only and must not be invoked transitively by other commands."
+      enforcement: hard
+    - id: GUARD_BOOTSTRAP_ZERO_DEPLOY_ONLY
+      kind: chain
+      statement: "Demo bootstrap is explicit-only and zero-deploy-only; full bootstrap defaults to warm reconcile."
+      enforcement: hard
+    - id: GUARD_BOOTSTRAP_COMPONENT_RESTORE_IDEMPOTENT
+      kind: chain
+      statement: "Explicit bootstrap component-restore re-run must not duplicate existing components."
       enforcement: hard
     - id: GUARD_SESSION_EXCLUSIVE
       kind: session
@@ -281,14 +309,14 @@ FRIDA_AGENT_LIFECYCLE:
       action: "Emit job report for SUCCESS or HALT."
   phase_invariants:
     - "no_profile_match MUST HALT"
-    - "Canonical zone AGENTS.md path resolution is zone-driven"
+    - "Contractical zone AGENTS.md path resolution is zone-driven"
     - "No writes outside explicit edit/create permissions"
   session:
     purpose: "Enforce synchronous sequential development through exclusive agent access."
     token_mechanism:
       acquire:
         precondition: "Clean branch, no uncommitted changes."
-        action: "Create session token file at .frida/internal/session.lock"
+        action: "Create session token file at .frida/contract/internal/session.lock"
         content:
           - agent_id
           - branch
@@ -318,12 +346,12 @@ FRIDA_AGENT_LIFECYCLE:
         action: "Remove session lock."
   interaction_modes:
     architect:
-      description: "Full access to canon management, visual loop, and contract translation."
+      description: "Full access to contract management, visual loop, and contract interfaces."
       allowed_operations:
-        - canon_update
+        - contract_update
         - visual_build
-        - contract_translate
-        - scaffold
+        - contract_manage
+        - contract_bootstrap
     developer:
       description: "Scoped access to implementation within zone boundaries."
       allowed_operations:
@@ -350,13 +378,14 @@ FRIDA_VALIDATION_RULES:
   version: 1.0.0
   purpose: "Domain-grouped guard references for structured validation."
   contract_consistency:
-    - GUARD_CANON_SCHEMA_FIRST
-    - GUARD_CANON_SOURCE_DECLARED
-    - GUARD_CANON_NOT_RUNTIME
+    - GUARD_CONTRACT_SCHEMA_FIRST
+    - GUARD_CONTRACT_SOURCE_DECLARED
+    - GUARD_CONTRACT_NOT_RUNTIME
   repo_guards:
     - GUARD_ARTIFACT_NO_MANUAL_EDITS
     - GUARD_WORKSPACE_TEMP_ONLY
     - GUARD_FRIDA_INTERNAL_NO_AGENT
+    - GUARD_FRIDA_INBOX_NO_AGENT
   layer_guards:
     - guard_chain_structural
     - schema_version_fixed
@@ -374,6 +403,8 @@ FRIDA_VALIDATION_RULES:
     - agent_session_exclusive
   template_guards:
     - GUARD_TEMPLATE_INTEGRITY
-    - GUARD_SCAFFOLD_IDEMPOTENT
+    - GUARD_BOOTSTRAP_EXPLICIT_ONLY
+    - GUARD_BOOTSTRAP_ZERO_DEPLOY_ONLY
+    - GUARD_BOOTSTRAP_COMPONENT_RESTORE_IDEMPOTENT
   antitask_guards:
     - GUARD_ANTITASK_VALIDATE_PHASE

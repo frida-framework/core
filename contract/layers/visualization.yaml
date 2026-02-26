@@ -23,13 +23,13 @@ FRIDA_VISUAL:
       edges: "all Ref/Refs"
       labels: full_path
   determinism:
-    rule: "Same canon input MUST produce identical visual overlay output (up to graph isomorphism)."
+    rule: "Same contract input MUST produce identical visual overlay output (up to graph isomorphism)."
   ref_to_edge_mapping:
     rule: "Every Ref-suffixed value resolves to a directed edge source→target in overlay."
   generation_trigger: "on_demand"
   principles:
     - id: overlay_read_only
-      text: "Overlay is read-only and derived from canon. Manual edits are forbidden."
+      text: "Overlay is read-only and derived from contract. Manual edits are forbidden."
     - id: lod_semantic_zoom
       text: "Zoom level determines Level-of-Detail. No user configuration needed."
     - id: edge_from_refs

@@ -25,15 +25,15 @@ FRIDA_ARCHITECTURE_DECISIONS:
   version: 1.0.0
   decisions:
     - id: CORE-ADR-001
-      title: Schema-first canon is the primary normalization axis
+      title: Schema-first contract is the primary normalization axis
       status: ACCEPTED
       decision:
-        - "Generation input MUST be schema-native canon with top-level meta + core blocks."
-        - "Canon model MUST be validated against schemas/frida-canon.schema.json."
-        - "In strict mode, deprecated canon fields are treated as hard failure."
+        - "Generation input MUST be schema-native contract with top-level meta + core blocks."
+        - "Contract model MUST be validated against schemas/frida-contract.schema.json."
+        - "In strict mode, deprecated contract fields are treated as hard failure."
       evidence:
         - src/schema.ts
-        - schemas/frida-canon.schema.json
+        - schemas/frida-contract.schema.json
         - src/runtime.ts
 
     - id: CORE-ADR-002
@@ -41,7 +41,7 @@ FRIDA_ARCHITECTURE_DECISIONS:
       status: ACCEPTED
       decision:
         - "All source data binding uses jsonpath-lite selectors."
-        - "Required selectors MUST match at least one canon node."
+        - "Required selectors MUST match at least one contract node."
         - "Selector resolution is stateless and deterministic."
       evidence:
         - src/selector.ts
@@ -59,7 +59,7 @@ FRIDA_ARCHITECTURE_DECISIONS:
       status: ACCEPTED
       decision:
         - "Zone resolution uses path-specificity algorithm, not profile heuristics."
-        - "Each zone has a canonical AGENTS.md path derived from agentsPath."
+        - "Each zone has a contractical AGENTS.md path derived from agentsPath."
         - "Zone resolution is deterministic: normalize → match → rank → select."
       evidence:
         - src/zone-check.ts
@@ -80,7 +80,7 @@ FRIDA_ARCHITECTURE_DECISIONS:
       status: ACCEPTED
       decision:
         - "Reporting path, extension, and filename pattern are constants."
-        - "Runtime config is generated from canon, not edited manually."
+        - "Runtime config is generated from contract, not edited manually."
         - "Init command normalizes reporting settings to fixed values."
       evidence:
         - src/reporting-contract.ts
@@ -90,9 +90,9 @@ FRIDA_ARCHITECTURE_DECISIONS:
       title: Visual overlay uses LOD-based semantic zoom
       status: ACCEPTED
       decision:
-        - "Canon YAML depth maps to LOD levels (topology/flow/specification)."
+        - "Contract YAML depth maps to LOD levels (topology/flow/specification)."
         - "Typed reference keys (*Ref, *Refs) produce explicit edges."
-        - "Overlay is deterministic: same canon → same overlay (up to isomorphism)."
+        - "Overlay is deterministic: same contract → same overlay (up to isomorphism)."
       evidence:
         - src/visual.ts
 
@@ -108,24 +108,30 @@ FRIDA_ARCHITECTURE_DECISIONS:
         - "Future: src/session.ts"
 
     - id: CORE-ADR-010
-      title: Scaffold delivers ahead-version canon
+      title: Warm-first bootstrap reconciles package-reference Frida surfaces
       status: ACCEPTED
       decision:
-        - "frida-core scaffold deploys base app + visualizer + canon."
-        - "Deployed canon describes the next iteration, not current state."
-        - "Scaffold is idempotent — re-run restores missing components."
+        - "frida-core bootstrap is a manual-only command; default mode is warm reconcile of Frida-managed surfaces."
+        - "Package files and package manifest are the reference for bootstrap-managed surfaces under drift."
+        - "Warm/cold-engine bootstrap MUST NOT modify app-contract files."
+        - "Frida app-side generation/bootstrap reads app-contract only from .frida/inbox/app-contract/** and does not fall back to contract/**."
+        - "Explicit demo mode is zero-deploy only and is the only mode that may write demo app-contract seed."
+        - "Warm/cold-engine bootstrap runs generation after reconcile to restore engine-generated artifacts."
+        - "Warm/cold-engine bootstrap post-generation MUST satisfy strict .frida root layout policy."
+        - "Explicit component-reconcile mode remains idempotent and scoped."
       evidence:
-        - "Future: src/scaffold.ts"
+        - "Future: src/bootstrap.ts"
 
     - id: CORE-ADR-011
-      title: Contract translators bridge natural language and code
+      title: Contract interfaces bridge natural language and code
       status: ACCEPTED
       decision:
-        - "Intent-to-contract translator converts user wishes to canon YAML."
-        - "Code-to-contract translator extracts canon from existing code."
-        - "Both produce draft canon requiring human or architect approval."
+        - "Intent-to-contract interface converts user specifications to contract YAML."
+        - "Code-to-contract interface extracts contract from existing code."
+        - "Both produce draft contract requiring human or architect approval."
+        - "Contract declares interface purpose and role. Implementation lives in engine .md playbooks deployed to app repos."
       evidence:
-        - "Future: src/translator.ts"
+        - "Future: src/contract-interfaces.ts"
 
 FRIDA_FOUNDATION_PRINCIPLES:
   _visibility: private
@@ -140,10 +146,10 @@ FRIDA_FOUNDATION_PRINCIPLES:
   principles:
     - id: schema_first
       text: "Schema-first normalization axis is mandatory."
-    - id: ref_dominance
-      text: "Path references (Ref-suffixed keys) dominate literal path values."
-    - id: canon_source_allowlist
-      text: "Canon source is limited to declared canonical files. No runtime inference."
+    - id: strict_path_refs
+      text: "All paths outside the PATHS block MUST be references (*Ref). Direct paths are forbidden."
+    - id: contract_source_allowlist
+      text: "Contract source is limited to declared contractical files. No runtime inference."
     - id: no_heuristics
       text: "No heuristics for contract interpretation; explicit contract data only."
     - id: fail_fast
@@ -151,12 +157,51 @@ FRIDA_FOUNDATION_PRINCIPLES:
     - id: reproducibility
       text: "Reproducibility and determinism are mandatory gates."
     - id: single_source_of_truth
-      text: "Each datum has exactly one canonical source. Overlays are derived, never authoritative."
+      text: "Each datum has exactly one contractical source. Overlays are derived, never authoritative."
     - id: context_minimization
       text: "Agent context is minimal and contract-scoped. No ambient knowledge."
     - id: architect_visual_loop
       text: "Visual artifacts support the architect loop: see → model → commit."
   migration_rule:
     default: "Adopt stable old-kernel principles unless conflict is detected."
-    conflict_resolution: "Current core canon has priority and is treated as refinement."
+    conflict_resolution: "Current core contract has priority and is treated as refinement."
     wiki_only_policy: "Wiki-only postulates from old kernel are deprecated in package core."
+  contract_design_principles:
+    - id: engine_app_separation
+      text: "Engine describes universal mechanisms. App describes project-specific data. No cross-contamination."
+    - id: brief_engine_detail_app
+      text: "Engine defines WHAT a mechanism does. App defines HOW it is configured."
+    - id: layer_single_purpose
+      text: "Each layer has one clear purpose. Block placement follows purpose, not convenience."
+    - id: config_details_live_in_config_layer
+      text: >-
+        Concrete engine settings and configurable literals MUST live in the
+        core-configuration layer file. Other layers may reference config
+        entries only and MUST NOT duplicate config details inline.
+    - id: frida_root_ownership_split
+      text: "`.frida` root is an ownership-split surface: only runtime config files at root; engine-managed artifacts in `.frida/contract`, reports in `.frida/reports`, and inbound SSOT data in protected `.frida/inbox`."
+    - id: name_reflects_content
+      text: "Names must accurately describe content. Misleading names must be corrected."
+    - id: domain_grouped_validation
+      text: "Guards and invariants are grouped by domain for structured auditing."
+    - id: buildtime_management_cli_separation
+      text: "Build-time mechanisms, contract interaction interfaces, and CLI are separate domains."
+    - id: no_loss_on_transform
+      text: "Every structural transformation is audited. Lost data is restored or explicitly deprecated."
+    - id: defaults_are_noise
+      text: "Default values are not stated. Explicit value means conscious choice."
+    - id: build_after_every_change
+      text: "Build must pass after every contract change."
+    - id: contract_is_governance
+      text: "Contract is governance data. No runtime state, no mutable data."
+    - id: interface_declaration_only
+      text: >-
+        Contract declares interface purpose, role, and reference.
+        Implementation details (procedures, algorithms, checklists) belong in
+        engine .md playbooks deployed to app repos, not in contract YAML.
+    - id: component_context_fit
+      text: >-
+        Every component contract file MUST fit entirely in the agent context window.
+        Component contract is a self-contained source for task formulation.
+        It declares: hierarchy position, mount point, input props, output callbacks.
+

@@ -4,19 +4,19 @@ import * as yaml from 'yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { fileURLToPath } from 'url';
-import { loadCanonDocument } from './canon-path.ts';
+import { loadContractDocument } from './contract-path.ts';
 import {
-  ensureCanonReportingSettings,
+  ensureRuntimeConfigArtifacts,
+  ensureContractReportingSettings,
   REPORTING_SETTINGS_FIXED,
-  toRuntimeConfig,
-  writeRuntimeConfig,
 } from './reporting-contract.ts';
+import { validateFridaRootLayout } from './frida-layout.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_CONFIG_SCHEMA_PATH = path.resolve(MODULE_DIR, '../schemas/frida-runtime-config.schema.json');
 
 interface InitArgs {
-  canonPath: string | null;
+  contractPath: string | null;
   dryRun: boolean;
 }
 
@@ -30,7 +30,7 @@ function parseArgs(args: string[]): InitArgs {
   };
 
   return {
-    canonPath: readFlag('--canon'),
+    contractPath: readFlag('--contract'),
     dryRun: args.includes('--dry-run'),
   };
 }
@@ -51,7 +51,7 @@ function validateRuntimeConfigSchema(payload: unknown): void {
   }
 }
 
-function validateCanonReporting(contract: Record<string, any>): void {
+function validateContractReporting(contract: Record<string, any>): void {
   const reporting = contract?.FRIDA_CONFIG?.reporting;
   if (!reporting || typeof reporting !== 'object') {
     throw new Error('FRIDA_CONFIG.reporting is missing after init normalization');
@@ -60,7 +60,7 @@ function validateCanonReporting(contract: Record<string, any>): void {
     throw new Error('FRIDA_CONFIG.reporting.collect_in_repo must be true');
   }
   if (reporting.repo_path !== REPORTING_SETTINGS_FIXED.repoPath) {
-    throw new Error('FRIDA_CONFIG.reporting.repo_path must be .frida/job-reports');
+    throw new Error(`FRIDA_CONFIG.reporting.repo_path must be ${REPORTING_SETTINGS_FIXED.repoPath}`);
   }
   if (reporting.file_ext !== REPORTING_SETTINGS_FIXED.fileExt) {
     throw new Error('FRIDA_CONFIG.reporting.file_ext must be .yaml');
@@ -77,31 +77,39 @@ export async function runFridaInitCli(args: string[] = []): Promise<number> {
   try {
     const parsedArgs = parseArgs(args);
     const rootDir = process.cwd();
-    const loaded = loadCanonDocument(rootDir, parsedArgs.canonPath || undefined);
+    const loaded = loadContractDocument(rootDir, parsedArgs.contractPath || undefined);
     const contract = loaded.parsed as Record<string, any>;
 
-    const { changed } = ensureCanonReportingSettings(contract);
-    validateCanonReporting(contract);
-
-    const runtimeConfig = toRuntimeConfig(REPORTING_SETTINGS_FIXED);
-    validateRuntimeConfigSchema(runtimeConfig);
+    const { changed } = ensureContractReportingSettings(contract);
+    validateContractReporting(contract);
 
     if (!parsedArgs.dryRun && changed) {
-      fs.writeFileSync(loaded.canonPath, `${yaml.stringify(contract)}\n`, 'utf-8');
+      fs.writeFileSync(loaded.contractPath, `${yaml.stringify(contract)}\n`, 'utf-8');
     }
 
     if (!parsedArgs.dryRun) {
-      const runtimeConfigPath = writeRuntimeConfig(rootDir, runtimeConfig);
-      console.log(`✅ Runtime config written: ${path.relative(rootDir, runtimeConfigPath)}`);
+      const runtimeConfigArtifacts = ensureRuntimeConfigArtifacts(rootDir, REPORTING_SETTINGS_FIXED);
+      validateRuntimeConfigSchema(runtimeConfigArtifacts.effectiveConfig);
+      if (runtimeConfigArtifacts.createdRuntimeConfig) {
+        console.log(`✅ Runtime config created: ${path.relative(rootDir, runtimeConfigArtifacts.runtimeConfigPath)}`);
+      } else {
+        console.log(`ℹ️ Runtime config preserved: ${path.relative(rootDir, runtimeConfigArtifacts.runtimeConfigPath)}`);
+      }
+      console.log(`✅ Runtime config template written: ${path.relative(rootDir, runtimeConfigArtifacts.templatePath)}`);
+      for (const warning of runtimeConfigArtifacts.warnings) {
+        console.warn(`⚠️  ${warning}`);
+      }
+      validateFridaRootLayout(rootDir, 'warn');
     } else {
       console.log('ℹ️ Dry run: no files written');
+      console.log('ℹ️ Dry run: runtime config template would be written to .frida/config.template.yaml');
+      console.log('ℹ️ Dry run: runtime config file would be created only if .frida/config.yaml is missing');
     }
 
-    console.log(`✅ Canon reporting normalized: ${path.relative(rootDir, loaded.canonPath)} (changed=${changed})`);
+    console.log(`✅ Contract reporting normalized: ${path.relative(rootDir, loaded.contractPath)} (changed=${changed})`);
     return 0;
   } catch (error) {
     console.error(`❌ init failed: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
 }
-

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hanszel.dev/schemas/frida-bootstrap-package-manifest.schema.json",
+  "title": "FRIDA Bootstrap Package Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "manifest_id", "assets_root", "entries"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "manifest_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "assets_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "target", "kind", "ownership_class", "apply_mode"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["file", "dir", "tree"]
+          },
+          "ownership_class": {
+            "type": "string",
+            "enum": ["engine_static", "engine_generated", "user_owned", "user_data", "demo_only"]
+          },
+          "apply_mode": {
+            "type": "string",
+            "enum": ["copy", "ensure_dir", "generated"]
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["warm", "cold-engine", "demo"]
+            },
+            "uniqueItems": true
+          },
+          "prune_scope": {
+            "type": "boolean"
+          },
+          "cleanup_only": {
+            "type": "boolean"
+          },
+          "preserve_globs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

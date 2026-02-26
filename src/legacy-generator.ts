@@ -2,21 +2,22 @@
  * FRIDA Unified Generator v3.0
  * 
  * Generates agent context from contract data.
- * All data comes from canon.cbmd.yaml (synced from wiki).
+ * All data comes from contract.cbmd.yaml (synced from wiki).
  * 
  * Sources:
- *   - contract/canon.cbmd.yaml (ZONES, TASK_PROFILES, INVARIANTS, FRIDA_GUARDS_BASELINE, PROJECT_GUARDS, GUARDS)
+ *   - contract/contract.cbmd.yaml (ZONES, TASK_PROFILES, INVARIANTS, FRIDA_GUARDS_BASELINE, PROJECT_GUARDS, GUARDS)
  * 
  * Outputs:
  *   - AGENTS.md (bootloader)
- *   - .specs/ROUTER.xml
- *   - .specs/profiles/*.xml
+ *   - .frida/contract/specs/ROUTER.xml (canonical)
+ *   - .frida/contract/profiles/*.xml (canonical)
  *   - {zone}/AGENTS.md (zone-specific)
- *   - docs/policy/*.md
- *   - docs/reference/*.md
- *   - .frida/frida.ir.json
- *   - .frida/frida.permissions.json
- *   - .frida/frida.graph.mmd
+ *   - .frida/contract/docs/{policy,reference}/*.md (canonical)
+ *   - .specs/ROUTER.xml, .specs/profiles/*.xml (compat mirrors)
+ *   - docs/policy/*.md, docs/reference/*.md (compat mirrors)
+ *   - .frida/contract/artifacts/frida.ir.json
+ *   - .frida/contract/artifacts/frida.permissions.json
+ *   - .frida/contract/artifacts/frida.graph.mmd
  */
 
 import * as fs from 'fs';
@@ -24,9 +25,9 @@ import * as crypto from 'crypto';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import Handlebars from 'handlebars';
-import { resolveCanonPath } from './canon-path.ts';
+import { loadContractDocument, resolveContractPath } from './contract-path.ts';
 // === CONFIG ===
-const ROOT_DIR = path.resolve(process.cwd());
+let ROOT_DIR = path.resolve(process.cwd());
 
 const AUTO_GENERATED_HEADER = '<!-- AUTO-GENERATED FROM CONTRACT - DO NOT EDIT MANUALLY -->\n\n';
 
@@ -69,7 +70,7 @@ interface Contract {
 }
 
 interface GeneratorRuntimePaths {
-    canonArtifactPath: string;
+    contractArtifactPath: string;
     bootloaderFilePath: string;
     specsRootDir: string;
     profilesRootDir: string;
@@ -134,7 +135,7 @@ interface IREdge {
 interface FridaIR {
     meta: {
         generatedAt: string;
-        canonSha256: string;
+        contractSha256: string;
         pathMappingsCount: number;
         zoneCount: number;
         profileCount: number;
@@ -157,9 +158,9 @@ class PathNormalizer {
     private flattenPaths(obj: any, prefix: string): void {
         for (const [key, value] of Object.entries(obj)) {
             if (typeof value === 'string') {
-                this.mappings.set(prefix + key, { canonical: value });
+                this.mappings.set(prefix + key, { contractical: value });
             } else if (typeof value === 'object' && value !== null) {
-                if ((value as any).canonical) {
+                if ((value as any).contractical) {
                     this.mappings.set(prefix + key, value);
                 } else {
                     this.flattenPaths(value, prefix + key + '.');
@@ -168,22 +169,22 @@ class PathNormalizer {
         }
     }
 
-    normalize(inputPath: string): { canonical: string; deprecated: boolean } {
+    normalize(inputPath: string): { contractical: string; deprecated: boolean } {
         const cleaned = inputPath.replace(/^\.\//, '').replace(/^\//, '');
 
         for (const [, mapping] of this.mappings) {
-            if (cleaned === mapping.canonical) {
-                return { canonical: mapping.canonical, deprecated: false };
+            if (cleaned === mapping.contractical) {
+                return { contractical: mapping.contractical, deprecated: false };
             }
             if (mapping.aliases?.includes(cleaned)) {
-                return { canonical: mapping.canonical, deprecated: false };
+                return { contractical: mapping.contractical, deprecated: false };
             }
             if (mapping.deprecated?.includes(cleaned)) {
-                return { canonical: mapping.canonical, deprecated: true };
+                return { contractical: mapping.contractical, deprecated: true };
             }
         }
 
-        return { canonical: cleaned, deprecated: false };
+        return { contractical: cleaned, deprecated: false };
     }
 
     getCount(): number {
@@ -209,6 +210,67 @@ function write(filePath: string, content: string, addHeader = false): void {
     console.log(`✅ Generated: ${path.relative(ROOT_DIR, filePath)}`);
 }
 
+function resetDir(dirPath: string): void {
+    fs.rmSync(dirPath, { recursive: true, force: true });
+    fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function copyDirContentsRecursive(sourceDir: string, targetDir: string): void {
+    fs.mkdirSync(targetDir, { recursive: true });
+    for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
+        const sourcePath = path.join(sourceDir, entry.name);
+        const targetPath = path.join(targetDir, entry.name);
+        if (entry.isDirectory()) {
+            copyDirContentsRecursive(sourcePath, targetPath);
+            continue;
+        }
+        if (!entry.isFile()) continue;
+        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+        fs.copyFileSync(sourcePath, targetPath);
+    }
+}
+
+function mirrorDirReplace(sourceDir: string, targetDir: string, label: string): void {
+    if (!fs.existsSync(sourceDir) || !fs.statSync(sourceDir).isDirectory()) {
+        console.warn(`⚠️  Compat mirror skipped (${label}): source dir missing (${path.relative(ROOT_DIR, sourceDir)})`);
+        return;
+    }
+    fs.mkdirSync(path.dirname(targetDir), { recursive: true });
+    resetDir(targetDir);
+    copyDirContentsRecursive(sourceDir, targetDir);
+    console.log(`✅ Compat mirror: ${path.relative(ROOT_DIR, targetDir)} <= ${path.relative(ROOT_DIR, sourceDir)}`);
+}
+
+function resolveContractPathString(contract: Contract, ref: string, fallback: string): string {
+    const resolved = resolvePathRef(contract, ref);
+    return typeof resolved === 'string' && resolved.trim() ? resolved : fallback;
+}
+
+function emitCompatMirrors(contract: Contract, runtimePaths: GeneratorRuntimePaths): void {
+    console.log('\n📋 Emitting compatibility mirrors...\n');
+
+    const legacySpecsRoot = path.join(ROOT_DIR, '.specs');
+    const legacyDocsPolicyDir = path.join(ROOT_DIR, 'docs', 'policy');
+    const legacyDocsReferenceDir = path.join(ROOT_DIR, 'docs', 'reference');
+
+    mirrorDirReplace(runtimePaths.specsRootDir, legacySpecsRoot, '.specs router tree');
+    mirrorDirReplace(runtimePaths.profilesRootDir, path.join(legacySpecsRoot, 'profiles'), '.specs/profiles');
+    mirrorDirReplace(runtimePaths.docsPolicyDir, legacyDocsPolicyDir, 'docs/policy');
+    mirrorDirReplace(runtimePaths.docsReferenceDir, legacyDocsReferenceDir, 'docs/reference');
+
+    // Root AGENTS.md remains the human/agent entrypoint. This internal mirror is engine-managed canonical state.
+    const fridaContractBootloaderPath = fromRepoRoot(
+        resolveContractPathString(contract, 'PATHS.fridaContract.bootloaderFile', '.frida/contract/AGENTS.md')
+    );
+    if (fs.existsSync(runtimePaths.bootloaderFilePath) && fs.statSync(runtimePaths.bootloaderFilePath).isFile()) {
+        fs.mkdirSync(path.dirname(fridaContractBootloaderPath), { recursive: true });
+        fs.copyFileSync(runtimePaths.bootloaderFilePath, fridaContractBootloaderPath);
+        console.log(
+            `✅ Canonical mirror: ${path.relative(ROOT_DIR, fridaContractBootloaderPath)} <= ${path.relative(ROOT_DIR, runtimePaths.bootloaderFilePath)}`
+        );
+    }
+}
+
 function registerHelpers(): void {
     Handlebars.registerHelper('formatPath', (pathStr: string) => {
         return pathStr?.replace(/\\/g, '/') || '';
@@ -228,7 +290,7 @@ type SecurityListKey = 'read_allow' | 'edit_allow' | 'create_allow' | 'forbid' |
 function splitScopeValues(value: string): string[] {
     const normalizeResolvedPath = (input: string): string => {
         const cleaned = input.trim();
-        // Canon PATHS keeps many file scopes as "*.ext*"; convert them to exact file paths for profile surfaces.
+        // Contract PATHS keeps many file scopes as "*.ext*"; convert them to exact file paths for profile surfaces.
         if (/(^|\/)[^/*?[\]{}]+\.[^/*?[\]{}]+\*$/.test(cleaned)) {
             return cleaned.slice(0, -1);
         }
@@ -267,8 +329,8 @@ function resolvePathRef(contract: Contract, ref: string): string | null {
         return cursor;
     }
 
-    if (cursor && typeof cursor === 'object' && typeof cursor.canonical === 'string') {
-        return cursor.canonical;
+    if (cursor && typeof cursor === 'object' && typeof cursor.contractical === 'string') {
+        return cursor.contractical;
     }
 
     return null;
@@ -280,21 +342,15 @@ function failWithError(message: string): never {
 }
 
 function readContractFileOrFail(absolutePath: string): { contract: Contract; contractRaw: string } {
-    if (!fs.existsSync(absolutePath)) {
-        failWithError(
-            `canon artifact not found at '${path.relative(ROOT_DIR, absolutePath) || absolutePath}'.`
-        );
-    }
-
-    const contractRaw = fs.readFileSync(absolutePath, 'utf-8');
     try {
+        const loaded = loadContractDocument(ROOT_DIR, absolutePath);
         return {
-            contract: yaml.parse(contractRaw),
-            contractRaw,
+            contract: loaded.parsed as Contract,
+            contractRaw: loaded.raw,
         };
     } catch (error) {
         failWithError(
-            `failed to parse canon artifact '${path.relative(ROOT_DIR, absolutePath) || absolutePath}': ${error instanceof Error ? error.message : String(error)
+            `failed to parse contract artifact '${path.relative(ROOT_DIR, absolutePath) || absolutePath}': ${error instanceof Error ? error.message : String(error)
             }`
         );
     }
@@ -367,8 +423,8 @@ function resolvePathRefOrFail(
     if (typeof node === 'string') {
         return node;
     }
-    if (node && typeof node === 'object' && typeof node.canonical === 'string') {
-        return node.canonical;
+    if (node && typeof node === 'object' && typeof node.contractical === 'string') {
+        return node.contractical;
     }
 
     if (expectedKind === 'dir' && node && typeof node === 'object') {
@@ -622,9 +678,9 @@ function toNodeId(kind: IRKind, rawId: string): string {
     return `${kind}:${rawId}`;
 }
 
-function fromRepoRoot(canonPath: string): string {
-    // canonPath may be "/.frida/x" or ".frida/x" — strip leading slashes/dots
-    const cleaned = canonPath.replace(/^\.\//, '').replace(/^\/+/, '');
+function fromRepoRoot(contractPath: string): string {
+    // contractPath may be "/.frida/x" or ".frida/x" — strip leading slashes/dots
+    const cleaned = contractPath.replace(/^\.\//, '').replace(/^\/+/, '');
     return path.join(ROOT_DIR, cleaned);
 }
 
@@ -717,40 +773,40 @@ function buildFridaIR(
     // Path nodes + access edges (profile -> path)
     const pathIds = new Set<string>();
     const ensurePathNode = (p: string) => {
-        const canon = normalizer.normalize(p).canonical;
-        if (!pathIds.has(canon)) {
-            pathIds.add(canon);
+        const contract = normalizer.normalize(p).contractical;
+        if (!pathIds.has(contract)) {
+            pathIds.add(contract);
             nodes.push({
-                id: toNodeId('path', canon),
+                id: toNodeId('path', contract),
                 kind: 'path',
-                label: canon,
-                attrs: { canonical: canon },
+                label: contract,
+                attrs: { contractical: contract },
             });
         }
-        return canon;
+        return contract;
     };
 
     for (const p of profiles) {
         const sec = p.security || {};
         for (const rp of sec.read_allow || []) {
-            const canon = ensurePathNode(rp);
-            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', canon), kind: 'may_read' });
+            const contract = ensurePathNode(rp);
+            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', contract), kind: 'may_read' });
         }
         for (const ep of sec.edit_allow || []) {
-            const canon = ensurePathNode(ep);
-            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', canon), kind: 'may_edit' });
+            const contract = ensurePathNode(ep);
+            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', contract), kind: 'may_edit' });
         }
         for (const fp of sec.forbid || []) {
-            const canon = ensurePathNode(fp);
-            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', canon), kind: 'forbidden' });
+            const contract = ensurePathNode(fp);
+            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', contract), kind: 'forbidden' });
         }
         for (const nfp of sec.edit_forbid || []) {
-            const canon = ensurePathNode(nfp);
-            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', canon), kind: 'no_edit' });
+            const contract = ensurePathNode(nfp);
+            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', contract), kind: 'no_edit' });
         }
         for (const cp of sec.create_allow || []) {
-            const canon = ensurePathNode(cp);
-            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', canon), kind: 'may_create' });
+            const contract = ensurePathNode(cp);
+            edges.push({ from: toNodeId('profile', p.id), to: toNodeId('path', contract), kind: 'may_create' });
         }
     }
 
@@ -779,7 +835,7 @@ function buildFridaIR(
     return {
         meta: {
             generatedAt: new Date().toISOString(),
-            canonSha256: sha256Text(contractRaw),
+            contractSha256: sha256Text(contractRaw),
             pathMappingsCount: normalizer.getCount(),
             zoneCount: zones.length,
             profileCount: profiles.length,
@@ -849,29 +905,51 @@ function emitMachineReadableExports(
 
 // === CONTRACT LOADERS ===
 function loadGeneratorContext(): LoadedGeneratorContext {
-    let canonPath = resolveCanonPath(ROOT_DIR);
-    let loaded = readContractFileOrFail(canonPath);
+    let contractPath = resolveContractPath(ROOT_DIR);
+    let loaded = readContractFileOrFail(contractPath);
+    const explicitContractPath = process.env.FRIDA_CONTRACT_PATH?.trim();
+    const normalizedContractPath = path.resolve(contractPath).replace(/\\/g, '/');
+    const contractPathIsInboxSource = normalizedContractPath.includes('/.frida/inbox/app-contract/');
+    const honorExplicitContractPath = Boolean(explicitContractPath) || contractPathIsInboxSource;
 
-    // Resolve canon path from FRIDA_CONFIG and re-load if canonical artifact differs from bootstrap location.
-    for (let i = 0; i < 2; i++) {
+    // Resolve contract path from FRIDA_CONFIG and re-load if contractical artifact differs from bootstrap location.
+    // If FRIDA_CONTRACT_PATH is explicitly set (for example bootstrap post-gen with inbox-only contract source),
+    // the explicit path is authoritative and re-resolve fallback is disabled.
+    if (!honorExplicitContractPath) {
+        for (let i = 0; i < 2; i++) {
+            const cfgPaths = getFridaConfigPathsOrFail(loaded.contract);
+            const contractRel = resolvePathRefOrFail(
+                loaded.contract,
+                cfgPaths.contract_inputFileRef,
+                'FRIDA_CONFIG.paths.contract_inputFileRef',
+                'file'
+            );
+            const resolvedContractPath = path.resolve(fromRepoRoot(contractRel));
+            if (resolvedContractPath === contractPath) {
+                break;
+            }
+            contractPath = resolvedContractPath;
+            loaded = readContractFileOrFail(contractPath);
+        }
+    } else {
         const cfgPaths = getFridaConfigPathsOrFail(loaded.contract);
-        const canonRel = resolvePathRefOrFail(
+        const contractRel = resolvePathRefOrFail(
             loaded.contract,
-            cfgPaths.canon_inputFileRef,
-            'FRIDA_CONFIG.paths.canon_inputFileRef',
+            cfgPaths.contract_inputFileRef,
+            'FRIDA_CONFIG.paths.contract_inputFileRef',
             'file'
         );
-        const resolvedCanonPath = path.resolve(fromRepoRoot(canonRel));
-        if (resolvedCanonPath === canonPath) {
-            break;
+        const resolvedContractPath = path.resolve(fromRepoRoot(contractRel));
+        if (resolvedContractPath !== contractPath) {
+            console.warn(
+                `⚠️  Contract source is fixed to ${path.relative(ROOT_DIR, contractPath) || contractPath}; skipping FRIDA_CONFIG.paths.contract_inputFileRef fallback to ${path.relative(ROOT_DIR, resolvedContractPath) || resolvedContractPath}`
+            );
         }
-        canonPath = resolvedCanonPath;
-        loaded = readContractFileOrFail(canonPath);
     }
 
     const cfgPaths = getFridaConfigPathsOrFail(loaded.contract);
     const runtimePaths: GeneratorRuntimePaths = {
-        canonArtifactPath: canonPath,
+        contractArtifactPath: contractPath,
         bootloaderFilePath: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'agents_bootloaderFileRef',
             legacyField: 'agents_bootloader',
@@ -1054,18 +1132,18 @@ function validateContract(contract: Contract): EffectiveGuards {
     const editAllowArchitectRequired = policyList('edit_allow_architect_required', ['tasks/inbox/**']);
     const editAllowArchitectAllowedOnly = policyList('edit_allow_architect_allowed_only', ['tasks/inbox/**', 'tasks/inbox/README.md']);
     const editAllowNonArchitectRequired = policyList('edit_allow_non_architect_required', ['tasks/README.md', 'tasks/**/README.md']);
-    const editForbidRequired = policyList('edit_forbid_required', ['tasks/TASK-*.md', 'tasks/**/TASK-*.md', '.frida/job-reports/*.yaml']);
+    const editForbidRequired = policyList('edit_forbid_required', ['tasks/TASK-*.md', 'tasks/**/TASK-*.md', '.frida/reports/*.yaml']);
     const forbidMustInclude = policyList('forbid_must_include', ['.frida/**']);
     const forbidMustNotInclude = policyList('forbid_must_not_include', ['tasks/**', 'tasks/README.md', 'tasks/**/README.md', 'tasks/TASK-*.md', 'tasks/**/TASK-*.md']);
-    const createAllowRequiredAllProfiles = policyList('create_allow_required_all_profiles', ['.frida/job-reports/*.yaml']);
-    const createAllowNonTaskSetterAllowedOnly = policyList('create_allow_non_task_setter_allowed_only', ['tasks/sessions/*.md', 'tasks/sessions/[0-9]*-*.md', '.frida/job-reports/*.yaml']);
+    const createAllowRequiredAllProfiles = policyList('create_allow_required_all_profiles', ['.frida/reports/*.yaml']);
+    const createAllowNonTaskSetterAllowedOnly = policyList('create_allow_non_task_setter_allowed_only', ['tasks/sessions/*.md', 'tasks/sessions/[0-9]*-*.md', '.frida/reports/*.yaml']);
     const createAllowTaskSetterRequired = policyList('create_allow_task_setter_required', ['tasks/TASK-*.md']);
     const createAllowTaskSetterForbidden = policyList('create_allow_task_setter_forbidden', ['tasks/**']);
     const reportingReadPath = (() => {
         const fromPolicy = policyList('read_allow_reporting_required', []);
         if (fromPolicy.length > 0) return fromPolicy[0];
         const fromAcl = (contract as any)?.REPORTING_ACCESS_POLICY?.acl_projection?.read_allow_governance_glob;
-        return typeof fromAcl === 'string' && fromAcl.trim() ? fromAcl : '.frida/job-reports/*.yaml';
+        return typeof fromAcl === 'string' && fromAcl.trim() ? fromAcl : '.frida/reports/*.yaml';
     })();
     const accessValidationEnabled =
         (contract.FRIDA_CONFIG as any)?.reporting?.access_validation?.enabled === true;
@@ -1198,9 +1276,9 @@ function validateContract(contract: Contract): EffectiveGuards {
 
 // === DRIFT CHECK ===
 function checkTemplateDrift(contract: Contract): void {
-    console.log('\n🔍 Checking template drift against canon...');
+    console.log('\n🔍 Checking template drift against contract...');
 
-    // Collect all FRIDA_TPL_* blocks from canon
+    // Collect all FRIDA_TPL_* blocks from contract
     const templateBlocks = Object.keys(contract).filter(k => k.startsWith('FRIDA_TPL_'));
 
     let passed = 0;
@@ -1216,11 +1294,11 @@ function checkTemplateDrift(contract: Contract): void {
         const filePath = path.join(ROOT_DIR, block.file);
         if (!fs.existsSync(filePath)) {
             console.error(`❌ Template drift: ${block.file} missing from repo`);
-            console.error(`   Expected by canon block ${key}`);
+            console.error(`   Expected by contract block ${key}`);
             process.exit(1);
         }
 
-        // Hash-based drift check: compare SHA-256 of .hbs file against canon content_hash
+        // Hash-based drift check: compare SHA-256 of .hbs file against contract content_hash
         const expectedHash = block.content_hash;
         if (!expectedHash) {
             // Fallback: if no content_hash, skip (legacy blocks still using inline content)
@@ -1234,7 +1312,7 @@ function checkTemplateDrift(contract: Contract): void {
 
         if (actualHash !== expectedHash) {
             console.error(`❌ Template drift: ${block.file} hash mismatch`);
-            console.error(`   Canon:  ${expectedHash}`);
+            console.error(`   Contract:  ${expectedHash}`);
             console.error(`   Actual: ${actualHash}`);
             console.error(`   Run 'npm run frida:hash' to see details.`);
             process.exit(1);
@@ -1328,9 +1406,9 @@ function processProfile(
         return paths.map(p => {
             const result = normalizer.normalize(p);
             if (result.deprecated) {
-                console.warn(`⚠️  Profile ${id}: Deprecated path '${p}' → '${result.canonical}'`);
+                console.warn(`⚠️  Profile ${id}: Deprecated path '${p}' → '${result.contractical}'`);
             }
-            return result.canonical;
+            return result.contractical;
         });
     };
 
@@ -1361,7 +1439,7 @@ function processProfile(
     }
 
     const normalizedReadAllow = normalizePaths(resolvedSecurity.read_allow);
-    const normalizedAgentsPaths = Array.from(agentsMdPaths).map(p => normalizer.normalize(p).canonical);
+    const normalizedAgentsPaths = Array.from(agentsMdPaths).map(p => normalizer.normalize(p).contractical);
 
     // Merge and dedupe
     const allReadAllow = [...normalizedReadAllow, ...normalizedAgentsPaths]
@@ -1530,6 +1608,8 @@ function generateZoneAgents(zones: Zone[], effectiveGuards: EffectiveGuards, doc
 
 // === MAIN ===
 export async function runLegacyFridaGenerator(options: LegacyGeneratorOptions = {}): Promise<void> {
+    ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
+
     console.log('🤖 FRIDA v3.0 GENERATOR\n');
     console.log('━'.repeat(60));
     console.log('Generating agent context from contract');
@@ -1540,7 +1620,7 @@ export async function runLegacyFridaGenerator(options: LegacyGeneratorOptions = 
     // Load and validate contract
     console.log('📚 Loading contract...');
     const { contract, contractRaw, runtimePaths } = loadGeneratorContext();
-    console.log(`📄 Canon artifact: ${path.relative(ROOT_DIR, runtimePaths.canonArtifactPath)}`);
+    console.log(`📄 Contract artifact: ${path.relative(ROOT_DIR, runtimePaths.contractArtifactPath)}`);
     const effectiveGuards = validateContract(contract);
     checkTemplateDrift(contract);
 
@@ -1565,7 +1645,7 @@ export async function runLegacyFridaGenerator(options: LegacyGeneratorOptions = 
     );
     console.log(`✅ Processed ${profiles.length} profiles`);
 
-    // Build and emit machine-readable IR artifacts to .frida/
+    // Build and emit machine-readable IR artifacts to canonical `.frida/contract/artifacts` (via PATHS).
     console.log('\n📋 Generating internal IR artifacts...\n');
     const fridaPaths = contract.PATHS?.frida;
     const irPath = fridaPaths?.ir
@@ -1583,15 +1663,13 @@ export async function runLegacyFridaGenerator(options: LegacyGeneratorOptions = 
     // Generate Bootloader
     console.log('\n📋 Generating core FRIDA files...\n');
     const tplBootloader = loadTemplate(fridaTplRoot, 'bootloader.hbs');
-    write(
-        runtimePaths.bootloaderFilePath,
-        tplBootloader({
-            generatedAt: new Date().toISOString(),
-            profileCount: profiles.length,
-            zoneCount: zones.length,
-            profiles,
-        })
-    );
+    const bootloaderContent = tplBootloader({
+        generatedAt: new Date().toISOString(),
+        profileCount: profiles.length,
+        zoneCount: zones.length,
+        profiles,
+    });
+    write(runtimePaths.bootloaderFilePath, bootloaderContent);
 
     // Generate Router
     const tplRouter = loadTemplate(fridaTplRoot, 'router.xml.hbs');
@@ -1640,7 +1718,7 @@ This document defines the mandatory FRIDA Run Report policy for agent task compl
 
 - **Required on:** SUCCESS and HALTED states
 - **Format:** YAML in markdown fenced code block
-- **Guard:** \`canon.observability.run-report-required\`
+- **Guard:** \`contract.observability.run-report-required\`
 
 ## Schema Reference
 
@@ -1685,6 +1763,8 @@ See \`contract:FRIDA_RUN_REPORTING\` for full schema details.
             adapterReferenceDocs = adapterResult.referenceDocs;
         }
     }
+
+    emitCompatMirrors(contract, runtimePaths);
 
     // Summary
     const zoneAgentsCount = zones.filter(z => z.agentsPath).length;

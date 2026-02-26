@@ -39,16 +39,18 @@ FRIDA_CLI:
     migration_report:
       purpose: "Generate migration report."
       description: "Generate migration report."
-    scaffold:
-      purpose: "Deploy base application with visualizer and canon."
-      description: "Deploy base application with visualizer and canon."
+    bootstrap:
+      purpose: "Warm-first reconcile of Frida-managed surfaces with explicit cold-engine and demo modes."
+      description: "Manual-only bootstrap/reconcile command. Default mode is warm; demo seeding is explicit-only; app-side post-generation reads contract from `.frida/inbox/app-contract/**` only."
       flags:
         - "--target <dir>"
+        - "--mode <warm|cold-engine|demo>"
         - "--component <name>"
+        - "--dry-run"
     visual:
       subcommands:
         build:
-          description: "Build visual overlay from canon."
+          description: "Build visual overlay from contract."
         check:
           description: "Validate visual overlay freshness."
   command_separation:
@@ -56,10 +58,14 @@ FRIDA_CLI:
       - build
       - gen
       - check_templates
-      - scaffold
+      - bootstrap
       - visual
     future_commands:
       - migration_report
+    manual_only_commands:
+      - bootstrap
+    auto_invocation_forbidden:
+      - "bootstrap MUST NOT be called transitively by build/gen/init/check/visual/report/migration-report."
   exit_codes:
     0: "Success."
     1: "Failure."
@@ -67,11 +73,11 @@ FRIDA_CLI:
   integration:
     rules:
       - "Template generation relies on Handlebars engine only."
-      - "Canon YAML uses js-yaml compatible parsing."
+      - "Contract YAML uses js-yaml compatible parsing."
       - "Output file encoding is always UTF-8."
       - "No shell commands in templates."
       - "Template partials MUST be registered before rendering."
-      - "Adapter functions receive resolved selector data and canon context."
+      - "Adapter functions receive resolved selector data and contract context."
     adapter_contract:
       description: "All custom generation adapters MUST implement FridaAdapter interface."
       interface:

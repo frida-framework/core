@@ -6,6 +6,7 @@ import { runFridaVisualCli } from './visual.ts';
 import { runFridaInitCli } from './init.ts';
 import { runFridaReportCli } from './report.ts';
 import { runFridaBuildCli } from './build.ts';
+import { runFridaBootstrapCli } from './bootstrap.ts';
 
 function printHelp(): void {
   console.log(`frida-core
@@ -13,12 +14,14 @@ function printHelp(): void {
 Usage:
   frida-core gen [--strict-schema]
   frida-core migration-report [--strict]
-  frida-core init [--canon <path>] [--dry-run]
+  frida-core init [--contract <path>] [--dry-run]
+  frida-core bootstrap --target <dir> [--mode warm|cold-engine|demo] [--dry-run]
+  frida-core bootstrap --component <name> [--target <dir>]
   frida-core visualize [--check] [args...]
   frida-core report [check|path|write] [args...]
   frida-core check [zone args...]
-  frida-core hash [--manifest <path>] [--canon <path>]
-  frida-core build [--public] [--output <path>] [--canon <path>]
+  frida-core hash [--manifest <path>] [--contract <path>]
+  frida-core build [--public] [--output <path>] [--contract <path>]
   frida-core help
 `);
 }
@@ -45,6 +48,8 @@ async function run(): Promise<number> {
       });
     case 'init':
       return runFridaInitCli(args);
+    case 'bootstrap':
+      return runFridaBootstrapCli(args);
     case 'visualize':
       return runFridaVisualCli(args);
     case 'report':

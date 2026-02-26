@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as yaml from 'yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import { loadCanonDocument } from './canon-path.ts';
+import { loadContractDocument } from './contract-path.ts';
 
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
 const DEFAULT_MANIFEST_REL_PATH = 'contract/template-integrity.manifest.yaml';
@@ -22,7 +22,7 @@ interface TemplateManifest {
 }
 
 interface HashArgs {
-  canonPath: string | null;
+  contractPath: string | null;
   manifestPath: string | null;
 }
 
@@ -36,7 +36,7 @@ function parseArgs(args: string[]): HashArgs {
   };
 
   return {
-    canonPath: readFlag('--canon'),
+    contractPath: readFlag('--contract'),
     manifestPath: readFlag('--manifest'),
   };
 }
@@ -111,8 +111,8 @@ function runManifestMode(manifestPath: string): number {
   return mismatch > 0 || missing > 0 ? 1 : 0;
 }
 
-function runLegacyCanonMode(canonPath: string | null): number {
-  const loaded = loadCanonDocument(ROOT_DIR, canonPath || undefined);
+function runLegacyContractMode(contractPath: string | null): number {
+  const loaded = loadContractDocument(ROOT_DIR, contractPath || undefined);
   const contract = loaded.parsed as Record<string, any>;
 
   const tplKeys = Object.keys(contract)
@@ -123,7 +123,7 @@ function runLegacyCanonMode(canonPath: string | null): number {
   let mismatch = 0;
   let missing = 0;
 
-  console.log(`📄 Canon fallback: ${path.relative(ROOT_DIR, loaded.canonPath)}`);
+  console.log(`📄 Contract fallback: ${path.relative(ROOT_DIR, loaded.contractPath)}`);
 
   for (const key of tplKeys) {
     const block = contract[key];
@@ -142,21 +142,21 @@ function runLegacyCanonMode(canonPath: string | null): number {
     }
 
     const actualHash = sha256File(filePath);
-    const canonHash = block.content_hash || null;
-    if (!canonHash) {
-      console.log(`🆕 ${key}: ${actualHash} (no content_hash in canon)`);
+    const contractHash = block.content_hash || null;
+    if (!contractHash) {
+      console.log(`🆕 ${key}: ${actualHash} (no content_hash in contract)`);
       mismatch += 1;
       continue;
     }
 
-    if (actualHash === canonHash) {
+    if (actualHash === contractHash) {
       console.log(`✅ ${key}: ${actualHash}`);
       ok += 1;
       continue;
     }
 
     console.log(`❌ ${key}:`);
-    console.log(`   canon:  ${canonHash}`);
+    console.log(`   contract:  ${contractHash}`);
     console.log(`   actual: ${actualHash}`);
     mismatch += 1;
   }
@@ -175,8 +175,8 @@ export function runFridaHashCli(args: string[] = process.argv.slice(2)): number 
       return runManifestMode(manifestPath);
     }
 
-    console.warn(`⚠️  Manifest not found (${manifestPath}), using legacy canon FRIDA_TPL_* fallback.`);
-    return runLegacyCanonMode(parsedArgs.canonPath);
+    console.warn(`⚠️  Manifest not found (${manifestPath}), using legacy contract FRIDA_TPL_* fallback.`);
+    return runLegacyContractMode(parsedArgs.contractPath);
   } catch (error) {
     console.error(`❌ hash check failed: ${error instanceof Error ? error.message : String(error)}`);
     return 1;

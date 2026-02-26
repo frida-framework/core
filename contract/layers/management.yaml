@@ -1,4 +1,4 @@
-# ─── LAYER 8: MANAGEMENT & TRANSLATION ───────────────────────────────────────
+# ─── LAYER 8: MANAGEMENT ───────────────────────────────────────────────────
 # Purpose: Interfaces for interacting with the contract — how to read, verify,
 #          and change it. Specs, guards, antitasks, update/verify/taskset protocols.
 
@@ -96,15 +96,15 @@ FRIDA_ANTITASK_SPEC:
     - id: REDIRECT
     - id: WARN
   sources:
-    - id: canonical_catalog
+    - id: contractical_catalog
       source_ref: "FRIDA_ENFORCEMENT.antitasks"
     - id: execution_protocol_forbidden_actions
       source_ref: "FRIDA_AGENT_LIFECYCLE.forbidden_actions_ref"
     - id: enforcement_guards
       source_ref: "FRIDA_ENFORCEMENT.guards"
   antitasks:
-    - id: ANTITASK_edit_canon_files_without_architect_role
-      pattern: "Edit canon files without architect role"
+    - id: ANTITASK_edit_contract_files_without_architect_role
+      pattern: "Edit contract files without architect role"
       reaction: HALT
     - id: ANTITASK_write_outside_zone_boundaries
       pattern: "Write outside zone boundaries"
@@ -132,13 +132,13 @@ FRIDA_INTERFACE_VERIFY:
   _visibility: public
   id: frida-interface-verify
   version: 1.0.0
-  purpose: "Validate canon against schema, check ref consistency, report issues."
+  purpose: "Validate contract against schema, check ref consistency, report issues."
   operations:
     audit:
-      description: "Validate canon against schema and report issues."
+      description: "Validate contract against schema and report issues."
       protocol: "frida-core migration-report"
     schema_check:
-      description: "Validate assembled canon against frida-canon.schema.json."
+      description: "Validate assembled contract against frida-contract.schema.json."
     ref_check:
       description: "Resolve all Ref/Refs and report broken references."
     generate:
@@ -147,6 +147,88 @@ FRIDA_INTERFACE_VERIFY:
     visual_check:
       description: "Check visual overlay freshness."
       protocol: "frida-core visual check"
+    quality_check:
+      description: "Compute quality metrics from CONTRACT_MANAGEMENT_INTERFACE."
+      metrics_ref: CONTRACT_MANAGEMENT_INTERFACE.quality_metrics
+
+CONTRACT_MANAGEMENT_INTERFACE:
+  _visibility: public
+  id: contract-management-interface
+  version: 1.0.0
+  purpose: >-
+    Engine-level contract management: change protocol language,
+    quality metrics, consistency checks, diagnostic framework,
+    contract fixer role, and audit format.
+    Implementation details in engine playbooks (templates/management/).
+
+  canon_composition:
+    purpose: "Canon consists of two groups that must stay synchronized."
+    groups:
+      - id: contracts
+        description: "Normative data (contract blocks)."
+      - id: protocols
+        description: "Rules for working with canon: routing, governance, playbooks."
+    rule: "When contracts change, check if protocols need updating, and vice versa."
+
+  change_protocol:
+    purpose: "Normative language for structural contract changes."
+    operations: [ADD, UPDATE, MOVE, DEPRECATE, REFCHECK, GUARDCHECK, PROFILECHECK, FENCECHECK, DUPCHECK, RESERVED_CHECK, CONTRACT-DIFF]
+    playbook_ref: "templates/management/AGENT-contract-update.md"
+
+  quality_metrics:
+    purpose: "Definitions of contract quality measurements."
+    blocking: [NON_ABS, ISSUES, WIKI_LINK_ISSUES, AGENT_DRIFT_ISSUES]
+    issue_components: [PARSE_ERRORS, FENCE_ERRORS, DUP_BLOCKS, UNRESOLVED_REFS, PROFILE_CONFLICTS, ZONE_SCHEMA_ERRORS, BROKEN_NAV_LINKS, AGENT_DRIFT_ISSUES]
+    diagnostic: [DEPRECATED_WITHOUT_REPLACEDBY, DANGLING_REPLACEDBY, TERM_GAPS, REDUNDANT_DESCRIPTIVE, REF_STYLE_MIX, UNUSED_GUARDS, UNUSED_INVARIANTS]
+    quality_gate:
+      rule: "All blocking metrics must equal 0 before finalization."
+
+  consistency_checks:
+    purpose: "Categories of consistency verification."
+    categories: [terms, guards_invariants, profiles, zones, cross_refs, fences, uniqueness, ui_boundaries]
+    playbook_ref: "templates/management/AGENT-contract-update.md"
+
+  diagnostic_framework:
+    purpose: "Pattern for contract issue diagnosis and repair."
+    pattern: "symptom -> cause -> algorithm"
+    categories: [missing_artifacts, metadata_mismatch, contract_drift, routing_error, guard_violation, generator_failure]
+    playbook_ref: "templates/management/AGENT-contract-repair.md"
+
+  contract_fixer_role:
+    purpose: "Only role with write access to contract blocks."
+    constraint: "Application only via PR and manual workflow."
+
+  audit_format:
+    purpose: "Structure for audit task packs generated per profile."
+    sections: [scope, embedded_contract, checklist, undocumented, scoring, report]
+    scoring_weights:
+      surface: 25
+      invariants: 30
+      guards: 25
+      undocumented: 10
+      reproducibility: 10
+    threshold:
+      pass: 70
+      rule: "Any COMPLIANCE.FAIL -> FAIL regardless of score."
+    finding_tags: [COMPLIANCE.FAIL, COMPLIANCE.PARTIAL, UNVERIFIABLE, CONTRACT.GAP, RISK.NDETERMINISM, RISK.SCOPE]
+    playbook_ref: "templates/management/AGENT-repo-audit.md"
+
+  component_contract_spec:
+    purpose: "Structure for component-level contract files."
+    required_sections:
+      - id: hierarchy_position
+        description: "Where this component sits in the app: parent page, sibling components."
+      - id: mount_point
+        description: "Entry point: slot reference, mount kind (mapper-managed | host-static)."
+      - id: input_props
+        description: "Typed input interface: data + state provided by host."
+      - id: output_callbacks
+        description: "Output interface: callbacks/events emitted to host."
+      - id: domain_blocks
+        description: "Component-specific contract blocks (UI structure, behavior, data schema)."
+      - id: shared_refs
+        description: "References to shared blocks (GLOSSARY, DATABASE_SCHEMA, RESOURCES) — refs only, not copies."
+    constraint: "Total file size MUST fit in agent context window for task formulation."
 
 FRIDA_INTERFACE_UPDATE_SPEC:
   _visibility: public
@@ -156,38 +238,27 @@ FRIDA_INTERFACE_UPDATE_SPEC:
   input:
     format: natural_language
     context:
-      - current_canon
+      - current_contract
       - target_block
       - schema_ref
-  pipeline:
-    - step: parse_intent
-      action: "Extract entities, actions, and constraints from user text."
-    - step: map_to_schema
-      action: "Map extracted entities to canon block schemas."
-    - step: generate_draft
-      action: "Produce draft YAML block conforming to schema."
-    - step: validate
-      action: "Validate draft against frida-canon.schema.json."
-    - step: present_diff
-      action: "Show visual diff (green/red nodes) on overlay."
   output:
     format: yaml
     requires_approval: true
   protocols:
     update:
-      description: "Apply changes to canon via structured patch."
-      protocol: "AGENT-canon-update"
+      description: "Apply changes to contract via structured patch."
+      playbook_ref: "templates/management/AGENT-contract-update.md"
       requires_role: ARCHITECT_AGENT
     repair:
-      description: "Fix canon inconsistencies (broken refs, missing blocks)."
-      protocol: "AGENT-canon-repair"
+      description: "Fix contract inconsistencies (broken refs, missing blocks)."
+      playbook_ref: "templates/management/AGENT-contract-repair.md"
       requires_role: ARCHITECT_AGENT
 
 FRIDA_INTERFACE_UPDATE_CODE:
   _visibility: public
   id: frida-interface-update-code
   version: 1.0.0
-  purpose: "Extract and extend canon specification from existing codebase."
+  purpose: "Extract and extend contract specification from existing codebase."
   input:
     format: source_code
     supported_languages:
@@ -195,59 +266,58 @@ FRIDA_INTERFACE_UPDATE_CODE:
       - JavaScript
       - HTML
       - CSS
-  pipeline:
-    - step: analyze_structure
-      action: "Identify components, routes, data models, and API calls."
-    - step: extract_entities
-      action: "Map code structures to canon block types (UI_STRUCTURE, RESOURCES, DATABASE_SCHEMA)."
-    - step: generate_draft
-      action: "Produce draft app-canon YAML from extracted entities."
-    - step: validate
-      action: "Validate draft against app-canon schema."
-    - step: reconcile
-      action: "Merge with existing canon if present, flagging conflicts."
   output:
     format: yaml
     requires_approval: true
   use_cases:
     - "Onboard existing project to Frida."
-    - "Background consistency loop: re-extract canon from code, diff against declared canon."
+    - "Background consistency loop: re-extract contract from code, diff against declared contract."
 
 FRIDA_INTERFACE_TASKSET:
   _visibility: public
   id: frida-interface-taskset
   version: 1.0.0
   purpose: "Prepare self-contained task packs from contract for agent execution."
+  playbook_ref: "templates/management/AGENT-task-formulation.md"
   task_pack_definition:
     term: >-
       A Task Pack is a self-contained instruction set for an agent-developer.
-      It transfers canon requirements into an actionable scope without
-      requiring the agent to interpret the wiki or canon directly.
-    principle: "CANON → ANTITASK → DEVELOPMENT"
+      It transfers contract requirements into an actionable scope without
+      requiring the agent to interpret the wiki or contract directly.
+    principle: "CONTRACT → ANTITASK → DEVELOPMENT"
     required_fields:
       - action: "What to do — concrete, unambiguous."
       - files: "Paths or zones affected."
       - profile_id: "Id from FRIDA_TASK_PROFILES."
-      - canon_requirements: "Guards/invariants/terms embedded explicitly."
+      - contract_requirements: "Guards/invariants/terms embedded explicitly."
       - verification_command: "Usually 'npm run verify', may differ by zone."
     optional_fields:
       - specific_invariants: "Task-specific invariant checks."
-    forbidden: "Referencing wiki or canon by link instead of embedding requirements."
+    forbidden: "Referencing wiki or contract by link instead of embedding requirements."
   readiness_checklist:
-    canon_ready:
+    contract_ready:
       - "Feature described in the appropriate contract:* block."
       - "All terms used in the task defined in contract:GLOSSARY."
     frida_ready:
       - "Zone for target files exists in ZONES."
-      - "Antitask generated after last canon update (npm run frida:gen)."
+      - "Antitask generated after last contract update."
       - "Profile covers target paths via edit_allowGlobRefs."
       - "Profile invariants are current for the task."
     scope_check:
-      - "Task does not add functionality beyond what is described in canon."
-      - "If new functionality needed — update canon first."
+      - "Task does not add functionality beyond what is described in contract."
+      - "If new functionality needed — update contract first."
+  audit_task_format:
+    scoring_ref: CONTRACT_MANAGEMENT_INTERFACE.audit_format
+    playbook_ref: "templates/management/AGENT-repo-audit.md"
+    determinism:
+      - "Profiles sorted by name."
+      - "Invariants within task sorted by id."
+      - "Guards within task sorted by id."
+      - "Zones within task sorted by zone name."
   halt_conditions:
-    - "Canon does not describe the feature being tasked."
+    - "Contract does not describe the feature being tasked."
     - "Zone or profile does not cover target files."
-    - "Antitask not regenerated after last canon update."
+    - "Antitask not regenerated after last contract update."
     - "Task requires agent to write outside edit_allowGlobRefs."
+
 

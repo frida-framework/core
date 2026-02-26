@@ -4,12 +4,8 @@ FRIDA_REPORTING:
   _visibility: private
   id: frida-reporting
   version: 1.0.0
-  file_contract:
-    collect_in_repo: true
-    repo_path: ".frida/job-reports"
-    file_ext: ".yaml"
-    filename_pattern: "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
-    exists_check: false
+  file_contractRef: "FRIDA_CONFIG.reporting"
+  runtime_configRef: "FRIDA_RUNTIME_CONFIG"
   access:
     create_all_profiles: true
     read_only_profiles:
@@ -38,11 +34,13 @@ FRIDA_VALIDATION_CHECKLIST:
   version: 1.0.0
   contract_consistency:
     - "All Ref-suffixed keys resolve to existing PATHS entries."
-    - "All required blocks listed in core.canonicalSourceBlocks exist as top-level keys."
+    - "All required blocks listed in core.contracticalSourceBlocks exist as top-level keys."
+    - "Concrete engine config details are defined in the core-configuration layer; other layers use refs only."
     - "Path refs resolve to valid filesystem targets."
   reporting_consistency:
     - "FRIDA_CONFIG.reporting is fixed and schema-valid."
     - "Runtime config validates against frida-runtime-config.schema.json."
+    - "FRIDA root layout policy enforces exactly two root files (config.yaml, config.template.yaml) and only allowed root dirs (contract, reports, inbox)."
   visual_consistency:
     - "Visual overlay is deterministic: same input → same output."
     - "Visual checks are fail-hard."
@@ -55,6 +53,12 @@ FRIDA_VALIDATION_CHECKLIST:
     - >-
       Run report MUST include verification.antitask (PASS/FAIL/SKIP) when status is
       SUCCESS or HALTED.
-  scaffold_consistency:
-    - "Scaffold output matches declared deliverables."
-    - "Re-scaffold does not duplicate existing components."
+  bootstrap_seed_consistency:
+    - "Bootstrap package manifest validates against schema and declared hash policy."
+    - "Default bootstrap mode is warm reconcile and HALTs with redirect when Frida markers are absent."
+    - "Warm/cold-engine bootstrap preserve user-owned runtime config and job reports while pruning unknown files only in declared managed scopes."
+    - "Warm/cold-engine bootstrap preserve `.frida/inbox/**` and use inbox app-contract source only (no fallback to `contract/**`)."
+    - "Warm/cold-engine bootstrap do not write app-contract files."
+    - "Warm/cold-engine bootstrap post-generation MUST pass strict `.frida` root layout validation."
+    - "Explicit demo mode is zero-deploy-only."
+    - "Explicit bootstrap component-reconcile remains idempotent."

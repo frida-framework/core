@@ -1,13 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import { loadCanonDocument } from './canon-path.ts';
+import { loadContractDocument } from './contract-path.ts';
 import type { BlockVisibility } from './types.ts';
 
 interface BuildArgs {
     publicOnly: boolean;
     output?: string;
-    canonPath?: string;
+    contractPath?: string;
 }
 
 function parseArgs(args: string[]): BuildArgs {
@@ -18,8 +18,8 @@ function parseArgs(args: string[]): BuildArgs {
             result.publicOnly = true;
         } else if (arg === '--output' && i + 1 < args.length) {
             result.output = args[++i];
-        } else if (arg === '--canon' && i + 1 < args.length) {
-            result.canonPath = args[++i];
+        } else if (arg === '--contract' && i + 1 < args.length) {
+            result.contractPath = args[++i];
         }
     }
     return result;
@@ -47,12 +47,12 @@ function stripVisibilityMarkers(obj: Record<string, any>): Record<string, any> {
     return result;
 }
 
-function filterPublicBlocks(canon: Record<string, any>): Record<string, any> {
+function filterPublicBlocks(contract: Record<string, any>): Record<string, any> {
     const result: Record<string, any> = {};
     // Structural blocks always included
     const structuralKeys = ['meta', 'core'];
 
-    for (const [key, value] of Object.entries(canon)) {
+    for (const [key, value] of Object.entries(contract)) {
         if (structuralKeys.includes(key)) {
             result[key] = value;
             continue;
@@ -66,11 +66,11 @@ function filterPublicBlocks(canon: Record<string, any>): Record<string, any> {
         }
     }
 
-    // Update canonicalSourceBlocks to reflect only public blocks
-    if (result.core?.canonicalSourceBlocks) {
+    // Update contracticalSourceBlocks to reflect only public blocks
+    if (result.core?.contracticalSourceBlocks) {
         result.core = {
             ...result.core,
-            canonicalSourceBlocks: result.core.canonicalSourceBlocks.filter(
+            contracticalSourceBlocks: result.core.contracticalSourceBlocks.filter(
                 (block: string) => block in result
             ),
         };
@@ -84,7 +84,7 @@ export async function runFridaBuildCli(args: string[]): Promise<number> {
     const rootDir = process.cwd();
 
     try {
-        const loaded = loadCanonDocument(rootDir, parsedArgs.canonPath || undefined);
+        const loaded = loadContractDocument(rootDir, parsedArgs.contractPath || undefined);
         let output = loaded.parsed;
 
         if (parsedArgs.publicOnly) {
@@ -96,7 +96,7 @@ export async function runFridaBuildCli(args: string[]): Promise<number> {
 
         const outputPath = parsedArgs.output
             ? path.resolve(rootDir, parsedArgs.output)
-            : path.resolve(rootDir, 'dist', parsedArgs.publicOnly ? 'canon.public.yaml' : 'canon.assembled.yaml');
+            : path.resolve(rootDir, 'dist', parsedArgs.publicOnly ? 'contract.public.yaml' : 'contract.assembled.yaml');
 
         const outputDir = path.dirname(outputPath);
         if (!fs.existsSync(outputDir)) {
@@ -105,7 +105,7 @@ export async function runFridaBuildCli(args: string[]): Promise<number> {
 
         const yamlOutput = yaml.stringify(output, { lineWidth: 120 });
         fs.writeFileSync(outputPath, yamlOutput, 'utf-8');
-        console.log(`✅ Canon written: ${path.relative(rootDir, outputPath)}`);
+        console.log(`✅ Contract written: ${path.relative(rootDir, outputPath)}`);
 
         return 0;
     } catch (error) {

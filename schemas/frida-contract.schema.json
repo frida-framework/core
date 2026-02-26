@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.frida.dev/frida-canon.schema.json",
-  "title": "Frida Canon Schema v3.0",
-  "description": "Schema for the consolidated Frida core canon. 33 required engine blocks + optional app blocks.",
+  "$id": "https://schemas.frida.dev/frida-contract.schema.json",
+  "title": "Frida Contract Schema v3.1",
+  "description": "Schema for the consolidated Frida core contract. 32 required engine blocks + optional app blocks.",
   "type": "object",
   "required": [
     "CANON_META",
@@ -35,7 +35,8 @@
     "FRIDA_INTERFACE_UPDATE_SPEC",
     "FRIDA_INTERFACE_UPDATE_CODE",
     "FRIDA_INTERFACE_TASKSET",
-    "FRIDA_SCAFFOLD"
+    "FRIDA_SCAFFOLD",
+    "FRIDA_WIKI_MECHANICS"
   ],
   "properties": {
     "CANON_META": {
@@ -485,7 +486,7 @@
             },
             "repo_path": {
               "type": "string",
-              "const": ".frida/job-reports"
+              "const": ".frida/reports"
             },
             "file_ext": {
               "type": "string",
@@ -784,9 +785,17 @@
     "FRIDA_REPORTING": {
       "type": "object",
       "required": [
-        "file_contract"
+        "file_contractRef"
       ],
       "properties": {
+        "file_contractRef": {
+          "type": "string",
+          "const": "FRIDA_CONFIG.reporting"
+        },
+        "runtime_configRef": {
+          "type": "string",
+          "const": "FRIDA_RUNTIME_CONFIG"
+        },
         "file_contract": {
           "type": "object",
           "required": [
@@ -1318,7 +1327,7 @@
         }
       }
     },
-    "UI_STRUCTURE": {
+    "WIZARD_UI_STRUCTURE": {
       "type": "object",
       "x-frida-lod": 2,
       "properties": {
@@ -1330,14 +1339,33 @@
         }
       }
     },
-    "UI_COMPONENT_CONTRACTS": {
+    "ROUTE_UI_STRUCTURE": {
+      "type": "object",
+      "x-frida-lod": 2,
+      "properties": {
+        "pages": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/pageEntry"
+          }
+        }
+      }
+    },
+    "WIZARD_UI_COMPONENT_CONTRACTS": {
       "type": "object",
       "x-frida-lod": 2,
       "additionalProperties": {
         "$ref": "#/$defs/componentEntry"
       }
     },
-    "UI_BEHAVIOR": {
+    "ROUTE_UI_COMPONENT_CONTRACTS": {
+      "type": "object",
+      "x-frida-lod": 2,
+      "additionalProperties": {
+        "$ref": "#/$defs/componentEntry"
+      }
+    },
+    "WIZARD_UI_BEHAVIOR": {
       "type": "object",
       "x-frida-lod": 3,
       "properties": {
@@ -1346,6 +1374,39 @@
           "items": {
             "$ref": "#/$defs/transitionEntry"
           }
+        },
+        "pageResources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "ROUTE_UI_BEHAVIOR": {
+      "type": "object",
+      "x-frida-lod": 3,
+      "properties": {
+        "transitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/transitionEntry"
+          }
+        },
+        "pageResources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "layout_interactions": {
+          "type": "object"
         }
       }
     },
@@ -1724,6 +1785,28 @@
         },
         "note": {
           "type": "string"
+        }
+      }
+    },
+    "FRIDA_WIKI_MECHANICS": {
+      "type": "object",
+      "required": [
+        "purpose",
+        "config_flag"
+      ],
+      "properties": {
+        "purpose": {
+          "type": "string"
+        },
+        "config_flag": {
+          "type": "object",
+          "required": [
+            "key",
+            "values"
+          ]
+        },
+        "schema_blocks": {
+          "type": "object"
         }
       }
     }

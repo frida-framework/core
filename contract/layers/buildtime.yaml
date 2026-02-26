@@ -1,15 +1,15 @@
 # ─── LAYER 6: BUILDTIME ──────────────────────────────────────────────────────
-# Purpose: Build-time mechanisms — how canon data is transformed into
-#          application artifacts (agent context, component surgery, app bootstrap).
+# Purpose: Build-time mechanisms — how contract data is transformed into
+#          application artifacts (agent context, component surgery).
 
 FRIDA_GENERATOR:
   _visibility: public
   id: frida-generator
   version: 1.0.0
-  purpose: "Generate agent context artifacts (AGENTS.md, profiles, policy docs) from canon."
+  purpose: "Generate agent context artifacts (AGENTS.md, profiles, policy docs) from contract."
   command: "frida-core gen"
   inputs:
-    - "Assembled canon (engine + app merged)."
+    - "Assembled contract (engine + app merged)."
     - "Handlebars templates from FRIDA_TEMPLATE_INTEGRITY."
   outputs:
     bootloader: "AGENTS.md — root agent entry point."
@@ -19,7 +19,7 @@ FRIDA_GENERATOR:
     policy_docs: "Human-readable policy documentation."
   algorithm:
     - step: LOAD
-      action: "Read assembled canon, validate required blocks."
+      action: "Read assembled contract, validate required blocks."
     - step: NORMALIZE
       action: "Apply path normalization (aliases, deprecated names)."
     - step: RESOLVE
@@ -62,24 +62,3 @@ FRIDA_MAPPER_MODEL:
     Concrete mapper configuration (components, forbidden/required lists)
     belongs in the app contract, not engine.
 
-FRIDA_SCAFFOLD:
-  _visibility: public
-  id: frida-scaffold
-  version: 1.0.0
-  purpose: "Deploy a base Frida-managed application with canon and agent context."
-  command: "frida-core scaffold"
-  deliverables_summary:
-    - "Minimal application skeleton."
-    - "Initial app-canon YAML (ahead-version policy)."
-    - "Bootloader AGENTS.md."
-    - ".frida/ directory structure."
-  recovery:
-    full: "frida-core scaffold --target <dir>"
-    component: "frida-core scaffold --component <name>"
-    behavior: "Idempotent — re-run detects existing components and only restores missing ones."
-  ahead_version_policy:
-    rule: "Scaffold deploys canon that describes features beyond current implementation."
-    purpose: "Agent can read canon and build the remaining features."
-  note: >-
-    Detailed scaffold deliverables (templates, visualizer component, mount
-    mechanism) belong in the app contract.
