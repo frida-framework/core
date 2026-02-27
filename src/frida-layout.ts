@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-export const FRIDA_ROOT_ALLOWED_FILES = ['config.yaml', 'config.template.yaml'] as const;
-export const FRIDA_ROOT_ALLOWED_DIRS = ['contract', 'reports', 'inbox'] as const;
+export const FRIDA_ROOT_ALLOWED_FILES = ['config.yaml'] as const;
+export const FRIDA_ROOT_ALLOWED_DIRS = ['contract', 'reports', 'inbox', 'templates'] as const;
 
 export type FridaRootLayoutValidationMode = 'warn' | 'fail';
 

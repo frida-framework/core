@@ -11,6 +11,7 @@ import {
   assertAppContractInboxSource,
   emitAppContractSourceMirror,
   emitFridaContractSourceMirror,
+  emitTemplatesMirror,
   ContractMirrorError,
 } from './contract-mirror.ts';
 import { validateFridaRootLayout } from './frida-layout.ts';
@@ -152,6 +153,9 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
     console.log(`✅ Frida contract mirror written: ${path.relative(loaded.rootDir, fridaMirrorDir)}`);
     const appMirrorDir = emitAppContractSourceMirror(loaded.rootDir);
     console.log(`✅ App contract working copy written: ${path.relative(loaded.rootDir, appMirrorDir)}`);
+
+    const templatesDir = emitTemplatesMirror(loaded.rootDir, ENGINE_PACKAGE_ROOT);
+    console.log(`✅ Frida templates distributed: ${path.relative(loaded.rootDir, templatesDir)}`);
   }
 
   validateFridaRootLayout(loaded.rootDir, 'warn');

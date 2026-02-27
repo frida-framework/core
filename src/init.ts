@@ -102,7 +102,7 @@ export async function runFridaInitCli(args: string[] = []): Promise<number> {
       validateFridaRootLayout(rootDir, 'warn');
     } else {
       console.log('ℹ️ Dry run: no files written');
-      console.log('ℹ️ Dry run: runtime config template would be written to .frida/config.template.yaml');
+      console.log('ℹ️ Dry run: runtime config template would be written to .frida/templates/config.template.yaml');
       console.log('ℹ️ Dry run: runtime config file would be created only if .frida/config.yaml is missing');
     }
 

@@ -5,6 +5,7 @@ export const APP_CONTRACT_INBOX_DIR_REL_PATH = '.frida/inbox/app-contract';
 export const APP_CONTRACT_INBOX_INDEX_REL_PATH = `${APP_CONTRACT_INBOX_DIR_REL_PATH}/contract.index.yaml`;
 export const FRIDA_CONTRACT_APP_MIRROR_DIR_REL_PATH = '.frida/contract/app';
 export const FRIDA_CONTRACT_ENGINE_MIRROR_DIR_REL_PATH = '.frida/contract/frida';
+export const FRIDA_TEMPLATES_DIR_REL_PATH = '.frida/templates';
 
 export class ContractMirrorError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -97,6 +98,17 @@ export function emitFridaContractSourceMirror(targetRootDir: string, packageRoot
   ensureFileExists(sourceIndex, 'FRIDA_CONTRACT_SOURCE_MISSING', 'frida package contract index');
 
   const targetDir = path.resolve(absoluteTargetRoot, FRIDA_CONTRACT_ENGINE_MIRROR_DIR_REL_PATH);
+  replaceDirectoryTree(sourceDir, targetDir);
+  return targetDir;
+}
+
+export function emitTemplatesMirror(targetRootDir: string, packageRootDir: string): string {
+  const absoluteTargetRoot = path.resolve(targetRootDir);
+  const absolutePackageRoot = path.resolve(packageRootDir);
+  const sourceDir = path.resolve(absolutePackageRoot, 'templates');
+  ensureDirExists(sourceDir, 'FRIDA_TEMPLATES_SOURCE_MISSING', 'frida package templates directory');
+
+  const targetDir = path.resolve(absoluteTargetRoot, FRIDA_TEMPLATES_DIR_REL_PATH);
   replaceDirectoryTree(sourceDir, targetDir);
   return targetDir;
 }

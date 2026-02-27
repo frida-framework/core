@@ -1,0 +1,46 @@
+# Boundaries
+
+This document defines the boundaries between different zones in the codebase.
+
+## Zones
+
+{{#each zones}}
+### {{name}}
+
+**Path:** `{{formatPath path}}`  
+**Status:** {{#if readOnly}}READ-ONLY{{else}}READ-WRITE{{/if}}
+
+{{#if readOnly}}
+**Why read-only:** {{whyReadOnly}}
+
+**Forbidden operations:**
+{{#each forbiddenOps}}
+- {{this}}
+{{/each}}
+
+**How to make changes:** {{#if redirectPath}}Modify `{{formatPath redirectPath}}` instead{{else}}Follow designated process{{/if}}
+{{/if}}
+
+---
+{{/each}}
+
+## Cross-Zone Rules
+
+1. **No imports from read-only zones to read-write zones** - Read-only zones are source-of-truth
+2. **No legacy imports in active zones** - Use `/legacy/**` only for archived code
+3. **Application-specific cross-zone rules are adapter-owned** - Core template remains domain-agnostic
+
+## Enforcement
+
+These boundaries are enforced by `npm run verify`:
+
+{{#if enforcedGuards}}
+| Guard | Type | Verifier |
+|-------|------|----------|
+{{#each enforcedGuards}}
+| `{{id}}` | `{{enforcement.type}}` | `{{enforcement.verifier}}` |
+{{/each}}
+{{else}}
+- Pre-commit hooks
+- CI checks on pull requests
+{{/if}}

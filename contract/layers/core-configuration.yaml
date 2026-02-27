@@ -24,7 +24,7 @@ PATHS:
     reportsDir: ".frida/reports"
     jobReportsDir: ".frida/job-reports"
     configFile: ".frida/config.yaml"
-    configTemplateFile: ".frida/config.template.yaml"
+    configTemplateFile: ".frida/templates/config.template.yaml"
     ir: ".frida/contract/artifacts/frida.ir.json"
     permissions: ".frida/contract/artifacts/frida.permissions.json"
     graph: ".frida/contract/artifacts/frida.graph.mmd"
@@ -225,7 +225,7 @@ FRIDA_RUNTIME_CONFIG:
   id: frida-frida-runtime-config
   version: 1.0.0
   file: ".frida/config.yaml"
-  template_file: ".frida/config.template.yaml"
+  template_file: ".frida/templates/config.template.yaml"
   source_of_truth: canon
   generated_from: "FRIDA_CONFIG.reporting"
   ownership:
@@ -233,7 +233,7 @@ FRIDA_RUNTIME_CONFIG:
     template_file: engine_owned
   update_policy:
     mode: template_only_plus_warnings
-    rule: "Engine writes/updates .frida/config.template.yaml and creates .frida/config.yaml only when missing. Existing runtime config file values MUST NOT be overwritten."
+    rule: "Engine writes/updates .frida/templates/config.template.yaml and creates .frida/config.yaml only when missing. Existing runtime config file values MUST NOT be overwritten."
 
 FRIDA_ROOT_LAYOUT_POLICY:
   _visibility: public
@@ -242,11 +242,12 @@ FRIDA_ROOT_LAYOUT_POLICY:
   scope: ".frida root directory only"
   exact_files:
     - "config.yaml"
-    - "config.template.yaml"
+
   allowed_dirs:
     - "contract"
     - "reports"
     - "inbox"
+    - "templates"
   validation_modes:
     warn: "Used by gen/init during rollout to report violations without stopping."
     fail: "Used by warm/cold-engine bootstrap post-gen to guarantee clean Frida layout in one command."
@@ -330,7 +331,7 @@ FRIDA_CONFIG_FIELD_DOCS:
       purpose: "Defines the canonical location for generated `.frida/config.yaml`."
     - path: "PATHS.frida.configTemplateFile"
       what: "Engine-managed runtime config template/reference file."
-      purpose: "Defines the canonical location for `.frida/config.template.yaml` in the strict `.frida` root layout."
+      purpose: "Defines the canonical location for `.frida/templates/config.template.yaml` in the strict `.frida` root layout."
     - path: "PATHS.frida.ir"
       what: "Canonical FRIDA IR artifact file path."
       purpose: "Pins machine-readable IR export under `.frida/contract/artifacts`."
@@ -654,7 +655,7 @@ FRIDA_CONFIG_FIELD_DOCS:
       purpose: "Makes clear the policy applies only to top-level entries under `.frida/`, not nested subtree contents."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.exact_files"
       what: "Exact required file set in `.frida/` root."
-      purpose: "Enforces that only `config.yaml` and `config.template.yaml` exist as root files."
+      purpose: "Enforces that only `config.yaml` exists as a root file."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.allowed_dirs"
       what: "Allowed directory names in `.frida/` root."
       purpose: "Restricts root directories to ownership domains (`contract`, `reports`, `inbox`)."

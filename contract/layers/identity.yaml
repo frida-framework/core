@@ -99,7 +99,7 @@ core:
     - "docs/policy/*.md"
     - "docs/reference/*.md"
     - ".frida/config.yaml"
-    - ".frida/config.template.yaml"
+    - ".frida/templates/config.template.yaml"
     - ".frida/contract/app/**"
     - ".frida/contract/frida/**"
     - ".frida/contract/artifacts/frida.ir.json"

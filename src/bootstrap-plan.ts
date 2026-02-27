@@ -10,41 +10,41 @@ export type BootstrapReconcileMode = 'warm' | 'cold-engine' | 'component';
 
 export type BootstrapPlanOperation =
   | {
-      kind: 'reset_dir';
-      targetPath: string;
-      absolutePath: string;
-      reason: string;
-    }
+    kind: 'reset_dir';
+    targetPath: string;
+    absolutePath: string;
+    reason: string;
+  }
   | {
-      kind: 'delete_dir';
-      targetPath: string;
-      absolutePath: string;
-      reason: string;
-    }
+    kind: 'delete_dir';
+    targetPath: string;
+    absolutePath: string;
+    reason: string;
+  }
   | {
-      kind: 'delete_file';
-      targetPath: string;
-      absolutePath: string;
-      reason: string;
-    }
+    kind: 'delete_file';
+    targetPath: string;
+    absolutePath: string;
+    reason: string;
+  }
   | {
-      kind: 'ensure_dir';
-      targetPath: string;
-      absolutePath: string;
-      reason: string;
-    }
+    kind: 'ensure_dir';
+    targetPath: string;
+    absolutePath: string;
+    reason: string;
+  }
   | {
-      kind: 'copy_file';
-      sourcePath: string;
-      sourceAbsolutePath: string;
-      targetPath: string;
-      targetAbsolutePath: string;
-      reason: string;
-    }
+    kind: 'copy_file';
+    sourcePath: string;
+    sourceAbsolutePath: string;
+    targetPath: string;
+    targetAbsolutePath: string;
+    reason: string;
+  }
   | {
-      kind: 'note';
-      message: string;
-    };
+    kind: 'note';
+    message: string;
+  };
 
 export interface BootstrapOperationPlan {
   mode: BootstrapReconcileMode;
@@ -109,7 +109,7 @@ function entryMatchesComponent(entry: BootstrapPackageManifestEntry, componentNa
       return entry.ownership_class === 'engine_generated';
     case 'runtime-config-template':
     case 'config-template':
-      return target === '.frida/config.template.yaml';
+      return target === '.frida/templates/config.template.yaml';
     default:
       return false;
   }

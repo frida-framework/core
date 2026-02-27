@@ -38,7 +38,7 @@ function fileContainsAll(filePath: string, requiredSnippets: string[]): boolean 
 export function detectFridaDeployment(targetDir: string): FridaDeploymentDetection {
   const absoluteTargetDir = path.resolve(targetDir);
   const markers: FridaDeploymentMarkers = {
-    runtimeConfigTemplate: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'config.template.yaml')),
+    runtimeConfigTemplate: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'templates', 'config.template.yaml')),
     contractSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'contract', 'specs', 'ROUTER.xml')),
     legacyFridaSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'specs', 'ROUTER.xml')),
     legacySpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.specs', 'ROUTER.xml')),

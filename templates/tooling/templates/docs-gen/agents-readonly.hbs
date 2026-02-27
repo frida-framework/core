@@ -1,0 +1,25 @@
+# {{zoneName}} - AGENTS.md
+
+## CRITICAL CONSTRAINT
+
+FORBIDDEN:
+{{#each forbiddenOps}}
+- {{this}}
+{{/each}}
+
+## WHY
+
+{{whyReadOnly}}
+
+{{#if consequence}}
+**What happens if violated:**
+{{consequence}}
+{{/if}}
+
+## HOW TO CHANGE
+
+{{howToChange}}
+
+## COMPLETION REPORT
+
+After finishing (or halting), you MUST emit FRIDA Run Report (contract:FRIDA_RUN_REPORTING). Include changed files, verification status, and model when known (do not guess).

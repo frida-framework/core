@@ -1,0 +1,77 @@
+<agent_instruction id="{{id}}">
+  <role>{{role}}</role>
+  <description>{{description}}</description>
+  
+  {{#if context}}
+  <active_context>{{context}}</active_context>
+  {{/if}}
+  
+  <security_clearance>
+    <allowed_paths>
+      {{#each security.read_allow}}
+      <path mode="read">{{this}}</path>
+      {{/each}}
+      {{#each security.edit_allow}}
+      <path mode="edit">{{this}}</path>
+      {{/each}}
+    </allowed_paths>
+    {{#if security.create_allow}}
+    <create_allow>
+      {{#each security.create_allow}}
+      <path>{{this}}</path>
+      {{/each}}
+    </create_allow>
+    {{/if}}
+    <forbidden_paths action="{{security.forbiddenAction}}">
+      {{#each security.forbid}}
+      <path>{{this}}</path>
+      {{/each}}
+      {{#each security.edit_forbid}}
+      <path mode="no-edit">{{this}}</path>
+      {{/each}}
+    </forbidden_paths>
+    {{#if security.redirects}}
+    {{#if security.redirects.length}}
+    <redirects>
+      {{#each security.redirects}}
+      <redirect from="{{from}}" to="{{to}}">
+        <reason>{{reason}}</reason>
+        {{#if guide}}<guide>{{guide}}</guide>{{/if}}
+      </redirect>
+      {{/each}}
+    </redirects>
+    {{/if}}
+    {{/if}}
+  </security_clearance>
+
+  <invariants>
+    {{#each resolvedInvariants}}
+    <invariant id="{{id}}">{{text}}</invariant>
+    {{/each}}
+  </invariants>
+
+  {{#if contexts}}
+  <available_contexts>
+    {{#each contexts}}
+    <context id="{{@key}}">
+      <trigger>{{trigger}}</trigger>
+      <additional_permissions>
+        {{#each additional_read}}
+        <path mode="read">{{this}}</path>
+        {{/each}}
+        {{#each additional_edit}}
+        <path mode="edit">{{this}}</path>
+        {{/each}}
+      </additional_permissions>
+      <reason>{{reason}}</reason>
+    </context>
+    {{/each}}
+  </available_contexts>
+  {{/if}}
+
+  <workflow_constraints>
+    <constraint>Do NOT hallucinate files outside of allowed_paths.</constraint>
+    <constraint>Check invariants before outputting code.</constraint>
+    <constraint>If path is forbidden, check for redirect before halting.</constraint>
+  </workflow_constraints>
+</agent_instruction>

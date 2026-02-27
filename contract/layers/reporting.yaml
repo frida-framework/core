@@ -40,7 +40,7 @@ FRIDA_VALIDATION_CHECKLIST:
   reporting_consistency:
     - "FRIDA_CONFIG.reporting is fixed and schema-valid."
     - "Runtime config validates against frida-runtime-config.schema.json."
-    - "FRIDA root layout policy enforces exactly two root files (config.yaml, config.template.yaml) and only allowed root dirs (contract, reports, inbox)."
+    - "FRIDA root layout policy enforces exactly one root file (config.yaml) and only allowed root dirs (contract, reports, inbox, templates)."
   visual_consistency:
     - "Visual overlay is deterministic: same input → same output."
     - "Visual checks are fail-hard."

@@ -61,7 +61,7 @@ export const REPORTING_SETTINGS_FIXED: ReportingSettings = {
 
 export const DEFAULT_APP_CONTRACT_SSOT: AppContractSsotMode = 'REPO.LOCAL';
 export const RUNTIME_CONFIG_REL_PATH = '.frida/config.yaml';
-export const RUNTIME_CONFIG_TEMPLATE_REL_PATH = '.frida/config.template.yaml';
+export const RUNTIME_CONFIG_TEMPLATE_REL_PATH = '.frida/templates/config.template.yaml';
 export const JOB_REPORTS_GLOB = '.frida/reports/*.yaml';
 
 function asObject(value: unknown): Record<string, any> {

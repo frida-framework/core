@@ -78,7 +78,7 @@ FRIDA_CONTRACT_BOOTSTRAP:
   target_detection:
     model: strong_marker_any
     frida_present_when_any:
-      - ".frida/config.template.yaml"
+      - ".frida/templates/config.template.yaml"
       - ".frida/contract/specs/ROUTER.xml"
       - ".frida/specs/ROUTER.xml (legacy pre-contract-layout marker)"
       - ".specs/ROUTER.xml (legacy compatibility marker)"
@@ -182,7 +182,7 @@ FRIDA_BOOTSTRAP_SURFACE_POLICY:
   target_markers:
     detection_mode: strong_marker_any
     markers:
-      - ".frida/config.template.yaml"
+      - ".frida/templates/config.template.yaml"
       - ".frida/contract/specs/ROUTER.xml"
       - ".frida/specs/ROUTER.xml (legacy pre-contract-layout marker)"
       - ".specs/ROUTER.xml (legacy compatibility marker)"

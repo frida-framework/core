@@ -239,7 +239,7 @@ entries:
       - cold-engine
 
   - id: frida_runtime_config_template
-    target: ".frida/config.template.yaml"
+    target: ".frida/templates/config.template.yaml"
     kind: file
     ownership_class: engine_generated
     apply_mode: generated
