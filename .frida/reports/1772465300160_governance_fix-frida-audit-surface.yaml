@@ -1,0 +1,58 @@
+frida_report: 1
+status: "SUCCESS"
+task_ref: "fix-frida-audit-surface"
+profile_id: "governance"
+model: "GPT-5"
+created_at: "2026-03-02T15:29:24.3696628Z"
+inputs:
+  prompt_summary: "Patch core repo so Frida audit surfaces and audit tooling are usable again."
+  canon_files_read:
+    - "contract/layers/infrastructure.yaml"
+    - "contract/layers/agent-framework.yaml"
+    - "contract/layers/core-configuration.yaml"
+    - "contract/bootstrap-package.manifest.yaml"
+    - "templates/management/AGENT-repo-audit.md"
+    - "package.json"
+    - "src/zone-check.ts"
+    - "src/generator.ts"
+    - "templates/tooling/lib/load-contract.mjs"
+    - "templates/tooling/verify/check-agents-contract-set.mjs"
+  constraints_adopted:
+    - "Zone routing remains path-driven (`non_templates` for repo root, `templates` for template subtree)."
+    - "Audit/governance reads may inspect canonical `.frida` surfaces but must not edit them."
+    - "`.frida/inbox/**` stays protected."
+    - "Verification must be deterministic and one-shot."
+changes:
+  modified:
+    - "contract/bootstrap-package.manifest.yaml"
+    - "contract/layers/agent-framework.yaml"
+    - "contract/layers/core-configuration.yaml"
+    - "package.json"
+    - "src/generator.ts"
+    - "src/zone-check.ts"
+    - "templates/management/AGENT-repo-audit.md"
+    - "templates/tooling/lib/load-contract.mjs"
+    - "templates/tooling/verify/check-agents-contract-set.mjs"
+  created:
+    - ".frida/reports/1772465300160_governance_fix-frida-audit-surface.yaml"
+  deleted: []
+verification:
+  commands:
+    - "npm run verify"
+    - "node dist/cli.js check zone --path templates"
+  result: "PASS"
+  notes: "verify passed after fixing ZONES metadata filtering, repo-root resolution, modular contract loading, and AGENTS path normalization."
+summary:
+  what_done:
+    - "Filtered non-zone metadata keys out of ZONES iteration in runtime/generator paths."
+    - "Fixed contract-set verifier root resolution and modular contract index loading."
+    - "Allowed governance to read canonical `.frida` audit surfaces while keeping `.frida/**` no-edit and `.frida/inbox/**` forbidden."
+    - "Updated repo-audit playbook to use `contract/contract.index.yaml` as the authoritative machine entry point."
+    - "Added a working `npm run verify` for this repository."
+  risks_or_debt:
+    - "Repository still contains unrelated pre-existing modifications outside this task."
+    - "Template hash manifest drift was not part of the new `verify` pipeline and remains a separate hygiene track."
+    - "Some auxiliary tooling files still carry legacy migration work outside the audit-critical path."
+  followups:
+    - "Mirror the same governance `.frida` audit-surface model into app contracts that still forbid `.frida/**` outright."
+    - "Decide whether template hash checks should become part of the default verify pipeline after manifest refresh."

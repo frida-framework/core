@@ -2,15 +2,15 @@
 import { runFridaGeneration } from './frida-core-bridge.ts';
 import { createContractDrivenAdapter } from './frida-contract-adapter.ts';
 
-const APP_CONTRACT_INBOX_INDEX = '.frida/inbox/app-contract/contract.index.yaml';
+const APP_CONTRACT_INDEX = '.frida/inbox/app-contract/contract.index.yaml';
 
 async function main(): Promise<void> {
   const strictSchema = process.argv.includes('--strict-schema');
   await runFridaGeneration({
     rootDir: process.cwd(),
-    contractPath: APP_CONTRACT_INBOX_INDEX,
+    contractPath: APP_CONTRACT_INDEX,
     strictSchema,
-    adapters: [createContractDrivenAdapter({ rootDir: process.cwd(), contractPath: APP_CONTRACT_INBOX_INDEX })],
+    adapters: [createContractDrivenAdapter({ rootDir: process.cwd(), contractPath: APP_CONTRACT_INDEX })],
   });
 }
 

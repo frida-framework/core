@@ -3,7 +3,7 @@
 CONTRACT_META:
   _visibility: private
   id: frida-contract-meta
-  version: 2.0.0
+  version: 2.3.0
   owner: frida-core
   updated_at: "2026-02-26"
   scope:
@@ -34,7 +34,7 @@ CONTRACT_UNIQUENESS:
 meta:
   id: frida-meta
   version: 1.0.0
-  schemaVersion: "2.0"
+  schemaVersion: "3.1"
   mode: schema
   contractArtifactRef: "PATHS.contract.coreContractFile"
 
@@ -80,11 +80,11 @@ core:
     - "schema-validate"
     - "normalize"
     - "resolve-selectors"
-    - "run-legacy-generator"
+    - "run-artifact-generator"
     - "run-adapter-generators"
     - "emit-manifest"
   pathRefs:
-    contractArtifact: "contract/core.contract.yaml"
+    contractArtifact: "contract/contract.index.yaml"
     templatesFrida: "templates/frida"
     templatesDocs: "templates/docs-gen"
   outputContracts:
@@ -94,10 +94,6 @@ core:
     - ".frida/contract/AGENTS.md"
     - ".frida/contract/docs/policy/*.md"
     - ".frida/contract/docs/reference/*.md"
-    - ".specs/ROUTER.xml"
-    - ".specs/profiles/*.xml"
-    - "docs/policy/*.md"
-    - "docs/reference/*.md"
     - ".frida/config.yaml"
     - ".frida/templates/config.template.yaml"
     - ".frida/contract/app/**"

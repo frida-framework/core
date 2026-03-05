@@ -12,7 +12,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..', '..');
-const CONTRACT_FILE = path.join(ROOT_DIR, 'contract', 'contract.cbmd.yaml');
+const CONTRACT_FILE = path.join(ROOT_DIR, 'contract', 'contract.index.yaml');
 const FIXED_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 
 function fail(message) {

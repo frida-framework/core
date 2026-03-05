@@ -2,19 +2,18 @@
  * FRIDA Unified Generator v3.0
  * 
  * Generates agent context from contract data.
- * All data comes from contract.cbmd.yaml (synced from wiki).
+ * All data comes from the active contract artifact (prefer modular contract.index.yaml).
  * 
  * Sources:
- *   - contract/contract.cbmd.yaml (ZONES, TASK_PROFILES, INVARIANTS, FRIDA_GUARDS_BASELINE, PROJECT_GUARDS, GUARDS)
+ *   - contract/contract.index.yaml (modular contract index and layers)
  * 
  * Outputs:
  *   - AGENTS.md (bootloader)
- *   - .frida/contract/specs/ROUTER.xml (canonical)
- *   - .frida/contract/profiles/*.xml (canonical)
- *   - {zone}/AGENTS.md (zone-specific)
- *   - .frida/contract/docs/{policy,reference}/*.md (canonical)
- *   - .specs/ROUTER.xml, .specs/profiles/*.xml (compat mirrors)
- *   - docs/policy/*.md, docs/reference/*.md (compat mirrors)
+ *   - .frida/contract/AGENTS.md (canonical internal mirror)
+ *   - .frida/contract/specs/ROUTER.xml
+ *   - .frida/contract/profiles/*.xml
+ *   - {zone}/AGENTS.md
+ *   - .frida/contract/docs/{policy,reference}/*.md
  *   - .frida/contract/artifacts/frida.ir.json
  *   - .frida/contract/artifacts/frida.permissions.json
  *   - .frida/contract/artifacts/frida.graph.mmd
@@ -230,34 +229,12 @@ function copyDirContentsRecursive(sourceDir: string, targetDir: string): void {
     }
 }
 
-function mirrorDirReplace(sourceDir: string, targetDir: string, label: string): void {
-    if (!fs.existsSync(sourceDir) || !fs.statSync(sourceDir).isDirectory()) {
-        console.warn(`⚠️  Compat mirror skipped (${label}): source dir missing (${path.relative(ROOT_DIR, sourceDir)})`);
-        return;
-    }
-    fs.mkdirSync(path.dirname(targetDir), { recursive: true });
-    resetDir(targetDir);
-    copyDirContentsRecursive(sourceDir, targetDir);
-    console.log(`✅ Compat mirror: ${path.relative(ROOT_DIR, targetDir)} <= ${path.relative(ROOT_DIR, sourceDir)}`);
-}
-
 function resolveContractPathString(contract: Contract, ref: string, fallback: string): string {
     const resolved = resolvePathRef(contract, ref);
     return typeof resolved === 'string' && resolved.trim() ? resolved : fallback;
 }
 
-function emitCompatMirrors(contract: Contract, runtimePaths: GeneratorRuntimePaths): void {
-    console.log('\n📋 Emitting compatibility mirrors...\n');
-
-    const legacySpecsRoot = path.join(ROOT_DIR, '.specs');
-    const legacyDocsPolicyDir = path.join(ROOT_DIR, 'docs', 'policy');
-    const legacyDocsReferenceDir = path.join(ROOT_DIR, 'docs', 'reference');
-
-    mirrorDirReplace(runtimePaths.specsRootDir, legacySpecsRoot, '.specs router tree');
-    mirrorDirReplace(runtimePaths.profilesRootDir, path.join(legacySpecsRoot, 'profiles'), '.specs/profiles');
-    mirrorDirReplace(runtimePaths.docsPolicyDir, legacyDocsPolicyDir, 'docs/policy');
-    mirrorDirReplace(runtimePaths.docsReferenceDir, legacyDocsReferenceDir, 'docs/reference');
-
+function emitCanonicalMirrors(contract: Contract, runtimePaths: GeneratorRuntimePaths): void {
     // Root AGENTS.md remains the human/agent entrypoint. This internal mirror is engine-managed canonical state.
     const fridaContractBootloaderPath = fromRepoRoot(
         resolveContractPathString(contract, 'PATHS.fridaContract.bootloaderFile', '.frida/contract/AGENTS.md')
@@ -367,6 +344,26 @@ function getFridaConfigPathsOrFail(contract: Contract): Record<string, any> {
     return cfgPaths;
 }
 
+function assertNoRemovedPathAliases(cfgPaths: Record<string, any>): void {
+    const removedAliasKeys = [
+        'agents_bootloader',
+        'specs_root',
+        'profiles_root',
+        'docs_policy',
+        'docs_reference',
+        'frida_internal',
+        'templates_frida',
+        'templates_docs',
+    ];
+
+    const present = removedAliasKeys.filter((key) => typeof cfgPaths[key] === 'string' && cfgPaths[key].trim());
+    if (present.length > 0) {
+        failWithError(
+            `removed FRIDA_CONFIG.paths aliases are no longer supported: ${present.map((key) => `FRIDA_CONFIG.paths.${key}`).join(', ')}`
+        );
+    }
+}
+
 function collectStringLeafPaths(node: any, out: string[] = []): string[] {
     if (typeof node === 'string') {
         out.push(node);
@@ -451,11 +448,10 @@ function resolveFridaConfigPath(
     cfgPaths: Record<string, any>,
     options: {
         refField: string;
-        legacyField?: string;
         expectedKind: 'file' | 'dir';
     }
 ): string {
-    const { refField, legacyField, expectedKind } = options;
+    const { refField, expectedKind } = options;
     const refValue = cfgPaths[refField];
     const context = `FRIDA_CONFIG.paths.${refField}`;
 
@@ -464,22 +460,6 @@ function resolveFridaConfigPath(
         return fromRepoRoot(resolvedRelPath);
     }
 
-    if (legacyField) {
-        const legacyValue = cfgPaths[legacyField];
-        if (typeof legacyValue === 'string' && legacyValue.trim()) {
-            console.warn(
-                `⚠️  FRIDA_CONFIG.paths.${legacyField} is deprecated. Use ${refField}.`
-            );
-            return fromRepoRoot(legacyValue);
-        }
-    }
-
-    if (legacyField) {
-        failWithError(
-            `missing required ${expectedKind} path configuration. Expected FRIDA_CONFIG.paths.${refField}` +
-            ` (preferred) or FRIDA_CONFIG.paths.${legacyField} (legacy).`
-        );
-    }
     failWithError(`missing required ${expectedKind} path configuration FRIDA_CONFIG.paths.${refField}.`);
 }
 
@@ -912,16 +892,17 @@ function loadGeneratorContext(): LoadedGeneratorContext {
     const contractPathIsInboxSource = normalizedContractPath.includes('/.frida/inbox/app-contract/');
     const honorExplicitContractPath = Boolean(explicitContractPath) || contractPathIsInboxSource;
 
-    // Resolve contract path from FRIDA_CONFIG and re-load if contractical artifact differs from bootstrap location.
+    // Resolve contract path from FRIDA_CONFIG and re-load if the canonical contract artifact differs from bootstrap location.
     // If FRIDA_CONTRACT_PATH is explicitly set (for example bootstrap post-gen with inbox-only contract source),
     // the explicit path is authoritative and re-resolve fallback is disabled.
     if (!honorExplicitContractPath) {
         for (let i = 0; i < 2; i++) {
             const cfgPaths = getFridaConfigPathsOrFail(loaded.contract);
+            if (!cfgPaths.canon_inputFileRef) break;
             const contractRel = resolvePathRefOrFail(
                 loaded.contract,
-                cfgPaths.contract_inputFileRef,
-                'FRIDA_CONFIG.paths.contract_inputFileRef',
+                cfgPaths.canon_inputFileRef,
+                'FRIDA_CONFIG.paths.canon_inputFileRef',
                 'file'
             );
             const resolvedContractPath = path.resolve(fromRepoRoot(contractRel));
@@ -933,61 +914,56 @@ function loadGeneratorContext(): LoadedGeneratorContext {
         }
     } else {
         const cfgPaths = getFridaConfigPathsOrFail(loaded.contract);
-        const contractRel = resolvePathRefOrFail(
-            loaded.contract,
-            cfgPaths.contract_inputFileRef,
-            'FRIDA_CONFIG.paths.contract_inputFileRef',
-            'file'
-        );
-        const resolvedContractPath = path.resolve(fromRepoRoot(contractRel));
-        if (resolvedContractPath !== contractPath) {
-            console.warn(
-                `⚠️  Contract source is fixed to ${path.relative(ROOT_DIR, contractPath) || contractPath}; skipping FRIDA_CONFIG.paths.contract_inputFileRef fallback to ${path.relative(ROOT_DIR, resolvedContractPath) || resolvedContractPath}`
+        if (cfgPaths.canon_inputFileRef) {
+            const contractRel = resolvePathRefOrFail(
+                loaded.contract,
+                cfgPaths.canon_inputFileRef,
+                'FRIDA_CONFIG.paths.canon_inputFileRef',
+                'file'
             );
+            const resolvedContractPath = path.resolve(fromRepoRoot(contractRel));
+            if (resolvedContractPath !== contractPath) {
+                console.warn(
+                    `⚠️  Contract source is fixed to ${path.relative(ROOT_DIR, contractPath) || contractPath}; skipping FRIDA_CONFIG.paths.canon_inputFileRef fallback to ${path.relative(ROOT_DIR, resolvedContractPath) || resolvedContractPath}`
+                );
+            }
         }
     }
 
     const cfgPaths = getFridaConfigPathsOrFail(loaded.contract);
+    assertNoRemovedPathAliases(cfgPaths);
     const runtimePaths: GeneratorRuntimePaths = {
         contractArtifactPath: contractPath,
         bootloaderFilePath: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'agents_bootloaderFileRef',
-            legacyField: 'agents_bootloader',
             expectedKind: 'file',
         }),
         specsRootDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'specs_rootRef',
-            legacyField: 'specs_root',
             expectedKind: 'dir',
         }),
         profilesRootDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'profiles_rootRef',
-            legacyField: 'profiles_root',
             expectedKind: 'dir',
         }),
         docsPolicyDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'docs_policyDirRef',
-            legacyField: 'docs_policy',
             expectedKind: 'dir',
         }),
         docsReferenceDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'docs_referenceDirRef',
-            legacyField: 'docs_reference',
             expectedKind: 'dir',
         }),
         fridaInternalDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'frida_internalRef',
-            legacyField: 'frida_internal',
             expectedKind: 'dir',
         }),
         templatesFridaDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'templates_fridaRef',
-            legacyField: 'templates_frida',
             expectedKind: 'dir',
         }),
         templatesDocsDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
             refField: 'templates_docsRef',
-            legacyField: 'templates_docs',
             expectedKind: 'dir',
         }),
     };
@@ -1033,7 +1009,7 @@ function validateContract(contract: Contract): EffectiveGuards {
             for (let i = 0; i < redirects.length; i++) {
                 const r = redirects[i];
                 if (r.pattern || r.redirectTo || r.message) {
-                    console.error(`❌ Error: TASK_PROFILES.${profileId}.redirects[${i}] uses legacy format (pattern/redirectTo/message). Use from/to/reason or fromGlobRef/toFileRef|toDirRef/reason.`);
+                    console.error(`❌ Error: TASK_PROFILES.${profileId}.redirects[${i}] uses deprecated format (pattern/redirectTo/message). Use from/to/reason or fromGlobRef/toFileRef|toDirRef/reason.`);
                     process.exit(1);
                 }
                 const hasCompatShape = typeof r.from === 'string' && typeof r.to === 'string';
@@ -1070,7 +1046,7 @@ function validateContract(contract: Contract): EffectiveGuards {
         }
     }
     const unresolvedZoneGuardRefs: string[] = [];
-    for (const [zoneId, zoneData] of Object.entries(contract.ZONES || {})) {
+    for (const [zoneId, zoneData] of getZoneEntries(contract)) {
         const refs = (zoneData as any).guardRefs;
         if (!Array.isArray(refs)) continue;
         for (const ref of refs) {
@@ -1129,6 +1105,7 @@ function validateContract(contract: Contract): EffectiveGuards {
     };
 
     const readAllowRequired = policyList('read_allow_required', ['tasks/**']);
+    const readAllowGovernanceRequired = policyList('read_allow_governance_required', []);
     const editAllowArchitectRequired = policyList('edit_allow_architect_required', ['tasks/inbox/**']);
     const editAllowArchitectAllowedOnly = policyList('edit_allow_architect_allowed_only', ['tasks/inbox/**', 'tasks/inbox/README.md']);
     const editAllowNonArchitectRequired = policyList('edit_allow_non_architect_required', ['tasks/README.md', 'tasks/**/README.md']);
@@ -1149,9 +1126,8 @@ function validateContract(contract: Contract): EffectiveGuards {
         (contract.FRIDA_CONFIG as any)?.reporting?.access_validation?.enabled === true;
 
     if (!accessValidationEnabled) {
-        console.warn(
-            '⚠️  D5 access validation is disabled by FRIDA_CONFIG.reporting.access_validation.enabled=false; skipping fail-hard checks.'
-        );
+        // D5 access validation requires FRIDA_CONFIG.reporting.access_validation.enabled=true;
+        // silently skip when absent (app-only contracts do not define this block).
     } else {
         for (const [profileId, profileData] of Object.entries(contract.TASK_PROFILES || {})) {
             const sec = (profileData as any).security || {};
@@ -1168,6 +1144,13 @@ function validateContract(contract: Contract): EffectiveGuards {
             for (const requiredPath of readAllowRequired) {
                 if (!has(readAllow, requiredPath)) {
                     tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.read_allow "${requiredPath}"`);
+                }
+            }
+            if (isGovernanceProfile) {
+                for (const requiredPath of readAllowGovernanceRequired) {
+                    if (!has(readAllow, requiredPath)) {
+                        tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: governance profile missing security.read_allow "${requiredPath}"`);
+                    }
                 }
             }
 
@@ -1301,7 +1284,7 @@ function checkTemplateDrift(contract: Contract): void {
         // Hash-based drift check: compare SHA-256 of .hbs file against contract content_hash
         const expectedHash = block.content_hash;
         if (!expectedHash) {
-            // Fallback: if no content_hash, skip (legacy blocks still using inline content)
+            // Fallback: if no content_hash, skip (older blocks still using inline content)
             console.warn(`⚠️  ${key} has no content_hash (skipped drift check)`);
             skipped++;
             continue;
@@ -1323,11 +1306,28 @@ function checkTemplateDrift(contract: Contract): void {
     console.log(`✅ Template drift check: ${passed} passed, ${skipped} skipped`);
 }
 
+function isZoneDefinition(value: unknown): value is Record<string, any> {
+    if (!value || typeof value !== 'object') {
+        return false;
+    }
+
+    const zoneData = value as Record<string, any>;
+    return typeof zoneData.pathGlobRef === 'string' || typeof zoneData.path === 'string';
+}
+
+function getZoneEntries(contract: Contract): Array<[string, any]> {
+    if (!contract.ZONES || typeof contract.ZONES !== 'object') {
+        return [];
+    }
+
+    return Object.entries(contract.ZONES).filter(([, value]) => isZoneDefinition(value));
+}
+
 // === DATA EXTRACTORS ===
 function extractZones(contract: Contract): Zone[] {
     if (!contract.ZONES) return [];
 
-    return Object.entries(contract.ZONES).map(([id, data]: [string, any]) => ({
+    return getZoneEntries(contract).map(([id, data]: [string, any]) => ({
         id,
         name: formatZoneName(id),
         path:
@@ -1420,7 +1420,7 @@ function processProfile(
     ];
 
     for (const allowedPath of allAllowedPaths) {
-        for (const [zoneId, zoneData] of Object.entries(contract.ZONES || {})) {
+        for (const [zoneId, zoneData] of getZoneEntries(contract)) {
             const resolvedZonePath =
                 resolveRefValue(contract, zoneData.pathGlobRef, `ZONES.${zoneId}.pathGlobRef`) ||
                 resolveRefValue(contract, zoneData.path, `ZONES.${zoneId}.path`) ||
@@ -1607,7 +1607,7 @@ function generateZoneAgents(zones: Zone[], effectiveGuards: EffectiveGuards, doc
 }
 
 // === MAIN ===
-export async function runLegacyFridaGenerator(options: LegacyGeneratorOptions = {}): Promise<void> {
+export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions = {}): Promise<void> {
     ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
 
     console.log('🤖 FRIDA v3.0 GENERATOR\n');
@@ -1764,7 +1764,7 @@ See \`contract:FRIDA_RUN_REPORTING\` for full schema details.
         }
     }
 
-    emitCompatMirrors(contract, runtimePaths);
+    emitCanonicalMirrors(contract, runtimePaths);
 
     // Summary
     const zoneAgentsCount = zones.filter(z => z.agentsPath).length;
@@ -1784,12 +1784,12 @@ See \`contract:FRIDA_RUN_REPORTING\` for full schema details.
 }
 
 async function main(): Promise<void> {
-    await runLegacyFridaGenerator();
+    await runFridaArtifactGenerator();
 }
 
 const isMainModule = process.argv[1] && (
-    process.argv[1].endsWith('legacy-generator.ts') ||
-    process.argv[1].endsWith('legacy-generator.js')
+    process.argv[1].endsWith('generator.ts') ||
+    process.argv[1].endsWith('generator.js')
 );
 
 if (isMainModule) {

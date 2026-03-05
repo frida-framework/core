@@ -13,16 +13,13 @@ FRIDA_WIKI_MECHANICS:
     app_contract_source: ".frida/inbox/app-contract/**"
     frida_consumer_source: ".frida/inbox/app-contract/**"
     working_copy: ".frida/contract/app/**"
-    legacy_surface: "contract/** (legacy compatibility surface; not SSOT, not substantial)"
-    fallback_to_legacy_contract: false
   repo_wiki_sync:
     raw_sync_target: ".frida/inbox/wiki-raw/**"
     normalized_local_ssot: ".frida/inbox/app-contract/**"
     frida_consumer_source: ".frida/inbox/app-contract/**"
     working_copy: ".frida/contract/app/**"
-    legacy_surface: "contract/** (legacy compatibility surface; transitional only)"
     writer: "GitHub Actions workflow"
-    note: "Wiki sync writes into inbox; Frida generation/bootstrap reads only inbox app-contract source and never falls back to contract/**."
+    note: "Wiki sync writes into inbox; Frida generation/bootstrap reads only inbox app-contract source."
   schema_blocks:
     DOCS:
       description: "Optional block in application contract storing wiki definitions used when APP_CONTRACT_SSOT=REPO.WIKI."

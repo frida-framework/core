@@ -7,7 +7,7 @@ PATHS:
   id: frida-paths
   version: 1.0.0
   contract:
-    coreCanonFile: "contract/core.canon.yaml"
+    coreCanonFile: "contract/contract.index.yaml"
   agents:
     bootloaderFile: "AGENTS.md"
   specs:
@@ -22,7 +22,6 @@ PATHS:
     internalDir: ".frida/contract/internal"
     inboxDir: ".frida/inbox"
     reportsDir: ".frida/reports"
-    jobReportsDir: ".frida/job-reports"
     configFile: ".frida/config.yaml"
     configTemplateFile: ".frida/templates/config.template.yaml"
     ir: ".frida/contract/artifacts/frida.ir.json"
@@ -70,6 +69,7 @@ PATHS:
     overlayDir: ".frida/contract/visual"
     overlayFile: ".frida/contract/visual/canon-overlay.json"
   scopes:
+    fridaManagedAll: ".frida/**"
     templatesAll: "templates/**"
     nonTemplatesAll: "**"
   normalization:
@@ -180,6 +180,12 @@ FRIDA_CONFIG:
       policy_paths:
         read_allow_required:
           - "tasks/**"
+        read_allow_governance_required:
+          - ".frida/AGENTS.md"
+          - ".frida/config.yaml"
+          - ".frida/templates/config.template.yaml"
+          - ".frida/contract/**"
+          - ".frida/reports/*.yaml"
         edit_allow_architect_required:
           - "tasks/inbox/**"
         edit_allow_non_architect_required:
@@ -190,7 +196,7 @@ FRIDA_CONFIG:
           - "tasks/**/TASK-*.md"
           - ".frida/reports/*.yaml"
         forbid_must_include:
-          - ".frida/**"
+          - ".frida/inbox/**"
         forbid_must_not_include:
           - "tasks/**"
           - "tasks/README.md"
@@ -241,6 +247,7 @@ FRIDA_ROOT_LAYOUT_POLICY:
   version: 1.0.0
   scope: ".frida root directory only"
   exact_files:
+    - "AGENTS.md"
     - "config.yaml"
 
   allowed_dirs:
@@ -248,6 +255,7 @@ FRIDA_ROOT_LAYOUT_POLICY:
     - "reports"
     - "inbox"
     - "templates"
+    - "cache"
   validation_modes:
     warn: "Used by gen/init during rollout to report violations without stopping."
     fail: "Used by warm/cold-engine bootstrap post-gen to guarantee clean Frida layout in one command."
@@ -279,8 +287,8 @@ FRIDA_CONFIG_FIELD_DOCS:
       what: "Namespace for contract artifact locations."
       purpose: "Groups paths used to locate canonical assembled contract files."
     - path: "PATHS.contract.coreCanonFile"
-      what: "Relative file path to the assembled canon contract artifact."
-      purpose: "Provides the canonical assembled contract target used by generators and validators."
+      what: "Relative file path to the canonical contract artifact."
+      purpose: "Provides the contract index path used by generators and validators."
     - path: "PATHS.agents"
       what: "Namespace for agent bootstrapping files."
       purpose: "Keeps agent entry-point paths centralized."
@@ -323,9 +331,6 @@ FRIDA_CONFIG_FIELD_DOCS:
     - path: "PATHS.frida.reportsDir"
       what: "Directory for FRIDA run/job reports."
       purpose: "Defines the default runtime report/audit history path (`.frida/reports`)."
-    - path: "PATHS.frida.jobReportsDir"
-      what: "Deprecated legacy alias for the old FRIDA report directory path."
-      purpose: "Documents the historical `.frida/job-reports` location for compatibility warnings and migration references."
     - path: "PATHS.frida.configFile"
       what: "Runtime config file produced by the engine."
       purpose: "Defines the canonical location for generated `.frida/config.yaml`."
@@ -361,19 +366,19 @@ FRIDA_CONFIG_FIELD_DOCS:
       purpose: "Stores a deterministic copy of package `contract/**` under the target repo for inspection and tooling."
     - path: "PATHS.fridaContract.specsDir"
       what: "Canonical specs directory under `.frida/contract`."
-      purpose: "Stores router XML and related canonical spec artifacts before compat mirroring."
+      purpose: "Stores router XML and related canonical spec artifacts."
     - path: "PATHS.fridaContract.profilesDir"
       what: "Canonical profiles directory under `.frida/contract`."
-      purpose: "Stores generated profile XML files before compat mirroring to `.specs/profiles`."
+      purpose: "Stores generated profile XML files in the canonical `.frida/contract/profiles` surface."
     - path: "PATHS.fridaContract.docsDir"
       what: "Canonical docs root directory under `.frida/contract`."
-      purpose: "Groups engine-generated policy/reference docs before compat mirroring."
+      purpose: "Groups engine-generated policy/reference docs in the canonical `.frida/contract/docs` surface."
     - path: "PATHS.fridaContract.docsPolicyDir"
       what: "Canonical policy docs directory under `.frida/contract/docs`."
-      purpose: "Stores engine-generated policy docs that are mirrored to `docs/policy` during transition."
+      purpose: "Stores engine-generated policy docs in the canonical `.frida/contract/docs/policy` surface."
     - path: "PATHS.fridaContract.docsReferenceDir"
       what: "Canonical reference docs directory under `.frida/contract/docs`."
-      purpose: "Stores engine-generated reference docs that are mirrored to `docs/reference` during transition."
+      purpose: "Stores engine-generated reference docs in the canonical `.frida/contract/docs/reference` surface."
     - path: "PATHS.fridaContract.internalDir"
       what: "Canonical internal working directory under `.frida/contract`."
       purpose: "Stores engine-managed internal state and generated internal files."
@@ -460,16 +465,19 @@ FRIDA_CONFIG_FIELD_DOCS:
       purpose: "Groups overlay artifact directory and file paths."
     - path: "PATHS.visual.overlayDir"
       what: "Directory for generated visual overlay artifacts."
-      purpose: "Points legacy visual path namespace to the canonical `.frida/contract/visual` location."
+      purpose: "Points the visual path namespace to the canonical `.frida/contract/visual` location."
     - path: "PATHS.visual.overlayFile"
       what: "Contract overlay JSON output path."
-      purpose: "Points legacy visual path namespace to the canonical visual overlay file in `.frida/contract/visual`."
+      purpose: "Points the visual path namespace to the canonical visual overlay file in `.frida/contract/visual`."
     - path: "PATHS.scopes.templatesAll"
       what: "Glob matching all template-zone files."
       purpose: "Feeds zone resolution and enforcement for template scope."
     - path: "PATHS.scopes"
       what: "Namespace for zone scope glob definitions."
       purpose: "Centralizes reusable scope globs for routing and enforcement."
+    - path: "PATHS.scopes.fridaManagedAll"
+      what: "Glob matching all Frida-managed runtime and generated surfaces."
+      purpose: "Lets zone routing attach `.frida/**` work to the dedicated Frida-managed antitask surface."
     - path: "PATHS.scopes.nonTemplatesAll"
       what: "Fallback glob matching all repository files."
       purpose: "Supports non-template zone routing baseline."
@@ -510,7 +518,7 @@ FRIDA_CONFIG_FIELD_DOCS:
       what: "Human-readable source description field."
       purpose: "Supports readable source manifests and diagnostics."
     - path: "FRIDA_CONFIG.paths"
-      what: "Resolved path-reference map used by legacy generator/runtime."
+      what: "Resolved path-reference map used by the generator/runtime."
       purpose: "Centralizes engine path dependencies as typed refs to `PATHS`."
     - path: "FRIDA_CONFIG.paths.canon_inputFileRef"
       what: "Ref to the canonical assembled contract artifact path."
@@ -572,6 +580,9 @@ FRIDA_CONFIG_FIELD_DOCS:
     - path: "FRIDA_CONFIG.reporting.access_validation.policy_paths.read_allow_required"
       what: "Required readable path globs."
       purpose: "Ensures profiles include mandatory read access surfaces."
+    - path: "FRIDA_CONFIG.reporting.access_validation.policy_paths.read_allow_governance_required"
+      what: "Additional readable path globs required only for governance/audit profiles."
+      purpose: "Keeps governance able to inspect canonical `.frida` audit surfaces without granting edit access."
     - path: "FRIDA_CONFIG.reporting.access_validation.policy_paths.edit_allow_architect_required"
       what: "Required edit globs for architect-level profiles."
       purpose: "Guarantees architect profiles can edit task inbox surfaces."
@@ -655,10 +666,10 @@ FRIDA_CONFIG_FIELD_DOCS:
       purpose: "Makes clear the policy applies only to top-level entries under `.frida/`, not nested subtree contents."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.exact_files"
       what: "Exact required file set in `.frida/` root."
-      purpose: "Enforces that only `config.yaml` exists as a root file."
+      purpose: "Enforces that the `.frida` root exposes only the protected zone antitask and runtime config as root files."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.allowed_dirs"
       what: "Allowed directory names in `.frida/` root."
-      purpose: "Restricts root directories to ownership domains (`contract`, `reports`, `inbox`)."
+      purpose: "Restricts root directories to ownership domains (`contract`, `reports`, `inbox`, `templates`)."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.validation_modes"
       what: "Validation severity modes for root layout checks."
       purpose: "Allows warn-mode rollout in gen/init and fail-mode enforcement in bootstrap."

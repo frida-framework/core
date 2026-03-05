@@ -4,9 +4,9 @@
 # Blocks list declares all top-level keys exported by the layer.
 # ──────────────────────────────────────────────────────────────────────────────
 
-schema_version: "1.0"
+schema_version: "3.1"
 contract_id: "FRIDA_CORE_CONTRACT"
-version: "2.2.0"
+version: "2.3.0"
 
 layers:
   - id: identity
@@ -146,10 +146,12 @@ layers:
       - FRIDA_INVARIANT_SPEC
       - FRIDA_ANTITASK_SPEC
       - FRIDA_INTERFACE_VERIFY
+      - FRIDA_INTERFACE_AUDIT
       - CONTRACT_MANAGEMENT_INTERFACE
       - FRIDA_INTERFACE_UPDATE_SPEC
       - FRIDA_INTERFACE_UPDATE_CODE
       - FRIDA_INTERFACE_TASKSET
+      - FRIDA_VERSION_POLICY
 
   - id: wiki
     path: contract/layers/wiki.yaml

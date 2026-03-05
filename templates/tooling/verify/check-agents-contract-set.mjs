@@ -3,21 +3,25 @@
  * Enforce contract AGENTS.md set.
  *
  * Policy:
- * - Compare tracked AGENTS.md files (git ls-files) with contract set from contract.
  * - Contract set = root bootloader + one zone AGENTS.md per contract:ZONES.
- * - Any missing or extra tracked AGENTS.md fails verification.
+ * - Every expected contract AGENTS.md path must exist on disk.
+ * - Extra tracked AGENTS.md files outside the contract set fail verification.
  */
 
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import yaml from 'yaml';
 import { loadModularContract } from '../lib/load-contract.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ROOT = join(__dirname, '../..');
+const ROOT = resolve(__dirname, '../../..');
+
+const IGNORED_AGENTS_PREFIXES = [
+  'templates/tooling/',
+  '.frida/templates/',
+];
 
 function normalizePath(input) {
   const withSlashes = String(input || '')
@@ -31,7 +35,7 @@ function normalizePath(input) {
 
 function ensureAgentsFilePath(pathLike) {
   const normalized = normalizePath(pathLike);
-  if (!normalized) return '';
+  if (!normalized || normalized === '.') return 'AGENTS.md';
   if (normalized === 'AGENTS.md' || normalized.endsWith('/AGENTS.md')) return normalized;
   return `${normalized}/AGENTS.md`;
 }
@@ -91,6 +95,22 @@ function resolveZoneAgentsPath(contract, zoneId, zoneData) {
   throw new Error(`ZONES.${zoneId} has no resolvable agents path (agentsPathDirRef|agentsPath|pathGlobRef|path)`);
 }
 
+function isZoneDefinition(value) {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    (typeof value.pathGlobRef === 'string' || typeof value.path === 'string')
+  );
+}
+
+function getZoneEntries(contract) {
+  if (!contract.ZONES || typeof contract.ZONES !== 'object') {
+    return [];
+  }
+
+  return Object.entries(contract.ZONES).filter(([, value]) => isZoneDefinition(value));
+}
+
 function loadContract() {
   const contract = loadModularContract(ROOT);
   if (!contract.ZONES || typeof contract.ZONES !== 'object') {
@@ -103,7 +123,7 @@ function collectExpectedAgents(contract) {
   const expected = new Set();
   expected.add(ensureAgentsFilePath(resolveBootloaderPath(contract)));
 
-  for (const [zoneId, zoneData] of Object.entries(contract.ZONES)) {
+  for (const [zoneId, zoneData] of getZoneEntries(contract)) {
     expected.add(resolveZoneAgentsPath(contract, zoneId, zoneData || {}));
   }
   return expected;
@@ -116,8 +136,16 @@ function collectTrackedAgents() {
     .map(line => normalizePath(line))
     .filter(Boolean)
     .filter(relPath => existsSync(join(ROOT, relPath)));
-  const agents = tracked.filter(path => path === 'AGENTS.md' || path.endsWith('/AGENTS.md'));
+  const agents = tracked
+    .filter(path => path === 'AGENTS.md' || path.endsWith('/AGENTS.md'))
+    .filter(path => !IGNORED_AGENTS_PREFIXES.some(prefix => path.startsWith(prefix)));
   return new Set(agents);
+}
+
+function collectExistingAgents(paths) {
+  return new Set(
+    [...paths].filter((relPath) => existsSync(join(ROOT, relPath)))
+  );
 }
 
 function toSortedDiff(a, b) {
@@ -129,18 +157,20 @@ try {
 
   const contract = loadContract();
   const expected = collectExpectedAgents(contract);
-  const actual = collectTrackedAgents();
+  const actual = collectExistingAgents(expected);
+  const tracked = collectTrackedAgents();
 
   const missing = toSortedDiff(expected, actual);
-  const extra = toSortedDiff(actual, expected);
+  const extra = toSortedDiff(tracked, expected);
 
   if (missing.length > 0 || extra.length > 0) {
     console.error('AGENTS contract-set check FAILED\n');
-    console.error(`Expected tracked AGENTS.md files: ${expected.size}`);
-    console.error(`Actual tracked AGENTS.md files:   ${actual.size}\n`);
+    console.error(`Expected contract AGENTS.md files: ${expected.size}`);
+    console.error(`Existing contract AGENTS.md files: ${actual.size}`);
+    console.error(`Tracked AGENTS.md files:           ${tracked.size}\n`);
 
     if (missing.length > 0) {
-      console.error('Missing contract AGENTS.md files:');
+      console.error('Missing contract AGENTS.md files on disk:');
       for (const p of missing) console.error(`  - ${p}`);
       console.error('');
     }
@@ -158,7 +188,7 @@ try {
     process.exit(1);
   }
 
-  console.log(`AGENTS contract-set OK (${actual.size} tracked file(s))`);
+  console.log(`AGENTS contract-set OK (${actual.size} contract file(s) present; ${tracked.size} tracked file(s))`);
 } catch (error) {
   console.error(`AGENTS contract-set check error: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(2);

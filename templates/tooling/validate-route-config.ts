@@ -47,7 +47,7 @@ interface ValidationResult {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, '..');
+const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
 const SCHEMA_PATH = path.resolve(ROOT_DIR, 'config/schemas/route-config.schema.json');
 
 if (!fs.existsSync(SCHEMA_PATH)) {

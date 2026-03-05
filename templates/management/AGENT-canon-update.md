@@ -220,7 +220,7 @@ When adding, renaming, or removing contract blocks, the same change must update 
 
 1. Move consumers to replacement (replacedByRef or MOVE/UPDATE).
 2. Confirm UNRESOLVED_REFS = 0.
-3. Remove legacy id/block in same patch.
+3. Remove superseded id/block in same patch.
 
 If safe removal impossible — deprecation scaffold: status, replacedByRef, date_deprecated, compat_note.
 

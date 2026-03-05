@@ -36,7 +36,7 @@ function buildTelemetry(warnings: string[], deprecatedFields: string[]): Generat
   };
 }
 
-const LEGACY_PATH_FIELDS: Array<{ field: string; ref: string }> = [
+const REMOVED_PATH_ALIAS_FIELDS: Array<{ field: string; ref: string }> = [
   { field: 'agents_bootloader', ref: 'agents_bootloaderFileRef' },
   { field: 'specs_root', ref: 'specs_rootRef' },
   { field: 'profiles_root', ref: 'profiles_rootRef' },
@@ -58,10 +58,10 @@ export function normalizeContractModel(contract: Record<string, any>): ContractN
   }
 
   const fridaPaths = contract?.FRIDA_CONFIG?.paths || {};
-  for (const legacy of LEGACY_PATH_FIELDS) {
-    if (typeof fridaPaths[legacy.field] === 'string') {
-      deprecatedFields.push(`FRIDA_CONFIG.paths.${legacy.field}`);
-      warnings.push(`Deprecated key FRIDA_CONFIG.paths.${legacy.field} used. Prefer ${legacy.ref}.`);
+  for (const removedAlias of REMOVED_PATH_ALIAS_FIELDS) {
+    if (typeof fridaPaths[removedAlias.field] === 'string') {
+      deprecatedFields.push(`FRIDA_CONFIG.paths.${removedAlias.field}`);
+      warnings.push(`Deprecated key FRIDA_CONFIG.paths.${removedAlias.field} used. Prefer ${removedAlias.ref}.`);
     }
   }
 
@@ -87,7 +87,7 @@ export function collectMigrationIssues(contract: Record<string, any>, strict = f
   const issues: MigrationIssue[] = [];
   const fridaPaths = contract?.FRIDA_CONFIG?.paths || {};
 
-  for (const item of LEGACY_PATH_FIELDS) {
+  for (const item of REMOVED_PATH_ALIAS_FIELDS) {
     if (typeof fridaPaths[item.field] === 'string') {
       issues.push({
         field: `FRIDA_CONFIG.paths.${item.field}`,

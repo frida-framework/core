@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
+import { runFridaAgentsContractSetCheck } from './agents-contract-set.ts';
 import { runFridaCheckCli } from './zone-check.ts';
 import { runFridaHashCli } from './template-hash.ts';
 import { runFridaVisualCli } from './visual.ts';
@@ -12,13 +13,14 @@ function printHelp(): void {
   console.log(`frida-core
 
 Usage:
-  frida-core gen [--strict-schema]
-  frida-core migration-report [--strict]
+  frida-core gen
+  frida-core migration-report
   frida-core init [--contract <path>] [--dry-run]
   frida-core bootstrap --target <dir> [--mode warm|cold-engine|demo] [--dry-run]
   frida-core bootstrap --component <name> [--target <dir>]
   frida-core visualize [--check] [args...]
   frida-core report [check|path|write] [args...]
+  frida-core check contract-set [--include-frida-internal]
   frida-core check [zone args...]
   frida-core hash [--manifest <path>] [--contract <path>]
   frida-core build [--public] [--output <path>] [--contract <path>]
@@ -38,7 +40,6 @@ async function run(): Promise<number> {
     case 'gen':
       await runFridaGeneration({
         rootDir: process.cwd(),
-        strictSchema: args.includes('--strict-schema'),
       });
       return 0;
     case 'migration-report':
@@ -55,6 +56,12 @@ async function run(): Promise<number> {
     case 'report':
       return runFridaReportCli(args);
     case 'check':
+      if (args[0] === 'contract-set') {
+        return runFridaAgentsContractSetCheck({
+          rootDir: process.cwd(),
+          includeFridaInternal: args.includes('--include-frida-internal'),
+        });
+      }
       return runFridaCheckCli(args);
     case 'hash':
       return runFridaHashCli(args);

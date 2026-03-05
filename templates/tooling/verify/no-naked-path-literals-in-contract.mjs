@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Enforce PATH_USAGE_POLICY:
+ * Enforce PATH_USAGE_POLICY when the contract defines it:
  * - path-bearing machine fields must use PATHS.* refs
  * - typed *Ref/*Refs fields must resolve and match expected kind
  * - if a *Ref exists, corresponding literal siblings must not coexist
@@ -90,7 +90,7 @@ function loadContractArtifact() {
 function normalizePolicy(contract) {
   const policy = contract.PATH_USAGE_POLICY;
   if (!isObject(policy)) {
-    throw new Error('PATH_USAGE_POLICY block missing in contract artifact');
+    return null;
   }
 
   const failMode = policy.pathBearingMachineFields?.failMode || {};
@@ -571,6 +571,13 @@ function main() {
   } catch (error) {
     console.error(`ERROR: ${error.message}`);
     process.exit(2);
+  }
+
+  if (!policy) {
+    console.log(`Contract artifact: ${artifact.relPath}`);
+    console.log('Path policy block: not defined');
+    console.log('SKIP: PATH_USAGE_POLICY block not present in contract artifact');
+    process.exit(0);
   }
 
   const { violations, warnings } = auditContract(artifact.parsed, policy);

@@ -6,7 +6,7 @@ import { applyBootstrapPlan, renderBootstrapPlan } from './bootstrap-apply.ts';
 import { detectFridaDeployment } from './bootstrap-detect.ts';
 import { loadBootstrapPackageManifest, BootstrapManifestLoadError } from './bootstrap-manifest.ts';
 import { buildBootstrapPlan, BootstrapPlanBuildError } from './bootstrap-plan.ts';
-import { APP_CONTRACT_INBOX_INDEX_REL_PATH } from './contract-mirror.ts';
+import { APP_CONTRACT_INBOX_INDEX_REL_PATH, assertAppContractInboxSource, ContractMirrorError } from './contract-mirror.ts';
 import { validateFridaRootLayout } from './frida-layout.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -68,23 +68,23 @@ function parseArgs(args: string[]): BootstrapArgs {
     };
   }
 
-  if (targetDir) {
+  if (!targetDir) {
     return {
-      mode: normalizedMode as BootstrapCliMode,
-      targetDir,
+      mode: 'invalid',
+      targetDir: null,
       componentName: null,
       dryRun,
       requestedMode,
+      error: 'Missing required flags: use --target <dir> (default warm) or --component <name> [--target <dir>].',
     };
   }
 
   return {
-    mode: 'invalid',
-    targetDir: null,
+    mode: normalizedMode as BootstrapCliMode,
+    targetDir,
     componentName: null,
     dryRun,
     requestedMode,
-    error: 'Missing required flags: use --target <dir> (default warm) or --component <name> [--target <dir>].',
   };
 }
 
@@ -108,7 +108,8 @@ Modes:
 Rules:
   - bootstrap is manual-only and must not be auto-invoked transitively.
   - warm/cold-engine MUST NOT modify app-contract files.
-  - app-side contract source for post-generation is inbox-only: .frida/inbox/app-contract/contract.index.yaml (no fallback to contract/**).
+  - app-side contract source for post-generation is inbox-only: .frida/inbox/app-contract/contract.index.yaml.
+  - retired path markers are detected only for one-way cleanup; bootstrap never regenerates retired surfaces.
   - demo mode is explicit-only and zero-deploy-only.
   - user-owned runtime config (.frida/config.yaml) and reports (.frida/reports/**) are preserved.
 `);
@@ -148,32 +149,67 @@ function findExistingContractFiles(targetDir: string): string[] {
 }
 
 function printBootstrapFailure(code: string, lines: string[] = []): number {
-  console.error(`❌ bootstrap failed: ${code}`);
+  console.error(`bootstrap failed: ${code}`);
   for (const line of lines) {
-    console.error(`   ${line}`);
+    console.error(`  ${line}`);
   }
   return 1;
 }
 
+function unsupportedContractHints(targetDir: string): string[] {
+  const hints: string[] = [];
+  const retiredRootContract = path.join(targetDir, 'contract', 'contract.cbmd.yaml');
+  const retiredInboxContract = path.join(targetDir, '.frida', 'inbox', 'app-contract', 'contract.cbmd.yaml');
+
+  if (fs.existsSync(retiredRootContract)) {
+    hints.push(`unsupported assembled contract file present: ${path.relative(targetDir, retiredRootContract)}`);
+  }
+  if (fs.existsSync(retiredInboxContract)) {
+    hints.push(`unsupported assembled inbox contract file present: ${path.relative(targetDir, retiredInboxContract)}`);
+  }
+
+  return hints;
+}
+
+function ensureCanonicalAppContractInboxOrFail(targetDir: string): number | null {
+  try {
+    assertAppContractInboxSource(targetDir);
+    return null;
+  } catch (error) {
+    if (error instanceof ContractMirrorError) {
+      const details = [
+        `target=${targetDir}`,
+        `required canonical app contract: ${APP_CONTRACT_INBOX_INDEX_REL_PATH}`,
+        error.message,
+        ...unsupportedContractHints(targetDir),
+      ];
+      details.push('Assembled snapshot contracts are not supported for bootstrap input. Migrate to the canonical inbox index first.');
+      return printBootstrapFailure(error.code, details);
+    }
+    throw error;
+  }
+}
+
 function printDetectionSummary(targetDir: string): void {
   const detection = detectFridaDeployment(targetDir);
-  console.log(`ℹ️ Frida markers in target (${targetDir}): ${detection.markerCount}`);
-  console.log(`   runtime config template: ${detection.markers.runtimeConfigTemplate ? 'yes' : 'no'}`);
-  console.log(`   specs router (.frida/contract): ${detection.markers.contractSpecsRouter ? 'yes' : 'no'}`);
-  console.log(`   specs router (.frida legacy):   ${detection.markers.legacyFridaSpecsRouter ? 'yes' : 'no'}`);
-  console.log(`   specs router (.specs):   ${detection.markers.legacySpecsRouter ? 'yes' : 'no'}`);
-  console.log(`   profiles dir (.frida/contract): ${detection.markers.contractProfilesDir ? 'yes' : 'no'}`);
-  console.log(`   profiles dir (.frida legacy):   ${detection.markers.legacyFridaProfilesDir ? 'yes' : 'no'}`);
-  console.log(`   profiles dir (.specs):   ${detection.markers.legacyProfilesDir ? 'yes' : 'no'}`);
-  console.log(`   bootloader AGENTS.md:    ${detection.markers.bootloaderAgents ? 'yes' : 'no'}`);
-  console.log(`   bootloader .frida/contract/AGENTS: ${detection.markers.fridaContractBootloaderAgents ? 'yes' : 'no'}`);
-  console.log(`   bootloader .frida/AGENTS:${detection.markers.fridaBootloaderAgents ? 'yes' : 'no'}`);
+  console.log(`Frida markers in target (${targetDir}): ${detection.markerCount}`);
+  console.log(`  runtime config template: ${detection.markers.runtimeConfigTemplate ? 'yes' : 'no'}`);
+  console.log(`  router (.frida/contract): ${detection.markers.contractSpecsRouter ? 'yes' : 'no'}`);
+  console.log(`  router cleanup marker (.frida/specs): ${detection.markers.retiredFridaSpecsRouter ? 'yes' : 'no'}`);
+  console.log(`  router cleanup marker (.specs): ${detection.markers.retiredSpecsRouter ? 'yes' : 'no'}`);
+  console.log(`  profiles (.frida/contract): ${detection.markers.contractProfilesDir ? 'yes' : 'no'}`);
+  console.log(`  profiles cleanup marker (.frida/profiles): ${detection.markers.retiredFridaProfilesDir ? 'yes' : 'no'}`);
+  console.log(`  profiles cleanup marker (.specs/profiles): ${detection.markers.retiredSpecsProfilesDir ? 'yes' : 'no'}`);
+  console.log(`  bootloader AGENTS.md: ${detection.markers.bootloaderAgents ? 'yes' : 'no'}`);
+  console.log(`  bootloader .frida/contract/AGENTS.md: ${detection.markers.fridaContractBootloaderAgents ? 'yes' : 'no'}`);
+  console.log(`  zone AGENTS.md (.frida): ${detection.markers.fridaManagedZoneAgents ? 'yes' : 'no'}`);
 }
 
 function ensureDemoAssetsOrFail(): { ok: true } | { ok: false; code: number } {
   if (fs.existsSync(BOOTSTRAP_DEMO_ASSETS_ROOT) && fs.statSync(BOOTSTRAP_DEMO_ASSETS_ROOT).isDirectory()) {
     return { ok: true };
   }
+
   return {
     ok: false,
     code: printBootstrapFailure('BOOTSTRAP_ASSETS_MISSING', [
@@ -189,8 +225,7 @@ async function runPostGeneration(targetDir: string): Promise<number> {
       rootDir: targetDir,
       contractPath: APP_CONTRACT_INBOX_INDEX_REL_PATH,
     });
-    // Post-gen may re-emit legacy `.frida/*` roots when app-side contracts still carry legacy PATHS.
-    // Re-apply cleanup-only manifest entries so warm/cold-engine bootstrap still guarantees clean `.frida` root layout.
+
     const loadedManifest = loadBootstrapPackageManifest(REPO_ROOT);
     const cleanupPlan = buildBootstrapPlan({
       packageRoot: loadedManifest.packageRoot,
@@ -209,9 +244,10 @@ async function runPostGeneration(targetDir: string): Promise<number> {
         { dryRun: false }
       );
       console.log(
-        `✅ bootstrap post-gen cleanup completed: delete_dir=${cleanupResult.deleteDirCount}, delete_file=${cleanupResult.deleteFileCount}`
+        `bootstrap post-gen cleanup completed: delete_dir=${cleanupResult.deleteDirCount}, delete_file=${cleanupResult.deleteFileCount}`
       );
     }
+
     validateFridaRootLayout(targetDir, 'fail');
     return 0;
   } catch (error) {
@@ -229,6 +265,11 @@ async function runReconcileMode(
 ): Promise<number> {
   const absoluteTarget = path.resolve(process.cwd(), targetDir);
   const detection = detectFridaDeployment(absoluteTarget);
+
+  const contractInboxCheck = ensureCanonicalAppContractInboxOrFail(absoluteTarget);
+  if (contractInboxCheck !== null) {
+    return contractInboxCheck;
+  }
 
   if (mode === 'warm' && !detection.present) {
     return printBootstrapFailure('FRIDA_NOT_DEPLOYED', [
@@ -278,7 +319,7 @@ async function runReconcileMode(
   console.log(renderBootstrapPlan(plan));
   const applyResult = applyBootstrapPlan(plan, { dryRun });
   console.log(
-    `✅ bootstrap ${dryRun ? 'dry-run' : 'apply'} plan completed: reset=${applyResult.resetDirCount}, delete_dir=${applyResult.deleteDirCount}, delete_file=${applyResult.deleteFileCount}, ensure=${applyResult.ensureDirCount}, copy=${applyResult.copyFileCount}`
+    `bootstrap ${dryRun ? 'dry-run' : 'apply'} plan completed: reset=${applyResult.resetDirCount}, delete_dir=${applyResult.deleteDirCount}, delete_file=${applyResult.deleteFileCount}, ensure=${applyResult.ensureDirCount}, copy=${applyResult.copyFileCount}`
   );
 
   if (dryRun || !plan.requiresGeneration) {
@@ -296,6 +337,11 @@ async function runComponentMode(componentName: string, targetDir: string, dryRun
       `target=${absoluteTarget}`,
       'Component reconcile requires an existing Frida deployment.',
     ]);
+  }
+
+  const contractInboxCheck = ensureCanonicalAppContractInboxOrFail(absoluteTarget);
+  if (contractInboxCheck !== null) {
+    return contractInboxCheck;
   }
 
   let loadedManifest;
@@ -332,12 +378,13 @@ async function runComponentMode(componentName: string, targetDir: string, dryRun
   console.log(renderBootstrapPlan(plan));
   const applyResult = applyBootstrapPlan(plan, { dryRun });
   console.log(
-    `✅ bootstrap component ${dryRun ? 'dry-run' : 'apply'} completed: component=${componentName}, reset=${applyResult.resetDirCount}, delete_dir=${applyResult.deleteDirCount}, delete_file=${applyResult.deleteFileCount}, ensure=${applyResult.ensureDirCount}, copy=${applyResult.copyFileCount}`
+    `bootstrap component ${dryRun ? 'dry-run' : 'apply'} completed: component=${componentName}, reset=${applyResult.resetDirCount}, delete_dir=${applyResult.deleteDirCount}, delete_file=${applyResult.deleteFileCount}, ensure=${applyResult.ensureDirCount}, copy=${applyResult.copyFileCount}`
   );
 
   if (dryRun || !plan.requiresGeneration) {
     return 0;
   }
+
   return runPostGeneration(absoluteTarget);
 }
 
@@ -388,7 +435,7 @@ export async function runFridaBootstrapCli(args: string[] = []): Promise<number>
     }
 
     if (parsed.mode === 'invalid') {
-      console.error(`❌ bootstrap failed: ${parsed.error || 'invalid arguments'}`);
+      console.error(`bootstrap failed: ${parsed.error || 'invalid arguments'}`);
       showHelp();
       return 2;
     }
@@ -403,7 +450,7 @@ export async function runFridaBootstrapCli(args: string[] = []): Promise<number>
 
     return runReconcileMode(parsed.mode, parsed.targetDir!, parsed.dryRun);
   } catch (error) {
-    console.error(`❌ bootstrap failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`bootstrap failed: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
 }

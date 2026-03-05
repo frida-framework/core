@@ -27,7 +27,7 @@ This document defines the boundaries between different zones in the codebase.
 ## Cross-Zone Rules
 
 1. **No imports from read-only zones to read-write zones** - Read-only zones are source-of-truth
-2. **No legacy imports in active zones** - Use `/legacy/**` only for archived code
+2. **No archived-surface imports in active zones** - Use the archived import surface only for archived code
 3. **Application-specific cross-zone rules are adapter-owned** - Core template remains domain-agnostic
 
 ## Enforcement

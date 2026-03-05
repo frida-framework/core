@@ -122,37 +122,40 @@ entries:
       - cold-engine
       - demo
 
-  - id: legacy_specs_root
+  - id: cleanup_specs_root
     target: ".specs"
     kind: dir
     ownership_class: engine_generated
     apply_mode: generated
     prune_scope: true
+    cleanup_only: true
     modes:
       - warm
       - cold-engine
 
-  - id: legacy_docs_policy_root
+  - id: cleanup_docs_policy_root
     target: "docs/policy"
     kind: dir
     ownership_class: engine_generated
     apply_mode: generated
     prune_scope: true
+    cleanup_only: true
     modes:
       - warm
       - cold-engine
 
-  - id: legacy_docs_reference_root
+  - id: cleanup_docs_reference_root
     target: "docs/reference"
     kind: dir
     ownership_class: engine_generated
     apply_mode: generated
     prune_scope: true
+    cleanup_only: true
     modes:
       - warm
       - cold-engine
 
-  - id: legacy_frida_specs_root
+  - id: cleanup_frida_specs_root
     target: ".frida/specs"
     kind: dir
     ownership_class: engine_generated
@@ -163,7 +166,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_profiles_root
+  - id: cleanup_frida_profiles_root
     target: ".frida/profiles"
     kind: dir
     ownership_class: engine_generated
@@ -174,7 +177,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_docs_root
+  - id: cleanup_frida_docs_root
     target: ".frida/docs"
     kind: dir
     ownership_class: engine_generated
@@ -185,7 +188,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_internal_root
+  - id: cleanup_frida_internal_root
     target: ".frida/internal"
     kind: dir
     ownership_class: engine_generated
@@ -196,7 +199,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_playbooks_root
+  - id: cleanup_frida_playbooks_root
     target: ".frida/playbooks"
     kind: dir
     ownership_class: engine_generated
@@ -207,7 +210,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_visual_root
+  - id: cleanup_frida_visual_root
     target: ".frida/visual"
     kind: dir
     ownership_class: engine_generated
@@ -218,7 +221,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_cache_root
+  - id: cleanup_frida_cache_root
     target: ".frida/cache"
     kind: dir
     ownership_class: engine_generated
@@ -354,18 +357,16 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_bootloader_agents_file
+  - id: frida_managed_zone_agents
     target: ".frida/AGENTS.md"
     kind: file
     ownership_class: engine_generated
     apply_mode: generated
-    prune_scope: true
-    cleanup_only: true
     modes:
       - warm
       - cold-engine
 
-  - id: legacy_frida_generated_ir_file
+  - id: cleanup_frida_generated_ir_file
     target: ".frida/frida.ir.json"
     kind: file
     ownership_class: engine_generated
@@ -376,7 +377,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_generated_permissions_file
+  - id: cleanup_frida_generated_permissions_file
     target: ".frida/frida.permissions.json"
     kind: file
     ownership_class: engine_generated
@@ -387,7 +388,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_generated_graph_file
+  - id: cleanup_frida_generated_graph_file
     target: ".frida/frida.graph.mmd"
     kind: file
     ownership_class: engine_generated
@@ -398,7 +399,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_generated_adapter_index_file
+  - id: cleanup_frida_generated_adapter_index_file
     target: ".frida/frida.adapter.generated.json"
     kind: file
     ownership_class: engine_generated
@@ -409,7 +410,7 @@ entries:
       - warm
       - cold-engine
 
-  - id: legacy_frida_visual_overlay_file
+  - id: cleanup_frida_visual_overlay_file
     target: ".frida/visual-schema.overlay.json"
     kind: file
     ownership_class: engine_generated
@@ -426,7 +427,7 @@ entries:
     kind: file
     ownership_class: engine_static
     apply_mode: copy
-    sha256: "sha256:a9454dad156d51bdece08e313a2d12b8acc2e69e976100c6660e3968e60c69e6"
+    sha256: "sha256:51292521beefbe84aa76c7acbfe574f6163d21df16f0f9c5665f2e32e870a9ea"
     modes:
       - warm
       - cold-engine
@@ -450,7 +451,7 @@ entries:
     kind: file
     ownership_class: engine_static
     apply_mode: copy
-    sha256: "sha256:365b1859f3c582e183f884ce9d0c886bca77298c64b3e0d9baa0854bf03c810a"
+    sha256: "sha256:8c23e9e11a98fc365fcd2730748bba02327958fe2779a8a2a18bf0135e0656a1"
     modes:
       - warm
       - cold-engine

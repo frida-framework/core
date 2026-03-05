@@ -92,6 +92,24 @@ function resolvePathLike(contract: Record<string, any>, value: unknown): string 
     return value;
 }
 
+function isZoneDefinition(value: unknown): value is Record<string, any> {
+    if (!value || typeof value !== 'object') {
+        return false;
+    }
+
+    const zoneData = value as Record<string, any>;
+    return typeof zoneData.pathGlobRef === 'string' || typeof zoneData.path === 'string';
+}
+
+function getZoneEntries(contract: Record<string, any>): Array<[string, Record<string, any>]> {
+    if (!contract.ZONES || typeof contract.ZONES !== 'object') {
+        return [];
+    }
+
+    return Object.entries(contract.ZONES)
+        .filter(([, value]) => isZoneDefinition(value)) as Array<[string, Record<string, any>]>;
+}
+
 // === CONTRACT LOADER ===
 export function loadZones(contractPath?: string): Map<string, Zone> {
     const loaded = loadContractDocument(ROOT_DIR, contractPath);
@@ -102,7 +120,7 @@ export function loadZones(contractPath?: string): Map<string, Zone> {
         throw new Error('ZONES block not found in contract');
     }
 
-    for (const [id, data] of Object.entries(contract.ZONES)) {
+    for (const [id, data] of getZoneEntries(contract)) {
         const zoneData = data as any;
         const zonePath =
             resolvePathLike(contract, zoneData.pathGlobRef) ||
@@ -249,7 +267,10 @@ export function getExpectedAgentsMd(zone: Zone): string {
         const basePath = zone.path.replace(/\/?\*\*?\/?$/, '');
         return `${basePath}/AGENTS.md`;
     }
-    return `${zone.agentsPath}/AGENTS.md`;
+    if (zone.agentsPath === '.') {
+        return 'AGENTS.md';
+    }
+    return `${zone.agentsPath.replace(/\/$/, '')}/AGENTS.md`;
 }
 
 /**

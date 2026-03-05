@@ -10,8 +10,8 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, '..');
-const DEFAULT_CONTRACT_FILE = 'contract/contract.cbmd.yaml';
+const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
+const DEFAULT_CONTRACT_FILE = '.frida/inbox/app-contract/contract.index.yaml';
 
 function toFsPath(relativePath) {
   return path.join(ROOT_DIR, relativePath.replace(/^\.\//, '').replace(/^\/+/, ''));

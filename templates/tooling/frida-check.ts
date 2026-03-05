@@ -11,6 +11,7 @@ import {
   type ValidationResult,
 } from './frida-core-bridge.ts';
 import { spawnSync } from 'child_process';
+import { existsSync } from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -26,8 +27,25 @@ export {
 };
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
-const CONTRACT_SET_VERIFIER = path.join(REPO_ROOT, 'scripts', 'verify', 'check-agents-contract-set.mjs');
+const REPO_ROOT = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
+
+function resolveContractSetVerifier(): string {
+  const candidates = [
+    path.join(REPO_ROOT, 'scripts', 'verify', 'check-agents-contract-set.mjs'),
+    path.join(REPO_ROOT, 'templates', 'tooling', 'verify', 'check-agents-contract-set.mjs'),
+    path.join(SCRIPT_DIR, 'verify', 'check-agents-contract-set.mjs'),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
+}
+
+const CONTRACT_SET_VERIFIER = resolveContractSetVerifier();
 
 function normalizeCliArgs(argv: string[]): string[] {
   if (argv.length === 0) return argv;

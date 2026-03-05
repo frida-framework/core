@@ -1,10 +1,13 @@
 <frida_router>
   <protocol>
-    1. ANALYZE user prompt for keywords.
-    2. MATCH keywords to a <profile>.
-    3. READ the file specified in 'context_path'.
-    4. ADOPT the role and constraints.
-    5. EXECUTE task.
+    1. CHECK if user prompt contains an explicit selector token `profile:<id>`.
+      1.1. If found: select the profile with matching id. If no profile matches → HALT with `no_profile_match`.
+      1.2. If not found: proceed to step 2.
+      2. ANALYZE user prompt for keywords.
+      3. MATCH keywords to a <profile>.
+        4. READ the file specified in 'context_path'.
+        5. ADOPT the role and constraints.
+        6. EXECUTE task.
   </protocol>
 
   <profiles>
@@ -12,7 +15,7 @@
     <profile id="{{id}}">
       <role>{{role}}</role>
       <keywords>{{keywords}}</keywords>
-      <context_path>.specs/profiles/{{id}}.xml</context_path>
+      <context_path>.frida/contract/profiles/{{id}}.xml</context_path>
     </profile>
     {{/each}}
   </profiles>

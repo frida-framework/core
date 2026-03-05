@@ -1,9 +1,11 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { loadContractDocument } from './contract-path.ts';
 
 const FIXED_TIMESTAMP = '1970-01-01T00:00:00.000Z';
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 type AnyObject = Record<string, any>;
 
@@ -339,8 +341,8 @@ interface SchemaDerivedConfig {
 }
 
 function findSchemaPath(): string | null {
-    // Walk up from __dirname to find schemas/frida-contract.schema.json
-    let dir = path.resolve(__dirname);
+    // Walk up from the module directory to find schemas/frida-contract.schema.json
+    let dir = path.resolve(MODULE_DIR);
     for (let i = 0; i < 5; i++) {
         const candidate = path.join(dir, 'schemas', 'frida-contract.schema.json');
         if (fs.existsSync(candidate)) {
@@ -672,7 +674,7 @@ export function extractVisualSchemaOverlay(
             generatedAt,
             contractSha256: sha256(contractRaw),
             visualSchemaVersion: schemaVersion,
-            source: options.sourcePath || path.posix.join('contract', 'contract.cbmd.yaml'),
+            source: options.sourcePath || path.posix.join('contract', 'contract.index.yaml'),
             nodeCount: nodes.length,
             edgeCount: edges.length,
         },

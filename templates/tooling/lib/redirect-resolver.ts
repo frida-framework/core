@@ -190,7 +190,7 @@ export const DEFAULT_REDIRECT_RULES: RedirectRule[] = [
   },
   {
     from: 'dist/aistudio/**',
-    to: 'contract/contract.index.yaml',
+    to: '.frida/inbox/app-contract/contract.index.yaml',
     reason: 'AI Studio artifacts are managed externally',
     guide: 'docs/aistudio/sync.md',
   },

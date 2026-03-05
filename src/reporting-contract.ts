@@ -280,11 +280,13 @@ export function resolveEffectiveRuntimeConfig(
   }
 
   if (typeof rawReporting.repo_path === 'string' && rawReporting.repo_path.trim().length > 0) {
-    effective.reporting.repo_path = rawReporting.repo_path;
-    if (rawReporting.repo_path === '.frida/job-reports') {
+    if (rawReporting.repo_path === REPORTING_SETTINGS_FIXED.repoPath) {
+      effective.reporting.repo_path = rawReporting.repo_path;
+    } else {
       warnings.push(
-        `runtime config file uses legacy reporting.repo_path=.frida/job-reports in ${RUNTIME_CONFIG_REL_PATH}; this is supported but new defaults use .frida/reports`
+        `runtime config file requests unsupported reporting.repo_path=${rawReporting.repo_path} in ${RUNTIME_CONFIG_REL_PATH}; using ${REPORTING_SETTINGS_FIXED.repoPath}`
       );
+      usedDefaults = true;
     }
   } else if ('reporting' in rawObject && 'repo_path' in rawReporting) {
     usedDefaults = true;

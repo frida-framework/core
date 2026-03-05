@@ -16,7 +16,7 @@ import * as yaml from 'yaml';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, '..');
+const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
 const RUNTIME_CONFIG_PATH = path.resolve(ROOT_DIR, '.frida', 'config.yaml');
 const WIKI_PATH = process.env.FRIDA_WIKI_PATH
     ? path.resolve(ROOT_DIR, process.env.FRIDA_WIKI_PATH)

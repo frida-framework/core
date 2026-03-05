@@ -340,7 +340,7 @@ export function buildBootstrapPlan(options: BuildBootstrapPlanOptions): Bootstra
           seen,
           targetDir,
           entry.target,
-          `Strict reconcile removes declared legacy file (${entry.id})`
+          `Strict reconcile removes declared cleanup-only file (${entry.id})`
         );
         continue;
       }
@@ -351,7 +351,7 @@ export function buildBootstrapPlan(options: BuildBootstrapPlanOptions): Bootstra
           seen,
           targetDir,
           entry.target,
-          `Strict reconcile removes declared legacy directory (${entry.id})`
+          `Strict reconcile removes declared cleanup-only directory (${entry.id})`
         );
         continue;
       }

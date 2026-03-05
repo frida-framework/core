@@ -1,8 +1,58 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as yaml from 'yaml';
 
-export const FRIDA_ROOT_ALLOWED_FILES = ['config.yaml'] as const;
-export const FRIDA_ROOT_ALLOWED_DIRS = ['contract', 'reports', 'inbox', 'templates'] as const;
+export const FRIDA_ROOT_ALLOWED_FILES = ['AGENTS.md', 'config.yaml'] as const;
+
+/** Baseline fallback used only when the frida-core contract mirror is unavailable (e.g., pre-bootstrap). */
+export const FRIDA_ROOT_ALLOWED_DIRS_BASELINE = ['contract', 'inbox', 'reports', 'templates'] as const;
+
+/** Relative path from repo root to the frida-core contract mirror index. */
+export const FRIDA_CORE_CONTRACT_MIRROR_PATH = '.frida/contract/frida/contract.index.yaml';
+
+/**
+ * Loads allowed_dirs from FRIDA_ROOT_LAYOUT_POLICY in the frida-core contract mirror.
+ * Falls back to FRIDA_ROOT_ALLOWED_DIRS_BASELINE if the mirror is not found.
+ * This ensures the contract is the single source of truth — no drift between YAML and code.
+ */
+export function loadAllowedDirs(rootDir: string): string[] {
+  const absoluteRoot = path.resolve(rootDir);
+  const mirrorIndexPath = path.resolve(absoluteRoot, FRIDA_CORE_CONTRACT_MIRROR_PATH);
+
+  if (!fs.existsSync(mirrorIndexPath)) {
+    return [...FRIDA_ROOT_ALLOWED_DIRS_BASELINE];
+  }
+
+  try {
+    const indexRaw = fs.readFileSync(mirrorIndexPath, 'utf-8');
+    const index = yaml.parse(indexRaw) as { layers?: Array<{ path: string }> };
+    const layers = Array.isArray(index?.layers) ? index.layers : [];
+    const mirrorDir = path.dirname(mirrorIndexPath);
+
+    for (const layer of layers) {
+      if (typeof layer?.path !== 'string') continue;
+      // Mirror flattens the contract/ prefix: contract/layers/foo.yaml → layers/foo.yaml under mirrorDir.
+      // Try: (1) relative to mirrorDir as-is, (2) strip first path segment then relative to mirrorDir, (3) relative to rootDir.
+      const stripped = layer.path.replace(/^[^/]+\//, ''); // removes leading "contract/"
+      const candidates = [
+        path.resolve(mirrorDir, layer.path),
+        path.resolve(mirrorDir, stripped),
+        path.resolve(absoluteRoot, layer.path),
+      ];
+      const layerPath = candidates.find((p) => fs.existsSync(p));
+      if (!layerPath) continue;
+      const layerParsed = yaml.parse(fs.readFileSync(layerPath, 'utf-8')) as Record<string, any>;
+      const policy = layerParsed?.FRIDA_ROOT_LAYOUT_POLICY;
+      if (policy && Array.isArray(policy.allowed_dirs)) {
+        return policy.allowed_dirs.filter((d: unknown) => typeof d === 'string');
+      }
+    }
+  } catch {
+    // If anything goes wrong, fall back to baseline
+  }
+
+  return [...FRIDA_ROOT_ALLOWED_DIRS_BASELINE];
+}
 
 export type FridaRootLayoutValidationMode = 'warn' | 'fail';
 
@@ -99,8 +149,8 @@ export function getFridaRootLayoutValidation(rootDir: string): FridaRootLayoutVa
     }
   }
 
-  const allowedDirs = new Set(FRIDA_ROOT_ALLOWED_DIRS);
-  const unexpectedDirs = state.dirs.filter((name) => !allowedDirs.has(name as (typeof FRIDA_ROOT_ALLOWED_DIRS)[number]));
+  const allowedDirs = new Set(loadAllowedDirs(rootDir));
+  const unexpectedDirs = state.dirs.filter((name) => !allowedDirs.has(name));
   if (unexpectedDirs.length > 0) {
     issues.push(`unexpected .frida root director${unexpectedDirs.length === 1 ? 'y' : 'ies'}: ${unexpectedDirs.join(', ')}`);
   }

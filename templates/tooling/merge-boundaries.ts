@@ -1,4 +1,4 @@
-#!/usr/bin/env npx ts-node
+#!/usr/bin/env tsx
 /**
  * Merge mx_cities_casetas.yaml and mx_cities_gates.yaml into mx_cities_boundaries.yaml
  * 
@@ -9,6 +9,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 interface Gate {
   lat: string;
@@ -482,7 +483,10 @@ function ensureValidBoundaries(data: YAMLData): { data: YAMLData; citiesNeedingP
 
 // Main execution
 async function main() {
-  const resourcesDir = path.join(__dirname, '..', 'resources');
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const rootDir = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
+  const resourcesDir = path.join(rootDir, 'resources');
   
   const casetasPath = path.join(resourcesDir, 'mx_cities_casetas.yaml');
   const gatesPath = path.join(resourcesDir, 'mx_cities_gates.yaml');

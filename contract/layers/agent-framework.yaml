@@ -14,14 +14,19 @@ FRIDA_TASK_PROFILES:
     security:
       read_allow:
         - "tasks/**"
+        - ".frida/AGENTS.md"
+        - ".frida/config.yaml"
+        - ".frida/templates/config.template.yaml"
+        - ".frida/contract/**"
         - ".frida/reports/*.yaml"
       edit_allow:
         - "tasks/inbox/**"
       create_allow:
         - ".frida/reports/*.yaml"
       forbid:
-        - ".frida/**"
+        - ".frida/inbox/**"
       edit_forbid:
+        - ".frida/**"
         - "tasks/TASK-*.md"
         - "tasks/**/TASK-*.md"
         - ".frida/reports/*.yaml"
@@ -42,7 +47,7 @@ FRIDA_TASK_PROFILES:
         - ".frida/reports/*.yaml"
       edit_allow: []
       forbid:
-        - ".frida/**"
+        - ".frida/inbox/**"
       edit_forbid:
         - "tasks/README.md"
   readonly_observer:
@@ -153,10 +158,10 @@ FRIDA_ENFORCEMENT:
       text: >-
         Identifiers MUST be neutral snake_case and MUST NOT contain profanity or
         jokes.
-    - id: no_legacy_id_fields
+    - id: no_secondary_id_fields
       text: >-
-        Contract blocks MUST NOT contain legacy_id fields; use source_ref during
-        migration if needed.
+        Contract blocks MUST NOT contain secondary migration-only id fields; use
+        source_ref if provenance must be preserved.
     - id: contract_uniformity
       text: "Contract MUST be structured and uniform across blocks."
     - id: rules_are_prominent
@@ -178,7 +183,7 @@ FRIDA_ENFORCEMENT:
       enforcement: hard
     - id: GUARD_ARTIFACT_NO_MANUAL_EDITS
       kind: nail
-      statement: "Generated artifacts (.frida/contract/profiles/, .frida/contract/AGENTS.md, .frida/contract/docs/) and compat mirrors (.specs/, docs/policy/, docs/reference/) must not be manually edited."
+      statement: "Generated artifacts (.frida/contract/profiles/, .frida/contract/AGENTS.md, .frida/contract/docs/) must not be manually edited."
       enforcement: warn
     - id: GUARD_WORKSPACE_TEMP_ONLY
       kind: ban

@@ -116,7 +116,7 @@ function loadAdapterConfig(rootDir: string, contractPath: string): AdapterConfig
 
 export function createContractDrivenAdapter(options: AdapterOptions = {}): FridaAdapter {
   const rootDir = path.resolve(options.rootDir || process.cwd());
-  const contractPath = options.contractPath || 'contract/contract.index.yaml';
+  const contractPath = options.contractPath || '.frida/inbox/app-contract/contract.index.yaml';
   const config = loadAdapterConfig(rootDir, contractPath);
 
   return {

@@ -1,6 +1,46 @@
 # ─── LAYER 8: MANAGEMENT ───────────────────────────────────────────────────
 # Purpose: Interfaces for interacting with the contract — how to read, verify,
 #          and change it. Specs, guards, antitasks, update/verify/taskset protocols.
+#          Also defines version policy for package, contract, and schema.
+
+FRIDA_VERSION_POLICY:
+  _visibility: public
+  id: frida-version-policy
+  version: 1.0.0
+  purpose: "Defines version domains, their sources of truth, and bump rules."
+  domains:
+    package:
+      source_of_truth: package.json → version
+      format: semver
+      bump_rules:
+        major: "Breaking change in public API (exports, CLI arguments, contract-mirror interface)."
+        minor: "New feature, new contract block, new CLI command, non-breaking API addition."
+        patch: "Bug fix, documentation, internal refactor with no API change."
+    contract:
+      source_of_truth: contract/contract.index.yaml → version
+      mirror: contract/layers/identity.yaml → CONTRACT_META.version
+      format: semver
+      consistency_rule: "contract.index.yaml version MUST equal CONTRACT_META.version."
+      bump_rules:
+        major: "New required top-level block, removal of existing block, structural incompatibility."
+        minor: "New optional block, new layer, new interface, new guard/invariant."
+        patch: "Wording fix, metadata update, non-structural clarification."
+    schema:
+      source_of_truth: schemas/frida-contract.schema.json → title (version suffix)
+      mirror: contract/contract.index.yaml → schema_version
+      mirror_2: contract/layers/identity.yaml → meta.schemaVersion
+      format: "MAJOR.MINOR"
+      consistency_rule: "All three locations MUST declare the same version."
+      bump_rules:
+        major: "New required property, removal of property, type change."
+        minor: "New optional property, relaxed constraint, enum extension."
+  invariants:
+    - id: version.contract_meta_sync
+      text: "CONTRACT_META.version MUST equal contract.index.yaml version at all times."
+    - id: version.schema_sync
+      text: "schema title, schema_version, and meta.schemaVersion MUST be identical."
+    - id: version.bump_on_mutation
+      text: "Any interface that mutates contract or code MUST evaluate version_impact."
 
 FRIDA_GUARD_SPEC:
   _visibility: private
@@ -151,6 +191,54 @@ FRIDA_INTERFACE_VERIFY:
       description: "Compute quality metrics from CONTRACT_MANAGEMENT_INTERFACE."
       metrics_ref: CONTRACT_MANAGEMENT_INTERFACE.quality_metrics
 
+FRIDA_INTERFACE_AUDIT:
+  _visibility: public
+  id: frida-interface-audit
+  version: 1.0.0
+  purpose: "Deployment readiness audit: validate contract structure, routing, and Frida surface integrity."
+  playbook_ref: "templates/management/AGENT-repo-audit.md"
+  requires_profile: readonly_observer
+  operations:
+    deployment_check:
+      description: "Verify Frida deployment structure (.frida/ layout, markers, config)."
+      steps:
+        - "Read app contract index from .frida/inbox/app-contract/contract.index.yaml and mirrored core contract index from .frida/contract/frida/contract.index.yaml"
+        - "Validate index against FRIDA_SCHEMA_SUPPORT.schema_version"
+        - "Verify AGENTS.md contract-set completeness"
+    contract_consistency:
+      description: "Check app contract against core contract format invariants."
+      checks:
+        - index_format_symmetric
+        - refs_resolve_via_exports
+        - schema_version_fixed
+    routing_check:
+      description: "Verify AGENTS.md routing chain completeness and correctness."
+      steps:
+        - "Verify root AGENTS.md exists and references correct paths"
+        - "Verify ROUTER.xml exists at .frida/contract/specs/"
+        - "Verify profile XMLs exist at .frida/contract/profiles/"
+        - "Verify zone AGENTS.md files match contract ZONES"
+    cli_diagnostics:
+      description: "Run automated CLI diagnostics."
+      commands:
+        - "frida-core migration-report"
+        - "frida-core check zone --path ."
+        - "frida-core check contract-set"
+  output:
+    format: report
+    includes:
+      - deployment_status
+      - contract_issues
+      - routing_issues
+      - cli_results
+      - readiness_verdict
+  keywords:
+    - audit
+    - deployment
+    - readiness
+    - diagnostics
+    - health-check
+
 CONTRACT_MANAGEMENT_INTERFACE:
   _visibility: public
   id: contract-management-interface
@@ -244,6 +332,10 @@ FRIDA_INTERFACE_UPDATE_SPEC:
   output:
     format: yaml
     requires_approval: true
+  version_impact:
+    evaluate: always
+    rule: "After applying changes, determine affected version domains (contract, schema, package) and bump per FRIDA_VERSION_POLICY."
+    ref: FRIDA_VERSION_POLICY
   protocols:
     update:
       description: "Apply changes to contract via structured patch."
@@ -269,6 +361,10 @@ FRIDA_INTERFACE_UPDATE_CODE:
   output:
     format: yaml
     requires_approval: true
+  version_impact:
+    evaluate: always
+    rule: "After extracting contract from code, compare with declared contract. If new blocks/fields added, bump contract version per FRIDA_VERSION_POLICY."
+    ref: FRIDA_VERSION_POLICY
   use_cases:
     - "Onboard existing project to Frida."
     - "Background consistency loop: re-extract contract from code, diff against declared contract."
@@ -303,6 +399,9 @@ FRIDA_INTERFACE_TASKSET:
       - "Antitask generated after last contract update."
       - "Profile covers target paths via edit_allowGlobRefs."
       - "Profile invariants are current for the task."
+    version_check:
+      - "Contract version matches CONTRACT_META.version (FRIDA_VERSION_POLICY.invariants.version.contract_meta_sync)."
+      - "Schema version consistent across all sources (FRIDA_VERSION_POLICY.invariants.version.schema_sync)."
     scope_check:
       - "Task does not add functionality beyond what is described in contract."
       - "If new functionality needed — update contract first."

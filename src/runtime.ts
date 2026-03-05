@@ -1,7 +1,6 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { runLegacyFridaGenerator } from './legacy-generator.ts';
+import { runFridaArtifactGenerator } from './generator.ts';
 import { resolveSelectors } from './selector.ts';
 import { collectMigrationIssues, normalizeContractModel, validateFridaSchemaModel } from './schema.ts';
 import { loadContractDocument } from './contract-path.ts';
@@ -10,6 +9,7 @@ import {
   APP_CONTRACT_INBOX_INDEX_REL_PATH,
   assertAppContractInboxSource,
   emitAppContractSourceMirror,
+  emitCoreToolingEntrypoints,
   emitFridaContractSourceMirror,
   emitTemplatesMirror,
   ContractMirrorError,
@@ -49,11 +49,10 @@ function loadContract(options: RunFridaCoreOptions): LoadedContract {
     assertAppContractInboxSource(effectiveRootDir, absoluteContractPath);
   }
 
-  const loaded = loadContractDocument(effectiveRootDir, effectiveContractPath);
-  return loaded;
+  return loadContractDocument(effectiveRootDir, effectiveContractPath);
 }
 
-function resolveRequiredSelectorSemantics(results: ResolvedSelectorResult[]): { warnings: string[]; } {
+function resolveRequiredSelectorSemantics(results: ResolvedSelectorResult[]): { warnings: string[] } {
   const warnings: string[] = [];
 
   for (const result of results) {
@@ -94,24 +93,16 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
     }
     throw error;
   }
+
   process.env.FRIDA_REPO_ROOT = loaded.rootDir;
   process.env.FRIDA_CONTRACT_PATH = loaded.contractPath;
 
   const normalized = normalizeContractModel(loaded.parsed);
-  try {
-    validateFridaSchemaModel(normalized.model);
-  } catch (error) {
-    if (options.strictSchema) {
-      throw error;
-    } else {
-      const msg = error instanceof Error ? error.message : String(error);
-      console.warn(`⚠️ Schema validation bypassed (strictSchema=false): ${msg}`);
-    }
-  }
+  validateFridaSchemaModel(normalized.model);
 
-  if (options.strictSchema && normalized.telemetry.deprecatedFieldCount > 0) {
+  if (normalized.telemetry.deprecatedFieldCount > 0) {
     throw new Error(
-      `strict schema mode failed: ${normalized.telemetry.deprecatedFieldCount} deprecated field(s) are still present`
+      `unsupported contract fields detected: ${normalized.telemetry.deprecatedFieldCount} deprecated field(s) present`
     );
   }
 
@@ -120,42 +111,38 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
   const selectorSemantics = resolveRequiredSelectorSemantics(sources.ordered);
 
   for (const warning of normalized.telemetry.warnings) {
-    console.warn(`⚠️  ${warning}`);
-  }
-  if (normalized.telemetry.deprecatedFieldCount > 0) {
-    console.warn(
-      `⚠️  Legacy compatibility telemetry: ${normalized.telemetry.deprecatedFieldCount} deprecated field(s) detected`
-    );
+    console.warn(warning);
   }
   for (const warning of selectorSemantics.warnings) {
-    console.warn(`⚠️  ${warning}`);
+    console.warn(warning);
   }
 
-  if (options.strictSchema !== false) {
-    await runLegacyFridaGenerator({});
-  } else {
-    console.log('✅ Bypassing core legacy artifact generation for app contract (strictSchema=false)');
-  }
+  await runFridaArtifactGenerator({});
 
   const runtimeConfigArtifacts = ensureRuntimeConfigArtifacts(loaded.rootDir, getContractReportingSettings(loaded.parsed));
   if (runtimeConfigArtifacts.createdRuntimeConfig) {
-    console.log(`✅ Runtime config created: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.runtimeConfigPath)}`);
+    console.log(`Runtime config created: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.runtimeConfigPath)}`);
   } else {
-    console.log(`ℹ️ Runtime config preserved: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.runtimeConfigPath)}`);
+    console.log(`Runtime config preserved: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.runtimeConfigPath)}`);
   }
-  console.log(`✅ Runtime config template written: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.templatePath)}`);
+  console.log(`Runtime config template written: ${path.relative(loaded.rootDir, runtimeConfigArtifacts.templatePath)}`);
   for (const warning of runtimeConfigArtifacts.warnings) {
-    console.warn(`⚠️  ${warning}`);
+    console.warn(warning);
   }
 
   if (!isEngineSelfRepo(loaded.rootDir)) {
     const fridaMirrorDir = emitFridaContractSourceMirror(loaded.rootDir, ENGINE_PACKAGE_ROOT);
-    console.log(`✅ Frida contract mirror written: ${path.relative(loaded.rootDir, fridaMirrorDir)}`);
+    console.log(`Frida contract mirror written: ${path.relative(loaded.rootDir, fridaMirrorDir)}`);
     const appMirrorDir = emitAppContractSourceMirror(loaded.rootDir);
-    console.log(`✅ App contract working copy written: ${path.relative(loaded.rootDir, appMirrorDir)}`);
+    console.log(`App contract working copy written: ${path.relative(loaded.rootDir, appMirrorDir)}`);
 
     const templatesDir = emitTemplatesMirror(loaded.rootDir, ENGINE_PACKAGE_ROOT);
-    console.log(`✅ Frida templates distributed: ${path.relative(loaded.rootDir, templatesDir)}`);
+    console.log(`Frida templates distributed: ${path.relative(loaded.rootDir, templatesDir)}`);
+
+    const projectedEntrypoints = emitCoreToolingEntrypoints(loaded.rootDir, loaded.parsed);
+    for (const entrypointPath of projectedEntrypoints) {
+      console.log(`Core tooling entrypoint written: ${path.relative(loaded.rootDir, entrypointPath)}`);
+    }
   }
 
   validateFridaRootLayout(loaded.rootDir, 'warn');
@@ -172,11 +159,11 @@ export function runFridaMigrationReport(options: RunFridaCoreOptions = {}): numb
   const issues = collectMigrationIssues(loaded.parsed, Boolean(options.strictSchema));
 
   if (issues.length === 0) {
-    console.log('✅ No deprecated contract fields found.');
+    console.log('No deprecated contract fields found.');
     return 0;
   }
 
-  console.log('📋 Frida migration report\n');
+  console.log('Frida migration report\n');
   for (const issue of issues) {
     console.log(`- ${formatIssue(issue)}`);
   }

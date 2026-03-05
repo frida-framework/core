@@ -80,15 +80,15 @@ FRIDA_CONTRACT_BOOTSTRAP:
     frida_present_when_any:
       - ".frida/templates/config.template.yaml"
       - ".frida/contract/specs/ROUTER.xml"
-      - ".frida/specs/ROUTER.xml (legacy pre-contract-layout marker)"
-      - ".specs/ROUTER.xml (legacy compatibility marker)"
+      - ".frida/specs/ROUTER.xml (retired-path cleanup marker)"
+      - ".specs/ROUTER.xml (retired-path cleanup marker)"
       - ".frida/contract/profiles/*"
-      - ".frida/profiles/* (legacy pre-contract-layout marker)"
-      - ".specs/profiles/* (legacy compatibility marker)"
+      - ".frida/profiles/* (retired-path cleanup marker)"
+      - ".specs/profiles/* (retired-path cleanup marker)"
       - "AGENTS.md (FRIDA bootloader signature)"
       - ".frida/contract/AGENTS.md (FRIDA bootloader signature, canonical internal mirror)"
-      - ".frida/AGENTS.md (FRIDA bootloader signature, legacy compatibility marker)"
-    note: "Marker inconsistency is expected under drift; warm reconcile repairs it."
+      - ".frida/AGENTS.md (Frida-managed zone AGENTS.md)"
+    note: "Retired-path markers may still be detected to support one-way cleanup during bootstrap."
   reconcile_policy:
     package_is_reference: true
     managed_surface_source: hybrid_contract_policy_plus_package_manifest
@@ -97,8 +97,6 @@ FRIDA_CONTRACT_BOOTSTRAP:
     package_manifestRef: "FRIDA_BOOTSTRAP_PACKAGE_MANIFEST"
   app_contract_policy:
     source_of_truth: ".frida/inbox/app-contract/**"
-    fallback_to_legacy_contract: false
-    legacy_contract_surface: "contract/** (legacy compatibility surface; not substantial SSOT artifact)"
     rule: "Frida engine MUST NOT modify app-contract files in warm or cold-engine modes."
     explicit_demo_exception: "Demo mode may write demo app-contract seed only."
     postgen_contract_path: ".frida/inbox/app-contract/contract.index.yaml"
@@ -184,14 +182,14 @@ FRIDA_BOOTSTRAP_SURFACE_POLICY:
     markers:
       - ".frida/templates/config.template.yaml"
       - ".frida/contract/specs/ROUTER.xml"
-      - ".frida/specs/ROUTER.xml (legacy pre-contract-layout marker)"
-      - ".specs/ROUTER.xml (legacy compatibility marker)"
+      - ".frida/specs/ROUTER.xml (retired-path cleanup marker)"
+      - ".specs/ROUTER.xml (retired-path cleanup marker)"
       - ".frida/contract/profiles/*"
-      - ".frida/profiles/* (legacy pre-contract-layout marker)"
-      - ".specs/profiles/* (legacy compatibility marker)"
+      - ".frida/profiles/* (retired-path cleanup marker)"
+      - ".specs/profiles/* (retired-path cleanup marker)"
       - "AGENTS.md FRIDA bootloader signature"
       - ".frida/contract/AGENTS.md FRIDA bootloader signature"
-      - ".frida/AGENTS.md FRIDA bootloader signature (legacy compatibility marker)"
+      - ".frida/AGENTS.md Frida-managed zone AGENTS.md"
   post_reconcile:
     run_generation: true
     purpose: "One-command clean Frida: reconcile package/static surfaces then regenerate engine-generated artifacts."
@@ -206,9 +204,9 @@ FRIDA_BOOTSTRAP_PACKAGE_MANIFEST:
   manifest_format: yaml
   manifest_contract:
     package_is_reference: true
-    legacy_surface_compatibility:
+    cleanup_support:
       enabled: true
-      note: "Manifest may include canonical .frida/contract/* surfaces plus legacy compatibility projections (.specs/*, docs/policy, docs/reference) and legacy pre-contract-layout .frida/* cleanup scopes during migration."
+      note: "Manifest may include cleanup-only retired-path scopes so bootstrap can remove pre-cutover surfaces during one-way migration."
     entries_describe:
       - source
       - target

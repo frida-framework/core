@@ -4,8 +4,8 @@ import * as yaml from 'yaml';
 import type { ContractIndex } from './types.ts';
 
 export const CONTRACT_CANDIDATES = [
+  '.frida/inbox/app-contract/contract.index.yaml',
   'contract/contract.index.yaml',
-  'contract/contract.cbmd.yaml',
 ] as const;
 
 export interface LoadedContractDocument {
@@ -21,6 +21,12 @@ export function resolveContractPath(rootDir: string, requestedPath?: string): st
   const effectiveRequestedPath = requestedPath || (envContractPath && envContractPath.trim() ? envContractPath : undefined);
 
   if (effectiveRequestedPath) {
+    const normalizedRequestedPath = effectiveRequestedPath.replace(/\\/g, '/');
+    if (normalizedRequestedPath === 'contract/contract.cbmd.yaml') {
+      throw new Error(
+        'Assembled snapshot contract is no longer supported. Use contract/contract.index.yaml or .frida/inbox/app-contract/contract.index.yaml.'
+      );
+    }
     const absoluteRequestedPath = path.resolve(rootDir, effectiveRequestedPath);
     if (!fs.existsSync(absoluteRequestedPath)) {
       throw new Error(`Contract file not found: ${absoluteRequestedPath}`);

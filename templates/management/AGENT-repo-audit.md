@@ -33,9 +33,10 @@ Use only the priority model from `contract:DOCS.sourcesModel`.
 
 For Canon-tier, extract data as follows:
 
-1. If `contract/canon.cbmd.yaml` exists, use as machine snapshot.
-2. If snapshot is absent or incomplete, extract contract blocks from zerohuman-* pages.
-3. If snapshot conflicts with wiki blocks, mark `CANON.GAP` and treat wiki contract blocks as normative.
+1. In deployed repos, use `.frida/inbox/app-contract/contract.index.yaml` as the authoritative app-contract entry point and `.frida/contract/frida/contract.index.yaml` for the mirrored Frida core contract.
+2. If an older repo exposes only `contract/canon.cbmd.yaml` or `contract/contract.cbmd.yaml`, treat it as compatibility-only snapshot.
+3. If snapshot is absent or incomplete, extract contract blocks from zerohuman-* pages.
+4. If snapshot conflicts with wiki blocks, mark `CANON.GAP` and treat wiki contract blocks as normative.
 
 ---
 

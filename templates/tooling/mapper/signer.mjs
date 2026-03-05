@@ -15,8 +15,7 @@ import { join, relative, posix } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const ROOT_DIR = join(__filename, '..', '..', '..');
+const ROOT_DIR = process.cwd();
 const MOUNT_DIR = join(ROOT_DIR, 'src', 'mount');
 const INTEGRITY_FILE = join(MOUNT_DIR, 'integrity.json');
 

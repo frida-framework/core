@@ -85,7 +85,7 @@ export const ErrorTemplates = {
     solution: {
       primary: `Invariant '${invariantId}' is referenced but not defined.`,
       command: 'Add to INVARIANTS block or remove reference',
-      docs: 'contract/contract.index.yaml',
+      docs: '.frida/inbox/app-contract/contract.index.yaml',
     },
   }),
 

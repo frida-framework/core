@@ -3,6 +3,7 @@ export { runFridaVisualCli } from './visual.ts';
 export { runFridaInitCli } from './init.ts';
 export { runFridaBootstrapCli } from './bootstrap.ts';
 export { runFridaReportCli } from './report.ts';
+export { checkAgentsContractSet, runFridaAgentsContractSetCheck } from './agents-contract-set.ts';
 export {
   runFridaCheckCli,
   loadZones,

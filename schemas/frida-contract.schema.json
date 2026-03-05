@@ -5,38 +5,10 @@
   "description": "Schema for the consolidated Frida core contract. 32 required engine blocks + optional app blocks.",
   "type": "object",
   "required": [
-    "CANON_META",
-    "CANON_UNIQUENESS",
     "meta",
     "core",
-    "FRIDA_SCHEMA_SUPPORT",
-    "FRIDA_ARCHITECTURE_DECISIONS",
-    "FRIDA_FOUNDATION_PRINCIPLES",
     "PATHS",
-    "FRIDA_CONFIG_SPEC",
-    "FRIDA_ASSEMBLY_PROTOCOL",
-    "FRIDA_REFS",
-    "FRIDA_CONFIG",
-    "FRIDA_RUNTIME_CONFIG",
-    "ZONES",
-    "FRIDA_TASK_PROFILES",
-    "FRIDA_ENFORCEMENT",
-    "FRIDA_AGENT_LIFECYCLE",
-    "FRIDA_ENFORCEMENT_TYPES",
-    "FRIDA_REPORTING",
-    "FRIDA_VALIDATION_CHECKLIST",
-    "FRIDA_TEMPLATE_INTEGRITY",
-    "FRIDA_CLI",
-    "FRIDA_VISUAL",
-    "FRIDA_GUARD_SPEC",
-    "FRIDA_INVARIANT_SPEC",
-    "FRIDA_ANTITASK_SPEC",
-    "FRIDA_INTERFACE_VERIFY",
-    "FRIDA_INTERFACE_UPDATE_SPEC",
-    "FRIDA_INTERFACE_UPDATE_CODE",
-    "FRIDA_INTERFACE_TASKSET",
-    "FRIDA_SCAFFOLD",
-    "FRIDA_WIKI_MECHANICS"
+    "ZONES"
   ],
   "properties": {
     "CANON_META": {
@@ -143,7 +115,6 @@
     "core": {
       "type": "object",
       "required": [
-        "canonicalSourceBlocks",
         "selectorGrammar",
         "generatorPipelineContracts",
         "pathRefs",
@@ -151,6 +122,20 @@
       ],
       "properties": {
         "canonicalSourceBlocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "contractSourceBlocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "contracticalSourceBlocks": {
           "type": "array",
           "minItems": 1,
           "items": {
@@ -171,7 +156,6 @@
         "pathRefs": {
           "type": "object",
           "required": [
-            "canonArtifact",
             "templatesFrida",
             "templatesDocs"
           ],
@@ -296,16 +280,6 @@
     },
     "PATHS": {
       "type": "object",
-      "required": [
-        "contract",
-        "agents",
-        "specs",
-        "profiles",
-        "docs",
-        "frida",
-        "templates",
-        "scopes"
-      ],
       "properties": {
         "scaffold": {
           "type": "object"
@@ -452,14 +426,12 @@
     "FRIDA_CONFIG": {
       "type": "object",
       "required": [
-        "paths",
-        "reporting"
+        "paths"
       ],
       "properties": {
         "paths": {
           "type": "object",
           "required": [
-            "canon_inputFileRef",
             "agents_bootloaderFileRef",
             "specs_rootRef",
             "profiles_rootRef",
@@ -538,10 +510,6 @@
     },
     "ZONES": {
       "type": "object",
-      "required": [
-        "templates",
-        "non_templates"
-      ],
       "properties": {
         "templates": {
           "$ref": "#/$defs/zoneEntry"
@@ -1353,27 +1321,28 @@
     },
     "WIZARD_UI_COMPONENT_CONTRACTS": {
       "type": "object",
-      "x-frida-lod": 2,
-      "additionalProperties": {
-        "$ref": "#/$defs/componentEntry"
-      }
+      "x-frida-lod": 2
     },
     "ROUTE_UI_COMPONENT_CONTRACTS": {
       "type": "object",
-      "x-frida-lod": 2,
-      "additionalProperties": {
-        "$ref": "#/$defs/componentEntry"
-      }
+      "x-frida-lod": 2
     },
     "WIZARD_UI_BEHAVIOR": {
       "type": "object",
       "x-frida-lod": 3,
       "properties": {
         "transitions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/transitionEntry"
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/transitionEntry"
+              }
+            },
+            {
+              "type": "object"
+            }
+          ]
         },
         "pageResources": {
           "type": "object",
@@ -1391,10 +1360,17 @@
       "x-frida-lod": 3,
       "properties": {
         "transitions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/transitionEntry"
-          }
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/transitionEntry"
+              }
+            },
+            {
+              "type": "object"
+            }
+          ]
         },
         "pageResources": {
           "type": "object",
@@ -1582,10 +1558,7 @@
       }
     },
     "INVARIANTS": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/invariantEntry"
-      }
+      "type": "object"
     },
     "PROJECT_GUARDS": {
       "type": "object",

@@ -2,12 +2,13 @@
 /**
  * Contract Validator
  * 
- * Validates contract/contract.cbmd.yaml before generation.
+ * Validates the active modular contract artifact before generation.
  * Ensures contract is internally consistent and references valid filesystem paths.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import * as yaml from 'yaml';
 import { glob } from 'glob';
 import { loadModularContract } from './lib/load-contract.mjs';
@@ -49,7 +50,9 @@ interface Contract {
 
 // === Config ===
 
-const ROOT_DIR = path.resolve(__dirname, '..');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
 
 // === Validators ===
 
@@ -100,11 +103,11 @@ class ContractValidator {
       'supabase/**',
       'tests/**',
       'docs/**',
-      '.specs/**',
+      '.frida/**',
     ];
 
     for (const pattern of patterns) {
-      const files = await glob(pattern, { cwd: ROOT_DIR, dot: false });
+      const files = await glob(pattern, { cwd: ROOT_DIR, dot: true });
       files.forEach(f => this.existingPaths.add(f));
     }
 
@@ -135,7 +138,7 @@ class ContractValidator {
         code: 'MISSING_REQUIRED_BLOCK',
         message: "At least one guard block is required: FRIDA_GUARDS_BASELINE, PROJECT_GUARDS, or GUARDS",
         location: 'contract root',
-        suggestion: 'Add composable guard blocks or legacy GUARDS block'
+        suggestion: 'Add composable guard blocks or the current GUARDS block'
       });
     }
   }

@@ -1,6 +1,6 @@
 {
   "name": "@hanszel/core",
-  "version": "0.1.0-alpha.2",
+  "version": "0.2.0",
   "description": "Schema-driven Frida Core generation engine",
   "private": false,
   "type": "module",
@@ -33,7 +33,7 @@
     "./schemas/frida-contract.schema.json": "./schemas/frida-contract.schema.json"
   },
   "files": [
-    "dist", 
+    "dist",
     "schemas",
     "contract",
     "templates",
@@ -42,6 +42,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "node -e \"import('node:fs').then(fs=>fs.rmSync('dist',{recursive:true,force:true}))\"",
+    "verify": "npm run build && node dist/cli.js migration-report && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs",
     "prepack": "npm run clean && npm run build"
   },
   "publishConfig": {

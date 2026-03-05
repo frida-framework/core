@@ -7,17 +7,17 @@
 | Directory | Contents |
 |-----------|----------|
 | `contract/` | Canon — source of truth for all generation and agent behavior |
-| `contract/canon.index.yaml` | Modular canon index (entry point) |
-| `contract/layers/` | 9 canon layers — each a focused slice of the canon |
+| `contract/contract.index.yaml` | Modular contract index (entry point) |
+| `contract/layers/` | 12 contract layers — each a focused slice of the contract |
 | `contract/template-integrity.manifest.yaml` | SHA-256 hash manifest for template drift detection |
 | `schemas/` | JSON Schemas for canon, runtime config, session reports |
 | `src/` | TypeScript source — loader, generator, CLI, zone-check, visual |
 | `templates/` | Handlebars templates for generated artifacts (AGENTS.md, profiles, docs) |
 | `dist/` | Build artifacts — compiled JS + assembled canon (generated, not committed) |
 
-## Canon structure
+## Contract structure
 
-The canon is split into 9 layers. Each layer has `keywords` for contextual lookup:
+The contract is split into 12 layers. Each layer has `keywords` for contextual lookup:
 
 | Layer | Visibility | Keywords |
 |-------|-----------|----------|
@@ -31,7 +31,7 @@ The canon is split into 9 layers. Each layer has `keywords` for contextual looku
 | `visualization` | public | visual, overlay, LOD, edges, graph, determinism |
 | `management` | mixed | guard-spec, antitask, verify, update, taskset |
 
-The monolith is a **build artifact** — run `frida-core build` to produce `dist/canon.assembled.yaml`.
+The assembled contract is a **build artifact** — run `frida-core build` to produce generated output under `dist/`.
 
 ## CLI
 
@@ -49,16 +49,19 @@ frida-core migration-report       # report deprecated canon fields
 
 ## Key concepts
 
-- **Canon** — YAML contract that drives all generation. Single source of truth.
+- **Contract** — YAML contract that drives all generation. Single source of truth.
 - **Zones** — Directory-scoped routing regions. Each zone has its own `AGENTS.md`.
-- **Layers** — Canon is split into focused files, assembled at load time.
+- **Layers** — Contract is split into focused files, assembled at load time.
 - **Visibility** — Blocks are `public` (external API) or `private` (internal). `build --public` strips private blocks.
 - **Templates** — `.hbs` files are source of truth. Drift detected via SHA-256 manifest.
+
+Modular `contract/contract.index.yaml` is authoritative.
+Assembled snapshot `contract/contract.cbmd.yaml` references are compatibility-only and must not be used as the active source.
 
 ## Package API
 
 ```ts
-import { runFridaGeneration, runFridaMigrationReport, loadCanonDocument } from '@hanszel/core';
+import { runFridaGeneration, runFridaMigrationReport, loadContractDocument } from '@hanszel/core';
 ```
 
 ## Development

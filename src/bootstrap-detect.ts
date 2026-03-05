@@ -4,14 +4,14 @@ import * as path from 'path';
 export interface FridaDeploymentMarkers {
   runtimeConfigTemplate: boolean;
   contractSpecsRouter: boolean;
-  legacyFridaSpecsRouter: boolean;
-  legacySpecsRouter: boolean;
+  retiredFridaSpecsRouter: boolean;
+  retiredSpecsRouter: boolean;
   contractProfilesDir: boolean;
-  legacyFridaProfilesDir: boolean;
-  legacyProfilesDir: boolean;
+  retiredFridaProfilesDir: boolean;
+  retiredSpecsProfilesDir: boolean;
   bootloaderAgents: boolean;
   fridaContractBootloaderAgents: boolean;
-  fridaBootloaderAgents: boolean;
+  fridaManagedZoneAgents: boolean;
 }
 
 export interface FridaDeploymentDetection {
@@ -40,11 +40,11 @@ export function detectFridaDeployment(targetDir: string): FridaDeploymentDetecti
   const markers: FridaDeploymentMarkers = {
     runtimeConfigTemplate: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'templates', 'config.template.yaml')),
     contractSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'contract', 'specs', 'ROUTER.xml')),
-    legacyFridaSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'specs', 'ROUTER.xml')),
-    legacySpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.specs', 'ROUTER.xml')),
+    retiredFridaSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'specs', 'ROUTER.xml')),
+    retiredSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.specs', 'ROUTER.xml')),
     contractProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, '.frida', 'contract', 'profiles')),
-    legacyFridaProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, '.frida', 'profiles')),
-    legacyProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, '.specs', 'profiles')),
+    retiredFridaProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, '.frida', 'profiles')),
+    retiredSpecsProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, '.specs', 'profiles')),
     bootloaderAgents: fileContainsAll(path.join(absoluteTargetDir, 'AGENTS.md'), [
       'AUTO-GENERATED FROM CONTRACT',
       'FRIDA',
@@ -53,7 +53,7 @@ export function detectFridaDeployment(targetDir: string): FridaDeploymentDetecti
       'AUTO-GENERATED FROM CONTRACT',
       'FRIDA',
     ]),
-    fridaBootloaderAgents: fileContainsAll(path.join(absoluteTargetDir, '.frida', 'AGENTS.md'), [
+    fridaManagedZoneAgents: fileContainsAll(path.join(absoluteTargetDir, '.frida', 'AGENTS.md'), [
       'AUTO-GENERATED FROM CONTRACT',
       'FRIDA',
     ]),
