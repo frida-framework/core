@@ -35,6 +35,8 @@ interface Zone {
     id: string;
     name?: string;
     path: string;
+    is_component?: boolean;
+    owner?: string;
     readOnly: boolean;
     whyReadOnly?: string;
     consequence?: string;
@@ -259,6 +261,21 @@ function registerHelpers(): void {
 
     Handlebars.registerHelper('eq', (a: any, b: any) => {
         return a === b;
+    });
+
+    Handlebars.registerHelper('groupBy', function (context: any[], key: string, options: any) {
+        if (!context || !context.length) return '';
+        const groups: Record<string, any[]> = {};
+        for (const item of context) {
+            const groupKey = item[key] || 'Platform';
+            if (!groups[groupKey]) groups[groupKey] = [];
+            groups[groupKey].push(item);
+        }
+        let result = '';
+        for (const [groupKey, items] of Object.entries(groups)) {
+            result += options.fn({ group: groupKey, items: items });
+        }
+        return result;
     });
 }
 
@@ -1334,6 +1351,8 @@ function extractZones(contract: Contract): Zone[] {
             resolveRefValue(contract, data.path, `ZONES.${id}.path`) ||
             resolveRefValue(contract, data.pathGlobRef, `ZONES.${id}.pathGlobRef`) ||
             '',
+        is_component: data.is_component,
+        owner: data.owner,
         readOnly: data.readOnly ?? false,
         whyReadOnly: data.whyReadOnly,
         consequence: data.consequence,
@@ -1705,6 +1724,14 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
         true
     );
 
+    const tplBoundaries = loadTemplate(docsTplRoot, 'boundaries.hbs');
+    const enforcedGuards = effectiveGuards.guards.filter(guard => guard.enforcement);
+    write(
+        path.join(runtimePaths.docsPolicyDir, 'BOUNDARIES.md'),
+        tplBoundaries({ zones, enforcedGuards }),
+        true
+    );
+
     // Generate RUN_REPORTING.md from FRIDA_RUN_REPORTING
     let runReportingGenerated = false;
     const runReportingBlock = contract['FRIDA_RUN_REPORTING'];
@@ -1768,7 +1795,7 @@ See \`contract:FRIDA_RUN_REPORTING\` for full schema details.
 
     // Summary
     const zoneAgentsCount = zones.filter(z => z.agentsPath).length;
-    const policyDocsCount = 1 + (runReportingGenerated ? 1 : 0) + adapterPolicyDocs;
+    const policyDocsCount = 2 + (runReportingGenerated ? 1 : 0) + adapterPolicyDocs;
 
     console.log('\n' + '━'.repeat(60));
     console.log('✨ FRIDA v3.0 GENERATION COMPLETE\n');

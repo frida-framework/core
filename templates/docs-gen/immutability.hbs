@@ -4,25 +4,30 @@ This document describes read-only zones and the reasons for their immutability.
 
 ## Read-Only Zones
 
-{{#each readOnlyZones}}
-### {{name}}
+{{#groupBy readOnlyZones "owner"}}
+### {{group}}
+{{#if (eq group "Platform")}}{{else}}*(Component)*{{/if}}
+
+{{#each items}}
+#### {{name}}
 
 **Path:** `{{formatPath path}}`
 
-#### Why read-only?
+##### Why read-only?
 
 {{whyReadOnly}}
 
-#### What happens if you edit these files?
+##### What happens if you edit these files?
 
 {{consequence}}
 
-#### How to make legitimate changes?
+##### How to make legitimate changes?
 
 {{howToChange}}
 
 ---
 {{/each}}
+{{/groupBy}}
 
 ## General Principle
 

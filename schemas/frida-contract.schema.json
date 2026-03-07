@@ -595,7 +595,21 @@
             }
           },
           "security": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "component_allow": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "component_forbid": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
@@ -1552,7 +1566,21 @@
             }
           },
           "security": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "component_allow": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "component_forbid": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
@@ -1820,6 +1848,12 @@
       "properties": {
         "hard_zone": {
           "type": "boolean"
+        },
+        "is_component": {
+          "type": "boolean"
+        },
+        "owner": {
+          "type": "string"
         },
         "path": {
           "type": "string"

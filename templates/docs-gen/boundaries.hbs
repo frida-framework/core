@@ -4,10 +4,14 @@ This document defines the boundaries between different zones in the codebase.
 
 ## Zones
 
-{{#each zones}}
-### {{name}}
+{{#groupBy zones "owner"}}
+### {{group}}
+{{#if (eq group "Platform")}}{{else}}*(Component)*{{/if}}
 
-**Path:** `{{formatPath path}}`  
+{{#each items}}
+#### {{name}}
+
+**Path:** `{{formatPath path}}`
 **Status:** {{#if readOnly}}READ-ONLY{{else}}READ-WRITE{{/if}}
 
 {{#if readOnly}}
@@ -18,11 +22,13 @@ This document defines the boundaries between different zones in the codebase.
 - {{this}}
 {{/each}}
 
-**How to make changes:** {{#if redirectPath}}Modify `{{formatPath redirectPath}}` instead{{else}}Follow designated process{{/if}}
+**How to make changes:** {{#if redirectPath}}Modify `{{formatPath redirectPath}}` instead{{else}}Follow designated
+process{{/if}}
 {{/if}}
 
 ---
 {{/each}}
+{{/groupBy}}
 
 ## Cross-Zone Rules
 
