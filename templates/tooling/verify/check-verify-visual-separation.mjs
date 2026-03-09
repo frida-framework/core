@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, '..', '..');
+const ROOT_DIR = path.resolve(process.cwd());
 const PACKAGE_FILE = path.join(ROOT_DIR, 'package.json');
 
 function fail(message) {
@@ -58,6 +58,9 @@ function main() {
     'check-visual-contract-consistency',
     'frida:visual',
     'check-visual-schema-determinism',
+    'check-visual-overlay-goldens',
+    'check-visual-viewer-runtime',
+    'check-visual-reference-viewer',
   ];
 
   for (const required of requiredInVerifyVisual) {
@@ -74,4 +77,3 @@ try {
 } catch (error) {
   fail(`check-verify-visual-separation failed: ${error instanceof Error ? error.message : String(error)}`);
 }
-

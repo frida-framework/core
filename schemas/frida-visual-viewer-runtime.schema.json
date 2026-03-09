@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.frida.dev/frida-visual-viewer-runtime.schema.json",
+  "title": "Frida Visual Viewer Runtime Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "current_scope",
+    "current_lod",
+    "focus",
+    "context_shell",
+    "peek",
+    "navigation_stack",
+    "trace_state"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "overlay_schema_id",
+        "overlay_schema_version",
+        "viewer_authority_ref",
+        "overlay_boundary_count",
+        "overlay_source"
+      ],
+      "properties": {
+        "schema_id": { "type": "string", "const": "frida-visual-viewer-runtime" },
+        "schema_version": { "type": "string", "const": "1.0.0" },
+        "overlay_schema_id": { "type": "string", "const": "frida-visual-overlay" },
+        "overlay_schema_version": { "type": "string", "const": "1.0.0" },
+        "viewer_authority_ref": { "type": "string", "const": "FRIDA_VISUAL.viewer_runtime_v1" },
+        "overlay_boundary_count": { "type": "integer", "minimum": 1 },
+        "overlay_source": { "type": "string" }
+      }
+    },
+    "current_scope": { "$ref": "#/$defs/viewerScope" },
+    "current_lod": {
+      "type": "string",
+      "enum": ["topology", "flow", "specification"]
+    },
+    "focus": {
+      "anyOf": [
+        { "$ref": "#/$defs/viewerFocus" },
+        { "type": "null" }
+      ]
+    },
+    "context_shell": { "$ref": "#/$defs/contextShell" },
+    "peek": { "$ref": "#/$defs/peekState" },
+    "navigation_stack": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/navigationFrame" }
+    },
+    "trace_state": { "$ref": "#/$defs/traceState" }
+  },
+  "$defs": {
+    "nullableString": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    },
+    "viewerScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "boundary_id",
+        "parent_boundary_id",
+        "caller_boundary_id",
+        "via",
+        "via_portal_kind",
+        "via_portal_id",
+        "via_exit_point_id",
+        "depth"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "boundary_id": { "type": "string" },
+        "parent_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "caller_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "via": {
+          "type": "string",
+          "enum": ["root", "enter", "up"]
+        },
+        "via_portal_kind": {
+          "anyOf": [
+            { "type": "string", "enum": ["mounted_child_relation", "continuation", "return"] },
+            { "type": "null" }
+          ]
+        },
+        "via_portal_id": { "$ref": "#/$defs/nullableString" },
+        "via_exit_point_id": { "$ref": "#/$defs/nullableString" },
+        "depth": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "viewerFocus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entity_kind", "entity_id", "boundary_id"],
+      "properties": {
+        "entity_kind": {
+          "type": "string",
+          "enum": [
+            "boundary",
+            "topology_node",
+            "topology_edge",
+            "flow_node",
+            "flow_edge",
+            "specification_node",
+            "specification_edge",
+            "entry_point",
+            "exit_point",
+            "mounted_child_relation",
+            "continuation_mapping",
+            "return_mapping",
+            "dependency_edge",
+            "context_shell",
+            "trace"
+          ]
+        },
+        "entity_id": { "type": "string" },
+        "boundary_id": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "contextShell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "boundary_id",
+        "caller_boundary_id",
+        "parent_boundary_id",
+        "entry_point_id",
+        "public_exit_point_ids",
+        "mounted_child_relation_ids",
+        "continuation_target_boundary_ids",
+        "return_target_boundary_ids",
+        "shell_hint",
+        "local_role",
+        "current_position_hint",
+        "minimap_boundary_ids",
+        "trace_hint_id"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "boundary_id": { "type": "string" },
+        "caller_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "parent_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "entry_point_id": { "type": "string" },
+        "public_exit_point_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "mounted_child_relation_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "continuation_target_boundary_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "return_target_boundary_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "shell_hint": { "$ref": "#/$defs/nullableString" },
+        "local_role": { "$ref": "#/$defs/nullableString" },
+        "current_position_hint": {
+          "type": "string",
+          "enum": ["root_boundary", "nested_boundary"]
+        },
+        "minimap_boundary_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "trace_hint_id": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "peekState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "open",
+        "boundary_id",
+        "source_boundary_id",
+        "relation_id",
+        "context_shell_id"
+      ],
+      "properties": {
+        "open": { "type": "boolean" },
+        "boundary_id": { "$ref": "#/$defs/nullableString" },
+        "source_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "relation_id": { "$ref": "#/$defs/nullableString" },
+        "context_shell_id": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "traceState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "open",
+        "boundary_id",
+        "entry_point_id",
+        "exit_point_id",
+        "continuation_mapping_ids",
+        "return_mapping_ids",
+        "projection_mode"
+      ],
+      "properties": {
+        "open": { "type": "boolean" },
+        "boundary_id": { "$ref": "#/$defs/nullableString" },
+        "entry_point_id": { "$ref": "#/$defs/nullableString" },
+        "exit_point_id": { "$ref": "#/$defs/nullableString" },
+        "continuation_mapping_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "return_mapping_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "projection_mode": {
+          "type": "string",
+          "enum": ["off", "boundary", "exit"]
+        }
+      }
+    },
+    "navigationFrame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "scope", "lod", "focus", "peek", "trace_state", "order_index"],
+      "properties": {
+        "id": { "type": "string" },
+        "scope": { "$ref": "#/$defs/viewerScope" },
+        "lod": {
+          "type": "string",
+          "enum": ["topology", "flow", "specification"]
+        },
+        "focus": {
+          "anyOf": [
+            { "$ref": "#/$defs/viewerFocus" },
+            { "type": "null" }
+          ]
+        },
+        "peek": { "$ref": "#/$defs/peekState" },
+        "trace_state": { "$ref": "#/$defs/traceState" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

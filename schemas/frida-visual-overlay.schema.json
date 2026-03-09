@@ -1,0 +1,411 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.frida.dev/frida-visual-overlay.schema.json",
+  "title": "Frida Visual Overlay Schema v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "projection_units",
+    "component_boundaries",
+    "topology_nodes",
+    "topology_edges",
+    "flow_nodes",
+    "flow_edges",
+    "specification_nodes",
+    "specification_edges",
+    "entry_points",
+    "exit_points",
+    "mounted_child_relations",
+    "continuation_mappings",
+    "return_mappings",
+    "dependency_edges",
+    "context_shell_hints",
+    "trace_projection_hints"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "generated_at",
+        "contract_sha256",
+        "source",
+        "overlay_path",
+        "builder_entrypoint",
+        "builder_command",
+        "projection_authority_ref",
+        "projection_unit_count",
+        "component_boundary_count",
+        "topology_node_count",
+        "topology_edge_count",
+        "flow_node_count",
+        "flow_edge_count",
+        "specification_node_count",
+        "specification_edge_count",
+        "dependency_edge_count"
+      ],
+      "properties": {
+        "schema_id": { "type": "string", "const": "frida-visual-overlay" },
+        "schema_version": { "type": "string", "const": "1.0.0" },
+        "generated_at": { "type": "string" },
+        "contract_sha256": { "type": "string" },
+        "source": { "type": "string" },
+        "overlay_path": { "type": "string" },
+        "builder_entrypoint": { "type": "string" },
+        "builder_command": { "type": "string" },
+        "projection_authority_ref": { "type": "string" },
+        "projection_unit_count": { "type": "integer", "minimum": 0 },
+        "component_boundary_count": { "type": "integer", "minimum": 0 },
+        "topology_node_count": { "type": "integer", "minimum": 0 },
+        "topology_edge_count": { "type": "integer", "minimum": 0 },
+        "flow_node_count": { "type": "integer", "minimum": 0 },
+        "flow_edge_count": { "type": "integer", "minimum": 0 },
+        "specification_node_count": { "type": "integer", "minimum": 0 },
+        "specification_edge_count": { "type": "integer", "minimum": 0 },
+        "dependency_edge_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "projection_units": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/projectionUnitRecord" }
+    },
+    "component_boundaries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/componentBoundaryRecord" }
+    },
+    "topology_nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nodeRecord" }
+    },
+    "topology_edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edgeRecord" }
+    },
+    "flow_nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nodeRecord" }
+    },
+    "flow_edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edgeRecord" }
+    },
+    "specification_nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nodeRecord" }
+    },
+    "specification_edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edgeRecord" }
+    },
+    "entry_points": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entryPointRecord" }
+    },
+    "exit_points": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/exitPointRecord" }
+    },
+    "mounted_child_relations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/mountedChildRelationRecord" }
+    },
+    "continuation_mappings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/boundaryMappingRecord" }
+    },
+    "return_mappings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/boundaryMappingRecord" }
+    },
+    "dependency_edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dependencyEdgeRecord" }
+    },
+    "context_shell_hints": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/contextShellHintRecord" }
+    },
+    "trace_projection_hints": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/traceProjectionHintRecord" }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    },
+    "projectionUnitRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "boundary_id", "source_kind", "source_path", "contract_path", "order_index"],
+      "properties": {
+        "id": { "type": "string" },
+        "boundary_id": { "type": "string" },
+        "source_kind": { "type": "string", "enum": ["contract_root", "top_level_block"] },
+        "source_path": { "type": "string" },
+        "contract_path": { "type": "string" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "componentBoundaryRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "boundary_id",
+        "projection_unit_id",
+        "source_path",
+        "parent_boundary_id",
+        "local_role",
+        "slot_ref",
+        "mount_kind",
+        "entry_point_id",
+        "exit_point_ids",
+        "mounted_child_boundary_ids",
+        "content_node_ids",
+        "dependency_targets",
+        "inbound_interface_keys",
+        "order_index"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "boundary_id": { "type": "string" },
+        "projection_unit_id": { "type": "string" },
+        "source_path": { "type": "string" },
+        "parent_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "local_role": { "$ref": "#/$defs/nullableString" },
+        "slot_ref": { "type": "string" },
+        "mount_kind": { "type": "string", "enum": ["mapper-managed", "host-static"] },
+        "entry_point_id": { "type": "string" },
+        "exit_point_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "mounted_child_boundary_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "content_node_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "dependency_targets": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "inbound_interface_keys": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "nodeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "boundary_id", "projection_unit_id", "label", "source_path", "order_index"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "boundary_id": { "$ref": "#/$defs/nullableString" },
+        "projection_unit_id": { "$ref": "#/$defs/nullableString" },
+        "label": { "type": "string" },
+        "source_path": { "type": "string" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "edgeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "source_id",
+        "target_id",
+        "source_boundary_id",
+        "target_boundary_id",
+        "projection_unit_id",
+        "source_path",
+        "order_index"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "source_id": { "type": "string" },
+        "target_id": { "type": "string" },
+        "source_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "target_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "projection_unit_id": { "$ref": "#/$defs/nullableString" },
+        "source_path": { "type": "string" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "entryPointRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "boundary_id", "projection_unit_id", "flow_node_id", "slot_ref", "mount_kind", "order_index"],
+      "properties": {
+        "id": { "type": "string" },
+        "boundary_id": { "type": "string" },
+        "projection_unit_id": { "type": "string" },
+        "flow_node_id": { "type": "string" },
+        "slot_ref": { "type": "string" },
+        "mount_kind": { "type": "string", "enum": ["mapper-managed", "host-static"] },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "exitPointRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "boundary_id",
+        "projection_unit_id",
+        "flow_node_id",
+        "exit_id",
+        "outcome",
+        "continuation_target_boundary_id",
+        "return_target_boundary_id",
+        "order_index"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "boundary_id": { "type": "string" },
+        "projection_unit_id": { "type": "string" },
+        "flow_node_id": { "type": "string" },
+        "exit_id": { "type": "string" },
+        "outcome": { "type": "string", "enum": ["continue", "return", "exit"] },
+        "continuation_target_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "return_target_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "mountedChildRelationRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "parent_boundary_id", "child_boundary_id", "projection_unit_id", "topology_edge_id", "order_index"],
+      "properties": {
+        "id": { "type": "string" },
+        "parent_boundary_id": { "type": "string" },
+        "child_boundary_id": { "type": "string" },
+        "projection_unit_id": { "type": "string" },
+        "topology_edge_id": { "type": "string" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "boundaryMappingRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source_exit_point_id",
+        "source_boundary_id",
+        "target_boundary_id",
+        "projection_unit_id",
+        "flow_edge_id",
+        "order_index"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "source_exit_point_id": { "type": "string" },
+        "source_boundary_id": { "type": "string" },
+        "target_boundary_id": { "type": "string" },
+        "projection_unit_id": { "type": "string" },
+        "flow_edge_id": { "type": "string" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "dependencyEdgeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source_boundary_id",
+        "source_node_id",
+        "target_ref",
+        "target_node_id",
+        "projection_unit_id",
+        "source_path",
+        "order_index"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "source_boundary_id": { "type": "string" },
+        "source_node_id": { "type": "string" },
+        "target_ref": { "type": "string" },
+        "target_node_id": { "type": "string" },
+        "projection_unit_id": { "type": "string" },
+        "source_path": { "type": "string" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "contextShellHintRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "boundary_id",
+        "projection_unit_id",
+        "parent_boundary_id",
+        "local_role",
+        "mount_kind",
+        "shell_hint",
+        "order_index"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "boundary_id": { "type": "string" },
+        "projection_unit_id": { "type": "string" },
+        "parent_boundary_id": { "$ref": "#/$defs/nullableString" },
+        "local_role": { "$ref": "#/$defs/nullableString" },
+        "mount_kind": { "type": "string", "enum": ["mapper-managed", "host-static"] },
+        "shell_hint": { "type": "string" },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "traceProjectionHintRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "boundary_id",
+        "projection_unit_id",
+        "entry_point_id",
+        "exit_point_ids",
+        "mounted_child_relation_ids",
+        "continuation_mapping_ids",
+        "return_mapping_ids",
+        "order_index"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "boundary_id": { "type": "string" },
+        "projection_unit_id": { "type": "string" },
+        "entry_point_id": { "type": "string" },
+        "exit_point_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "mounted_child_relation_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "continuation_mapping_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "return_mapping_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "order_index": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

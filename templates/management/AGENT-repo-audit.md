@@ -138,6 +138,7 @@ Coverage:
 - Each invariant
 - Each guard
 - Each embedded entity
+- Component-boundary contracts, when present: canonical component_* sections complete, mounted child refs resolve, exit outcomes explicit, parent view does not inline child internals, and shared refs stay dependency-only
 
 ### 4. Undocumented details
 

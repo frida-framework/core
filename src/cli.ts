@@ -4,6 +4,7 @@ import { runFridaAgentsContractSetCheck } from './agents-contract-set.ts';
 import { runFridaCheckCli } from './zone-check.ts';
 import { runFridaHashCli } from './template-hash.ts';
 import { runFridaVisualCli } from './visual.ts';
+import { runFridaVisualViewerCli } from './visual-reference-viewer.ts';
 import { runFridaInitCli } from './init.ts';
 import { runFridaReportCli } from './report.ts';
 import { runFridaBuildCli } from './build.ts';
@@ -19,6 +20,7 @@ Usage:
   frida-core bootstrap --target <dir> [--mode warm|cold-engine|demo|zero-start] [--dry-run]
   frida-core bootstrap --component <name> [--target <dir>]
   frida-core visual [--check] [args...]
+  frida-core visual-viewer [--overlay <path>] [--out <path>] [--title <text>]
   frida-core report [check|path|write] [args...]
   frida-core check contract-set [--include-frida-internal]
   frida-core check [zone args...]
@@ -54,6 +56,9 @@ async function run(): Promise<number> {
     case 'visual':
     case 'visualize':
       return runFridaVisualCli(args);
+    case 'visual-viewer':
+    case 'viewer':
+      return runFridaVisualViewerCli(args);
     case 'report':
       return runFridaReportCli(args);
     case 'check':

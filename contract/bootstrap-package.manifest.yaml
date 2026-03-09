@@ -386,7 +386,7 @@ entries:
     kind: file
     ownership_class: engine_static
     apply_mode: copy
-    sha256: sha256:b662b6009d76f0f5e17f768f6df2d0d50b3e96856dec4c95aa742532a94b3ed9
+    sha256: sha256:4f2a2e1226bd7c193cb9c725ba0952d705e5ee2b8470e9a114d9f77828ffaa43
     modes:
       - warm
       - cold-engine
@@ -408,7 +408,7 @@ entries:
     kind: file
     ownership_class: engine_static
     apply_mode: copy
-    sha256: sha256:cafe301200bd58e9e242cd5c618c7135c4806aee86f7624cf2f9ae1ba5a3b2b3
+    sha256: sha256:fccdc8b11ff5541a702eb6b434ced7c0c0f555ea836e1cd4944c6007c2a8656a
     modes:
       - warm
       - cold-engine

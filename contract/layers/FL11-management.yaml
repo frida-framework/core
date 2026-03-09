@@ -101,6 +101,22 @@ FRIDA_GUARD_SPEC:
       text: "id violates neutral naming policy."
     - id: version_not_semver
       text: "version is not semver (MAJOR.MINOR.PATCH)."
+    - id: component_boundary_section_missing
+      text: "A required component_* boundary section is missing."
+    - id: component_boundary_ref_unresolved
+      text: "A declared mounted child boundary or continuation/return boundary ref does not resolve."
+    - id: component_output_exit_outcome_missing
+      text: "A component_output_interface exit entry is missing required outcome semantics."
+    - id: component_parent_child_inline_violation
+      text: "Parent specification inlines mounted child internals where explicit drill-in is required."
+    - id: component_shared_refs_boundary_override
+      text: "component_shared_refs is used to smuggle ownership, hierarchy, entry, or exit semantics."
+    - id: component_legacy_term_detected
+      text: "A legacy component-boundary section name appears in an active contract definition."
+    - id: component_namespace_mixed
+      text: "Old and new component-boundary namespaces coexist in an active contract definition."
+    - id: component_visual_semantics_drift
+      text: "Visualization semantics drift from the boundary-first component model."
 
 FRIDA_INVARIANT_SPEC:
   _visibility: private
@@ -187,6 +203,9 @@ FRIDA_INTERFACE_VERIFY:
     visual_check:
       description: "Check visual overlay freshness."
       protocol: "frida-core visual check"
+    component_boundary_check:
+      description: "Check boundary-first component contract semantics, legacy-term bans, and drill-in/exit enforcement."
+      protocol: "node templates/tooling/verify/check-component-boundary-contract.mjs"
     quality_check:
       description: "Compute contract quality metrics per internal self-contract management policy."
 
@@ -294,7 +313,27 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
 
   consistency_checks:
     purpose: "Categories of consistency verification."
-    categories: [terms, guards_invariants, profiles, zones, cross_refs, fences, uniqueness, ui_boundaries]
+    categories: [terms, guards_invariants, profiles, zones, cross_refs, fences, uniqueness, ui_boundaries, component_boundaries, visualization_boundaries]
+    component_boundaries:
+      - id: boundary_sections_complete
+        rule: "Component-level contract files MUST declare all canonical component_* sections defined by component_contract_spec.required_sections."
+      - id: boundary_refs_resolve
+        rule: "component_mount_point.mounted_child_boundaryRefs and component_output_interface.*boundaryRef targets MUST resolve when declared."
+      - id: boundary_exit_semantics_complete
+        rule: "component_output_interface exit entries MUST declare id and outcome and remain usable as the canonical source for flow and exit semantics."
+      - id: boundary_namespace_clean
+        rule: "Legacy section names and mixed old/new namespace use are forbidden in active component-boundary definitions."
+      - id: boundary_non_duplication
+        rule: "Parent component contracts MUST NOT inline mounted child internals when drill-in is required, and component_shared_refs MUST remain dependency-only."
+    visualization_boundaries:
+      - id: boundary_first_projection
+        rule: "Visualization interprets topology, flow, and specification relative to the current component boundary before using YAML depth."
+      - id: child_drill_in_explicit
+        rule: "Cross-component drill-in MUST use explicit mounted child boundaries from component_mount_point.mounted_child_boundaryRefs."
+      - id: child_non_auto_expand
+        rule: "Parent specification view MUST NOT auto-expand mounted child internals."
+      - id: exit_projection_canonical
+        rule: "Flow projection reads canonical exits, outcomes, and continuation/return targeting only from component_output_interface."
     playbook_ref: "templates/management/AGENT-contract-update.md"
 
   diagnostic_framework:
@@ -323,21 +362,130 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
     playbook_ref: "templates/management/AGENT-repo-audit.md"
 
   component_contract_spec:
-    purpose: "Structure for component-level contract files."
+    purpose: "Normative structure for component-level contract files that define component boundary semantics."
+    authoritative_rule: "This block is the authoritative source for component-level contract section names, field requirements, and source-contract semantics. Visual projection behavior is authoritative only via FRIDA_VISUAL.component_projection."
+    visual_projection_authorityRef: "FRIDA_VISUAL.component_projection"
     required_sections:
-      - id: hierarchy_position
-        description: "Where this component sits in the app: parent page, sibling components."
-      - id: mount_point
-        description: "Entry point: slot reference, mount kind (mapper-managed | host-static)."
-      - id: input_props
-        description: "Typed input interface: data + state provided by host."
-      - id: output_callbacks
-        description: "Output interface: callbacks/events emitted to host."
-      - id: domain_blocks
-        description: "Component-specific contract blocks (UI structure, behavior, data schema)."
-      - id: shared_refs
-        description: "References to shared blocks (GLOSSARY, DATABASE_SCHEMA, RESOURCES) — refs only, not copies."
-    constraint: "Total file size MUST fit in agent context window for task formulation."
+      - id: component_hierarchy_position
+        description: >-
+          Topology placement of this component within the component-boundary
+          model: host/page parent, sibling relation, and local nesting. This
+          section MUST describe component placement only; it MUST NOT be read as
+          global hierarchy, file hierarchy, scope hierarchy, or graph hierarchy.
+      - id: component_mount_point
+        description: >-
+          Component entry boundary: slot reference and mount kind
+          (mapper-managed | host-static). This section defines the component
+          contract mount boundary only; it MUST NOT be read as a filesystem
+          mount, a generic runtime mount, or portal semantics outside the
+          component-boundary model. When present,
+          mounted_child_boundaryRefs declare explicit mounted child component
+          boundaries available for boundary-aware drill-in.
+      - id: component_input_interface
+        description: >-
+          Typed inbound contract interface from host/caller into the component
+          boundary. It covers data and state supplied through the component
+          contract, not arbitrary runtime props outside the contract surface.
+      - id: component_output_interface
+        description: >-
+          Typed outbound contract interface from the component boundary to the
+          host/caller. It defines callbacks, emitted events, and canonical
+          exits, and is the canonical source for exit semantics in visualization
+          and flow projection. Exit entries MUST support stable outcome
+          classification and may declare continuation or return targeting.
+      - id: component_domain_blocks
+        description: >-
+          Internal projection content for the component boundary (UI structure,
+          behavior, data schema) used after entry and exit interfaces are
+          defined.
+      - id: component_shared_refs
+        description: >-
+          Refs to shared contract blocks (GLOSSARY, DATABASE_SCHEMA, RESOURCES)
+          for dependency reuse only. These refs MUST NOT override ownership
+          boundaries or duplicate shared source-of-truth content.
+    section_field_rules:
+      component_mount_point:
+        required_fields:
+          - slotRef
+          - mount_kind
+        optional_fields:
+          - mounted_child_boundaryRefs
+        rule: >-
+          mounted_child_boundaryRefs declare explicit mounted child component
+          boundaries. Cross-component drill-in is allowed only through those
+          refs; absent refs mean no child boundary drill-in target is declared
+          at this mount boundary.
+        example:
+          mounted_child_boundaryRefs:
+            - "route_details_panel"
+      component_output_interface:
+        required_exit_entry_fields:
+          - id
+          - outcome
+        optional_exit_entry_fields:
+          - target_boundaryRef
+          - return_target_boundaryRef
+        allowed_outcomes:
+          - continue
+          - return
+          - exit
+        outcome_target_rules:
+          continue: "Requires target_boundaryRef and forbids return_target_boundaryRef."
+          return: "Requires return_target_boundaryRef and forbids target_boundaryRef."
+          exit: "Forbids target_boundaryRef and return_target_boundaryRef."
+        rule: >-
+          outcome classifies the canonical exit. target_boundaryRef and
+          return_target_boundaryRef define continuation and return targeting for
+          boundary-aware flow projection when present.
+        example_exit:
+          id: "open_details"
+          outcome: "continue"
+          target_boundaryRef: "route_details_panel"
+      component_shared_refs:
+        optional_fields:
+          - refs
+        rule: >-
+          Dependency projection reads shared targets from refs and any nested
+          *Ref/*Refs leaves under component_shared_refs only as shared
+          dependencies. component_shared_refs MUST NOT target component
+          boundaries or smuggle ownership, hierarchy, entry, exit, or mount
+          semantics.
+    example_component_contract:
+      note: "Illustrative source-contract snippet. Visual projection is derived by FRIDA_VISUAL.component_projection."
+      component_hierarchy_position:
+        parent_boundaryRef: "dashboard_root"
+        local_role: "screen_fragment"
+      component_mount_point:
+        slotRef: "UI_STRUCTURE.dashboard.root.summarySlot"
+        mount_kind: "mapper-managed"
+        mounted_child_boundaryRefs:
+          - "route_details_panel"
+      component_input_interface:
+        selected_route_id: "string"
+        selected_day: "date"
+      component_output_interface:
+        exits:
+          - id: "open_details"
+            outcome: "continue"
+            target_boundaryRef: "route_details_panel"
+          - id: "return_to_dashboard"
+            outcome: "return"
+            return_target_boundaryRef: "dashboard_root"
+      component_domain_blocks:
+        summary_stack:
+          purpose: "Internal source-contract detail for the current component boundary."
+      component_shared_refs:
+        refs:
+          - "GLOSSARY.route"
+          - "RESOURCES.maps_api"
+    consistency_rule: >-
+      Component contract files MUST use only the canonical section ids listed
+      here. Legacy aliases are forbidden unless an explicit versioned migration
+      block declares a temporary deprecation window.
+    constraint: >-
+      Total file size MUST fit in agent context window for task formulation.
+      Required sections are interpreted by component boundary semantics first;
+      YAML depth and incidental key order are secondary.
 
 FRIDA_INTERFACE_UPDATE_APP_BY_SPEC:
   _visibility: public

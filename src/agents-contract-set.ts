@@ -21,6 +21,10 @@ export interface AgentsContractSetCheckResult {
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE_PACKAGE_ROOT = path.resolve(MODULE_DIR, '..');
+const ENGINE_TEMPLATE_AGENTS_PREFIXES = [
+  'templates/tooling/',
+  '.frida/templates/',
+] as const;
 
 function normalizePath(input: string): string {
   const withSlashes = String(input || '')
@@ -97,6 +101,15 @@ function isFridaInternalPath(pathLike: string): boolean {
 
 function isEngineSelfRepo(rootDir: string): boolean {
   return path.resolve(rootDir) === ENGINE_PACKAGE_ROOT;
+}
+
+function isIgnoredTrackedAgentsPath(rootDir: string, relPath: string): boolean {
+  if (!isEngineSelfRepo(rootDir)) {
+    return false;
+  }
+
+  const normalized = normalizePath(relPath);
+  return ENGINE_TEMPLATE_AGENTS_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
 function getZoneBlockName(rootDir: string): 'ZONES' | 'INT_FRIDA_ZONES' {
@@ -186,6 +199,8 @@ function collectTrackedAgents(rootDir: string, options: { includeFridaInternal: 
     .filter(Boolean)
     .filter((relPath) => existsSync(path.join(rootDir, relPath)))
     .filter((relPath) => relPath === 'AGENTS.md' || relPath.endsWith('/AGENTS.md'))
+    // Template-source AGENTS files are package assets, not live contract-set surfaces.
+    .filter((relPath) => !isIgnoredTrackedAgentsPath(rootDir, relPath))
     .filter((relPath) => options.includeFridaInternal || !isFridaInternalPath(relPath));
 
   return new Set(tracked);

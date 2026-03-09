@@ -11,7 +11,7 @@
 | `contract/layers/` | Frida core layers `FL##-*` plus Frida-managed app-template layers `AL##-*` |
 | `contract/template-integrity.manifest.yaml` | SHA-256 hash manifest for template drift detection |
 | `schemas/` | JSON Schemas for contract, runtime config, session reports |
-| `src/` | TypeScript source — loader, generator, CLI, zone-check, visual |
+| `src/` | TypeScript source — loader, generator, CLI, zone-check, visual, viewer-runtime |
 | `templates/` | Handlebars templates for generated artifacts (AGENTS.md, profiles, docs) |
 | `dist/` | Build artifacts — compiled JS + assembled contract (generated, not committed) |
 | `frida-tasks/` | Repo-local task output for Frida self-contract management only |
@@ -48,7 +48,8 @@ frida-core check --path <dir>     # resolve zone for a directory
 frida-core bootstrap --target <dir>                   # warm reconcile (default)
 frida-core bootstrap --target <dir> --mode zero-start # first-time onboarding for clean repos
 frida-core bootstrap --target <dir> --mode cold-engine  # engine-only first-time deploy
-frida-core visual [--check]       # build or check visual overlay
+frida-core visual [--check]       # build or check visual overlay schema v1 at PATHS.visual.overlayFile
+frida-core visual-viewer [--overlay <path>] [--out <path>] [--title <text>]  # generate a static proof viewer for an overlay
 frida-core hash --check           # verify template integrity
 frida-core init                   # normalize reporting config
 frida-core migration-report       # report deprecated contract fields
@@ -118,6 +119,9 @@ Prints the plan without writing any files.
 - **Zones** — `ZONES` is the public zone model for target repos. Private Frida-repo routing entities live only in `INT_FRIDA_ZONES`. Each resolved zone has its own `AGENTS.md`.
 - **Layers** — Contract is split into focused files, assembled at load time.
 - **Visibility** — `FRIDA_INTERFACE_*` blocks are public by default unless `_visibility: private` is set explicitly. `build --public` strips private blocks.
+- **Visual overlay** — read-only JSON derived from contract truth. UI/runtime consume `.frida/contract/visual/canon-overlay.json` (or `PATHS.visual.overlayFile`) instead of re-deriving visual semantics from raw contract. `npm run frida:visual` materializes the canonical artifact, and `npm run verify:visual` now requires it to exist and stay fresh.
+- **Viewer runtime contract** — runtime navigation state is a separate overlay-consuming layer with its own vocabulary: `scope`, `focus`, `lod`, `context_shell`, `enter`, `peek`, `back`, `up`, `trace`, `navigation_stack`.
+- **Reference viewer** — `frida-core visual-viewer` generates a minimal static HTML proof viewer backed by the overlay and the viewer runtime reducer. The live overlay now includes the authoritative `visual_demo_*` component pack, and `npm run frida:visual-viewer:demo` still renders the mounted-child fixture into `dist/reference-viewer/demo/index.html`.
 - **Self-management** — `FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT` is private, repo-local to `frida`, and is not deployed into target repos.
 - **Task surface** — In repo `frida`, only `frida-tasks/TASK-*.md` is allowed. `tasks/` is forbidden in repo `frida`; `frida-tasks/` is forbidden outside repo `frida`.
 - **Templates** — `.hbs` files are source of truth. Drift detected via SHA-256 manifest.

@@ -1,0 +1,83 @@
+PATHS:
+  visual:
+    overlayFile: fixtures/visual-overlay/out/negative_dependency_misuse.overlay.json
+
+FRIDA_CONFIG:
+  visual:
+    overlay_pathRef: PATHS.visual.overlayFile
+
+FRIDA_VISUAL:
+  version: "1.0.0"
+  overlay_format: json
+  overlay_pathRef: PATHS.visual.overlayFile
+  component_projection:
+    primary_unit: component-level contract file
+    authoritative_rule: This projection spec is the authoritative source for component-boundary visual projection semantics.
+    projection_domains:
+      topology: {}
+      flow: {}
+      specification: {}
+    current_boundary_establishment:
+      order:
+        - component_hierarchy_position
+        - component_mount_point
+        - component_input_interface
+        - component_output_interface
+      rule: YAML depth may expand detail only after the current component boundary is established.
+    drill_in:
+      source_field: component_mount_point.mounted_child_boundaryRefs
+      parent_view_rule: Parent specification MUST NOT auto-expand mounted child internals.
+    drill_out:
+      source_fields:
+        - component_output_interface.outcome
+        - component_output_interface.target_boundaryRef
+        - component_output_interface.return_target_boundaryRef
+      rule: Return and continuation targeting derive from component_output_interface exit entries.
+    dependency_projection:
+      rule: component_shared_refs create dependency edges only and never override ownership or boundaries.
+  overlay_schema_v1:
+    id: frida-visual-overlay
+    version: 1.0.0
+    output_pathRef: PATHS.visual.overlayFile
+    projection_authorityRef: FRIDA_VISUAL.component_projection
+    builder_entrypoint: src/visual.ts
+
+dependency_owner:
+  component_hierarchy_position:
+    local_role: owner
+  component_mount_point:
+    slotRef: app.owner
+    mount_kind: host-static
+    mounted_child_boundaryRefs: []
+  component_input_interface:
+    request:
+      kind: record
+  component_output_interface:
+    exits:
+      - id: done
+        outcome: exit
+  component_domain_blocks:
+    render_owner:
+      detail: standard
+  component_shared_refs:
+    refs:
+      - child_panel
+
+child_panel:
+  component_hierarchy_position:
+    local_role: child
+  component_mount_point:
+    slotRef: app.child
+    mount_kind: mapper-managed
+    mounted_child_boundaryRefs: []
+  component_input_interface:
+    payload:
+      kind: record
+  component_output_interface:
+    exits:
+      - id: close
+        outcome: exit
+  component_domain_blocks:
+    render_child:
+      detail: normal
+  component_shared_refs: {}

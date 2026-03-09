@@ -1,0 +1,413 @@
+{
+  "meta": {
+    "schema_id": "frida-visual-overlay",
+    "schema_version": "1.0.0",
+    "generated_at": "1970-01-01T00:00:00.000Z",
+    "contract_sha256": "8ffc3283f9b913bafeb35202f2604bc24a9195a1064be117d7ea33bb06718cc5",
+    "source": "templates/tooling/verify/fixtures/visual-overlay/yaml_depth_secondary.yaml",
+    "overlay_path": "fixtures/visual-overlay/out/yaml_depth_secondary.overlay.json",
+    "builder_entrypoint": "src/visual.ts",
+    "builder_command": "frida-core visual",
+    "projection_authority_ref": "FRIDA_VISUAL.component_projection",
+    "projection_unit_count": 1,
+    "component_boundary_count": 1,
+    "topology_node_count": 1,
+    "topology_edge_count": 0,
+    "flow_node_count": 5,
+    "flow_edge_count": 6,
+    "specification_node_count": 9,
+    "specification_edge_count": 8,
+    "dependency_edge_count": 0
+  },
+  "projection_units": [
+    {
+      "id": "projection_unit:yaml_depth_secondary",
+      "boundary_id": "yaml_depth_secondary",
+      "source_kind": "contract_root",
+      "source_path": "$root",
+      "contract_path": "templates/tooling/verify/fixtures/visual-overlay/yaml_depth_secondary.yaml",
+      "order_index": 0
+    }
+  ],
+  "component_boundaries": [
+    {
+      "id": "boundary:yaml_depth_secondary",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root",
+      "parent_boundary_id": null,
+      "local_role": "analyzer",
+      "slot_ref": "app.surface",
+      "mount_kind": "host-static",
+      "entry_point_id": "entry_point:yaml_depth_secondary",
+      "exit_point_ids": [
+        "exit_point:yaml_depth_secondary:complete"
+      ],
+      "mounted_child_boundary_ids": [],
+      "content_node_ids": [
+        "planner",
+        "presenter"
+      ],
+      "dependency_targets": [],
+      "inbound_interface_keys": [
+        "inbound"
+      ],
+      "order_index": 0
+    }
+  ],
+  "topology_nodes": [
+    {
+      "id": "topology:boundary:yaml_depth_secondary",
+      "kind": "component_boundary",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "yaml_depth_secondary",
+      "source_path": "$root.component_hierarchy_position",
+      "order_index": 0
+    }
+  ],
+  "topology_edges": [],
+  "flow_nodes": [
+    {
+      "id": "flow:domain:yaml_depth_secondary:planner",
+      "kind": "domain_block",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "planner",
+      "source_path": "$root.component_domain_blocks.planner",
+      "order_index": 0
+    },
+    {
+      "id": "flow:entry:yaml_depth_secondary",
+      "kind": "entry_point",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "yaml_depth_secondary:entry",
+      "source_path": "$root.component_mount_point",
+      "order_index": 0
+    },
+    {
+      "id": "flow:exit:yaml_depth_secondary:complete",
+      "kind": "exit_point",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "complete",
+      "source_path": "$root.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow:inbound_interface:yaml_depth_secondary",
+      "kind": "inbound_interface",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "yaml_depth_secondary:inbound",
+      "source_path": "$root.component_input_interface",
+      "order_index": 0
+    },
+    {
+      "id": "flow:domain:yaml_depth_secondary:presenter",
+      "kind": "domain_block",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "presenter",
+      "source_path": "$root.component_domain_blocks.presenter",
+      "order_index": 1
+    }
+  ],
+  "flow_edges": [
+    {
+      "id": "flow_edge:domain_to_exit:yaml_depth_secondary:planner:complete",
+      "kind": "domain_block_to_exit",
+      "source_id": "flow:domain:yaml_depth_secondary:planner",
+      "target_id": "flow:exit:yaml_depth_secondary:complete",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root.component_domain_blocks.planner",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:entry_to_inbound_interface:yaml_depth_secondary",
+      "kind": "entry_to_inbound_interface",
+      "source_id": "flow:entry:yaml_depth_secondary",
+      "target_id": "flow:inbound_interface:yaml_depth_secondary",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root.component_mount_point",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_domain:yaml_depth_secondary:planner",
+      "kind": "inbound_interface_to_domain_block",
+      "source_id": "flow:inbound_interface:yaml_depth_secondary",
+      "target_id": "flow:domain:yaml_depth_secondary:planner",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root.component_domain_blocks.planner",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_exit:yaml_depth_secondary:complete",
+      "kind": "inbound_interface_to_exit",
+      "source_id": "flow:inbound_interface:yaml_depth_secondary",
+      "target_id": "flow:exit:yaml_depth_secondary:complete",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_domain:yaml_depth_secondary:presenter",
+      "kind": "inbound_interface_to_domain_block",
+      "source_id": "flow:inbound_interface:yaml_depth_secondary",
+      "target_id": "flow:domain:yaml_depth_secondary:presenter",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root.component_domain_blocks.presenter",
+      "order_index": 1
+    },
+    {
+      "id": "flow_edge:domain_to_exit:yaml_depth_secondary:presenter:complete",
+      "kind": "domain_block_to_exit",
+      "source_id": "flow:domain:yaml_depth_secondary:presenter",
+      "target_id": "flow:exit:yaml_depth_secondary:complete",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root.component_domain_blocks.presenter",
+      "order_index": 100
+    }
+  ],
+  "specification_nodes": [
+    {
+      "id": "specification:boundary:yaml_depth_secondary",
+      "kind": "component_boundary",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "yaml_depth_secondary",
+      "source_path": "$root",
+      "order_index": 0
+    },
+    {
+      "id": "specification:domain:yaml_depth_secondary:planner",
+      "kind": "domain_block",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "planner",
+      "source_path": "$root.component_domain_blocks.planner",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:yaml_depth_secondary:boundary_placement",
+      "kind": "section:boundary_placement",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "boundary_placement",
+      "source_path": "$root.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "specification:domain:yaml_depth_secondary:presenter",
+      "kind": "domain_block",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "presenter",
+      "source_path": "$root.component_domain_blocks.presenter",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:yaml_depth_secondary:entry_boundary",
+      "kind": "section:entry_boundary",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "entry_boundary",
+      "source_path": "$root.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:yaml_depth_secondary:inbound_interface",
+      "kind": "section:inbound_interface",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "inbound_interface",
+      "source_path": "$root.component_input_interface",
+      "order_index": 2
+    },
+    {
+      "id": "specification:section:yaml_depth_secondary:exit_semantics",
+      "kind": "section:exit_semantics",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "exit_semantics",
+      "source_path": "$root.component_output_interface",
+      "order_index": 3
+    },
+    {
+      "id": "specification:section:yaml_depth_secondary:boundary_content",
+      "kind": "section:boundary_content",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "boundary_content",
+      "source_path": "$root.component_domain_blocks",
+      "order_index": 4
+    },
+    {
+      "id": "specification:section:yaml_depth_secondary:dependency_refs",
+      "kind": "section:dependency_refs",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "label": "dependency_refs",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 5
+    }
+  ],
+  "specification_edges": [
+    {
+      "id": "specification_edge:contains_domain_block:yaml_depth_secondary:planner",
+      "kind": "contains_domain_block",
+      "source_id": "specification:section:yaml_depth_secondary:boundary_content",
+      "target_id": "specification:domain:yaml_depth_secondary:planner",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root.component_domain_blocks",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:yaml_depth_secondary:boundary_placement",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:yaml_depth_secondary",
+      "target_id": "specification:section:yaml_depth_secondary:boundary_placement",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_domain_block:yaml_depth_secondary:presenter",
+      "kind": "contains_domain_block",
+      "source_id": "specification:section:yaml_depth_secondary:boundary_content",
+      "target_id": "specification:domain:yaml_depth_secondary:presenter",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root.component_domain_blocks",
+      "order_index": 1
+    },
+    {
+      "id": "specification_edge:contains_section:yaml_depth_secondary:entry_boundary",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:yaml_depth_secondary",
+      "target_id": "specification:section:yaml_depth_secondary:entry_boundary",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root",
+      "order_index": 1
+    },
+    {
+      "id": "specification_edge:contains_section:yaml_depth_secondary:inbound_interface",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:yaml_depth_secondary",
+      "target_id": "specification:section:yaml_depth_secondary:inbound_interface",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root",
+      "order_index": 2
+    },
+    {
+      "id": "specification_edge:contains_section:yaml_depth_secondary:exit_semantics",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:yaml_depth_secondary",
+      "target_id": "specification:section:yaml_depth_secondary:exit_semantics",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root",
+      "order_index": 3
+    },
+    {
+      "id": "specification_edge:contains_section:yaml_depth_secondary:boundary_content",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:yaml_depth_secondary",
+      "target_id": "specification:section:yaml_depth_secondary:boundary_content",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root",
+      "order_index": 4
+    },
+    {
+      "id": "specification_edge:contains_section:yaml_depth_secondary:dependency_refs",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:yaml_depth_secondary",
+      "target_id": "specification:section:yaml_depth_secondary:dependency_refs",
+      "source_boundary_id": "yaml_depth_secondary",
+      "target_boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "source_path": "$root",
+      "order_index": 5
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "entry_point:yaml_depth_secondary",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "flow_node_id": "flow:entry:yaml_depth_secondary",
+      "slot_ref": "app.surface",
+      "mount_kind": "host-static",
+      "order_index": 0
+    }
+  ],
+  "exit_points": [
+    {
+      "id": "exit_point:yaml_depth_secondary:complete",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "flow_node_id": "flow:exit:yaml_depth_secondary:complete",
+      "exit_id": "complete",
+      "outcome": "exit",
+      "continuation_target_boundary_id": null,
+      "return_target_boundary_id": null,
+      "order_index": 0
+    }
+  ],
+  "mounted_child_relations": [],
+  "continuation_mappings": [],
+  "return_mappings": [],
+  "dependency_edges": [],
+  "context_shell_hints": [
+    {
+      "id": "context_shell:yaml_depth_secondary",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "parent_boundary_id": null,
+      "local_role": "analyzer",
+      "mount_kind": "host-static",
+      "shell_hint": "host_static_shell",
+      "order_index": 0
+    }
+  ],
+  "trace_projection_hints": [
+    {
+      "id": "trace_projection:yaml_depth_secondary",
+      "boundary_id": "yaml_depth_secondary",
+      "projection_unit_id": "projection_unit:yaml_depth_secondary",
+      "entry_point_id": "entry_point:yaml_depth_secondary",
+      "exit_point_ids": [
+        "exit_point:yaml_depth_secondary:complete"
+      ],
+      "mounted_child_relation_ids": [],
+      "continuation_mapping_ids": [],
+      "return_mapping_ids": [],
+      "order_index": 0
+    }
+  ]
+}

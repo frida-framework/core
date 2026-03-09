@@ -87,10 +87,14 @@ FRIDA_ARCHITECTURE_DECISIONS:
         - src/init.ts
 
     - id: CORE-ADR-008
-      title: Visual overlay uses LOD-based semantic zoom
+      title: Visual overlay uses boundary-first semantic zoom
       status: ACCEPTED
       decision:
-        - "Contract YAML depth maps to LOD levels (topology/flow/specification)."
+        - "Component-level contract file is the primary visual projection unit."
+        - "FRIDA_VISUAL.component_projection is the authoritative source for source-contract-to-visual mapping semantics."
+        - "Component boundary semantics are established before any YAML-depth expansion."
+        - "Topology, flow, and specification are interpreted relative to the current component boundary."
+        - "Mounted child internals stay collapsed in parent specification view until explicit drill-in through component_mount_point.mounted_child_boundaryRefs."
         - "Typed reference keys (*Ref, *Refs) produce explicit edges."
         - "Overlay is deterministic: same contract → same overlay (up to isomorphism)."
       evidence:
@@ -217,5 +221,12 @@ FRIDA_FOUNDATION_PRINCIPLES:
       text: >-
         Every component contract file MUST fit entirely in the agent context window.
         Component contract is a self-contained source for task formulation.
-        It declares: hierarchy position, mount point, input props, output callbacks.
+        It is the primary visual projection unit for its current component boundary.
+        It declares: component_hierarchy_position, component_mount_point,
+        component_input_interface, component_output_interface,
+        component_domain_blocks, and component_shared_refs. These names define
+        component-boundary semantics, not repo/file/global hierarchy,
+        filesystem mount semantics, or arbitrary runtime props/events outside
+        the contract surface. Mounted child internals are reached only by
+        explicit boundary-aware drill-in.
 

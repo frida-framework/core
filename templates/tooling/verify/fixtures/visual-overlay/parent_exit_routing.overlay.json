@@ -1,0 +1,1143 @@
+{
+  "meta": {
+    "schema_id": "frida-visual-overlay",
+    "schema_version": "1.0.0",
+    "generated_at": "1970-01-01T00:00:00.000Z",
+    "contract_sha256": "88b150e8fce44ca3cb07d486f1961803bcd9d871a09f68158eba9273ab61cce9",
+    "source": "templates/tooling/verify/fixtures/visual-overlay/parent_exit_routing.yaml",
+    "overlay_path": "fixtures/visual-overlay/out/parent_exit_routing.overlay.json",
+    "builder_entrypoint": "src/visual.ts",
+    "builder_command": "frida-core visual",
+    "projection_authority_ref": "FRIDA_VISUAL.component_projection",
+    "projection_unit_count": 3,
+    "component_boundary_count": 3,
+    "topology_node_count": 3,
+    "topology_edge_count": 4,
+    "flow_node_count": 13,
+    "flow_edge_count": 16,
+    "specification_node_count": 24,
+    "specification_edge_count": 21,
+    "dependency_edge_count": 0
+  },
+  "projection_units": [
+    {
+      "id": "projection_unit:after_success",
+      "boundary_id": "after_success",
+      "source_kind": "top_level_block",
+      "source_path": "after_success",
+      "contract_path": "templates/tooling/verify/fixtures/visual-overlay/parent_exit_routing.yaml",
+      "order_index": 0
+    },
+    {
+      "id": "projection_unit:caller_shell",
+      "boundary_id": "caller_shell",
+      "source_kind": "top_level_block",
+      "source_path": "caller_shell",
+      "contract_path": "templates/tooling/verify/fixtures/visual-overlay/parent_exit_routing.yaml",
+      "order_index": 1
+    },
+    {
+      "id": "projection_unit:wizard_step",
+      "boundary_id": "wizard_step",
+      "source_kind": "top_level_block",
+      "source_path": "wizard_step",
+      "contract_path": "templates/tooling/verify/fixtures/visual-overlay/parent_exit_routing.yaml",
+      "order_index": 2
+    }
+  ],
+  "component_boundaries": [
+    {
+      "id": "boundary:after_success",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success",
+      "parent_boundary_id": "caller_shell",
+      "local_role": "continuation",
+      "slot_ref": "shell.after_success",
+      "mount_kind": "mapper-managed",
+      "entry_point_id": "entry_point:after_success",
+      "exit_point_ids": [
+        "exit_point:after_success:close"
+      ],
+      "mounted_child_boundary_ids": [],
+      "content_node_ids": [
+        "render_success"
+      ],
+      "dependency_targets": [],
+      "inbound_interface_keys": [
+        "result"
+      ],
+      "order_index": 0
+    },
+    {
+      "id": "boundary:caller_shell",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell",
+      "parent_boundary_id": null,
+      "local_role": "shell",
+      "slot_ref": "page.root",
+      "mount_kind": "host-static",
+      "entry_point_id": "entry_point:caller_shell",
+      "exit_point_ids": [
+        "exit_point:caller_shell:complete"
+      ],
+      "mounted_child_boundary_ids": [
+        "wizard_step",
+        "after_success"
+      ],
+      "content_node_ids": [
+        "render_shell"
+      ],
+      "dependency_targets": [],
+      "inbound_interface_keys": [
+        "request"
+      ],
+      "order_index": 1
+    },
+    {
+      "id": "boundary:wizard_step",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step",
+      "parent_boundary_id": "caller_shell",
+      "local_role": "step",
+      "slot_ref": "shell.step",
+      "mount_kind": "mapper-managed",
+      "entry_point_id": "entry_point:wizard_step",
+      "exit_point_ids": [
+        "exit_point:wizard_step:success",
+        "exit_point:wizard_step:cancel"
+      ],
+      "mounted_child_boundary_ids": [],
+      "content_node_ids": [
+        "evaluate_choice"
+      ],
+      "dependency_targets": [],
+      "inbound_interface_keys": [
+        "choice"
+      ],
+      "order_index": 2
+    }
+  ],
+  "topology_nodes": [
+    {
+      "id": "topology:boundary:after_success",
+      "kind": "component_boundary",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "after_success",
+      "source_path": "after_success.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "topology:boundary:caller_shell",
+      "kind": "component_boundary",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "caller_shell",
+      "source_path": "caller_shell.component_hierarchy_position",
+      "order_index": 1
+    },
+    {
+      "id": "topology:boundary:wizard_step",
+      "kind": "component_boundary",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "wizard_step",
+      "source_path": "wizard_step.component_hierarchy_position",
+      "order_index": 2
+    }
+  ],
+  "topology_edges": [
+    {
+      "id": "topology_edge:mounted_child:caller_shell:wizard_step",
+      "kind": "mounted_child",
+      "source_id": "topology:boundary:caller_shell",
+      "target_id": "topology:boundary:wizard_step",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell.component_mount_point.mounted_child_boundaryRefs[0]",
+      "order_index": 0
+    },
+    {
+      "id": "topology_edge:parent_child:caller_shell:after_success",
+      "kind": "parent_child",
+      "source_id": "topology:boundary:caller_shell",
+      "target_id": "topology:boundary:after_success",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "topology_edge:mounted_child:caller_shell:after_success",
+      "kind": "mounted_child",
+      "source_id": "topology:boundary:caller_shell",
+      "target_id": "topology:boundary:after_success",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell.component_mount_point.mounted_child_boundaryRefs[1]",
+      "order_index": 1
+    },
+    {
+      "id": "topology_edge:parent_child:caller_shell:wizard_step",
+      "kind": "parent_child",
+      "source_id": "topology:boundary:caller_shell",
+      "target_id": "topology:boundary:wizard_step",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_hierarchy_position",
+      "order_index": 2
+    }
+  ],
+  "flow_nodes": [
+    {
+      "id": "flow:domain:after_success:render_success",
+      "kind": "domain_block",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "render_success",
+      "source_path": "after_success.component_domain_blocks.render_success",
+      "order_index": 0
+    },
+    {
+      "id": "flow:entry:after_success",
+      "kind": "entry_point",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "after_success:entry",
+      "source_path": "after_success.component_mount_point",
+      "order_index": 0
+    },
+    {
+      "id": "flow:exit:after_success:close",
+      "kind": "exit_point",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "close",
+      "source_path": "after_success.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow:inbound_interface:after_success",
+      "kind": "inbound_interface",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "after_success:inbound",
+      "source_path": "after_success.component_input_interface",
+      "order_index": 0
+    },
+    {
+      "id": "flow:domain:caller_shell:render_shell",
+      "kind": "domain_block",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "render_shell",
+      "source_path": "caller_shell.component_domain_blocks.render_shell",
+      "order_index": 0
+    },
+    {
+      "id": "flow:exit:caller_shell:complete",
+      "kind": "exit_point",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "complete",
+      "source_path": "caller_shell.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow:entry:caller_shell",
+      "kind": "entry_point",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "caller_shell:entry",
+      "source_path": "caller_shell.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "flow:inbound_interface:caller_shell",
+      "kind": "inbound_interface",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "caller_shell:inbound",
+      "source_path": "caller_shell.component_input_interface",
+      "order_index": 1
+    },
+    {
+      "id": "flow:domain:wizard_step:evaluate_choice",
+      "kind": "domain_block",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "evaluate_choice",
+      "source_path": "wizard_step.component_domain_blocks.evaluate_choice",
+      "order_index": 0
+    },
+    {
+      "id": "flow:exit:wizard_step:success",
+      "kind": "exit_point",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "success",
+      "source_path": "wizard_step.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow:exit:wizard_step:cancel",
+      "kind": "exit_point",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "cancel",
+      "source_path": "wizard_step.component_output_interface.exits[1]",
+      "order_index": 1
+    },
+    {
+      "id": "flow:entry:wizard_step",
+      "kind": "entry_point",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "wizard_step:entry",
+      "source_path": "wizard_step.component_mount_point",
+      "order_index": 2
+    },
+    {
+      "id": "flow:inbound_interface:wizard_step",
+      "kind": "inbound_interface",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "wizard_step:inbound",
+      "source_path": "wizard_step.component_input_interface",
+      "order_index": 2
+    }
+  ],
+  "flow_edges": [
+    {
+      "id": "flow_edge:domain_to_exit:after_success:render_success:close",
+      "kind": "domain_block_to_exit",
+      "source_id": "flow:domain:after_success:render_success",
+      "target_id": "flow:exit:after_success:close",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success.component_domain_blocks.render_success",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:entry_to_inbound_interface:after_success",
+      "kind": "entry_to_inbound_interface",
+      "source_id": "flow:entry:after_success",
+      "target_id": "flow:inbound_interface:after_success",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success.component_mount_point",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_domain:after_success:render_success",
+      "kind": "inbound_interface_to_domain_block",
+      "source_id": "flow:inbound_interface:after_success",
+      "target_id": "flow:domain:after_success:render_success",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success.component_domain_blocks.render_success",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_exit:after_success:close",
+      "kind": "inbound_interface_to_exit",
+      "source_id": "flow:inbound_interface:after_success",
+      "target_id": "flow:exit:after_success:close",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:domain_to_exit:caller_shell:render_shell:complete",
+      "kind": "domain_block_to_exit",
+      "source_id": "flow:domain:caller_shell:render_shell",
+      "target_id": "flow:exit:caller_shell:complete",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell.component_domain_blocks.render_shell",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_domain:caller_shell:render_shell",
+      "kind": "inbound_interface_to_domain_block",
+      "source_id": "flow:inbound_interface:caller_shell",
+      "target_id": "flow:domain:caller_shell:render_shell",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell.component_domain_blocks.render_shell",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_exit:caller_shell:complete",
+      "kind": "inbound_interface_to_exit",
+      "source_id": "flow:inbound_interface:caller_shell",
+      "target_id": "flow:exit:caller_shell:complete",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:entry_to_inbound_interface:caller_shell",
+      "kind": "entry_to_inbound_interface",
+      "source_id": "flow:entry:caller_shell",
+      "target_id": "flow:inbound_interface:caller_shell",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "flow_edge:continue:wizard_step:success:after_success",
+      "kind": "continue",
+      "source_id": "flow:exit:wizard_step:success",
+      "target_id": "flow:entry:after_success",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:domain_to_exit:wizard_step:evaluate_choice:success",
+      "kind": "domain_block_to_exit",
+      "source_id": "flow:domain:wizard_step:evaluate_choice",
+      "target_id": "flow:exit:wizard_step:success",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_domain_blocks.evaluate_choice",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_domain:wizard_step:evaluate_choice",
+      "kind": "inbound_interface_to_domain_block",
+      "source_id": "flow:inbound_interface:wizard_step",
+      "target_id": "flow:domain:wizard_step:evaluate_choice",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_domain_blocks.evaluate_choice",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_exit:wizard_step:success",
+      "kind": "inbound_interface_to_exit",
+      "source_id": "flow:inbound_interface:wizard_step",
+      "target_id": "flow:exit:wizard_step:success",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:domain_to_exit:wizard_step:evaluate_choice:cancel",
+      "kind": "domain_block_to_exit",
+      "source_id": "flow:domain:wizard_step:evaluate_choice",
+      "target_id": "flow:exit:wizard_step:cancel",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_domain_blocks.evaluate_choice",
+      "order_index": 1
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_exit:wizard_step:cancel",
+      "kind": "inbound_interface_to_exit",
+      "source_id": "flow:inbound_interface:wizard_step",
+      "target_id": "flow:exit:wizard_step:cancel",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_output_interface.exits[1]",
+      "order_index": 1
+    },
+    {
+      "id": "flow_edge:return:wizard_step:cancel:caller_shell",
+      "kind": "return",
+      "source_id": "flow:exit:wizard_step:cancel",
+      "target_id": "flow:entry:caller_shell",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_output_interface.exits[1]",
+      "order_index": 1
+    },
+    {
+      "id": "flow_edge:entry_to_inbound_interface:wizard_step",
+      "kind": "entry_to_inbound_interface",
+      "source_id": "flow:entry:wizard_step",
+      "target_id": "flow:inbound_interface:wizard_step",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_mount_point",
+      "order_index": 2
+    }
+  ],
+  "specification_nodes": [
+    {
+      "id": "specification:boundary:after_success",
+      "kind": "component_boundary",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "after_success",
+      "source_path": "after_success",
+      "order_index": 0
+    },
+    {
+      "id": "specification:domain:after_success:render_success",
+      "kind": "domain_block",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "render_success",
+      "source_path": "after_success.component_domain_blocks.render_success",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:after_success:boundary_placement",
+      "kind": "section:boundary_placement",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "boundary_placement",
+      "source_path": "after_success.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:after_success:entry_boundary",
+      "kind": "section:entry_boundary",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "entry_boundary",
+      "source_path": "after_success.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:after_success:inbound_interface",
+      "kind": "section:inbound_interface",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "inbound_interface",
+      "source_path": "after_success.component_input_interface",
+      "order_index": 2
+    },
+    {
+      "id": "specification:section:after_success:exit_semantics",
+      "kind": "section:exit_semantics",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "exit_semantics",
+      "source_path": "after_success.component_output_interface",
+      "order_index": 3
+    },
+    {
+      "id": "specification:section:after_success:boundary_content",
+      "kind": "section:boundary_content",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "boundary_content",
+      "source_path": "after_success.component_domain_blocks",
+      "order_index": 4
+    },
+    {
+      "id": "specification:section:after_success:dependency_refs",
+      "kind": "section:dependency_refs",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "label": "dependency_refs",
+      "source_path": "after_success.component_shared_refs",
+      "order_index": 5
+    },
+    {
+      "id": "specification:domain:caller_shell:render_shell",
+      "kind": "domain_block",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "render_shell",
+      "source_path": "caller_shell.component_domain_blocks.render_shell",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:caller_shell:boundary_placement",
+      "kind": "section:boundary_placement",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "boundary_placement",
+      "source_path": "caller_shell.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "specification:boundary:caller_shell",
+      "kind": "component_boundary",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "caller_shell",
+      "source_path": "caller_shell",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:caller_shell:entry_boundary",
+      "kind": "section:entry_boundary",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "entry_boundary",
+      "source_path": "caller_shell.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:caller_shell:inbound_interface",
+      "kind": "section:inbound_interface",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "inbound_interface",
+      "source_path": "caller_shell.component_input_interface",
+      "order_index": 2
+    },
+    {
+      "id": "specification:section:caller_shell:exit_semantics",
+      "kind": "section:exit_semantics",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "exit_semantics",
+      "source_path": "caller_shell.component_output_interface",
+      "order_index": 3
+    },
+    {
+      "id": "specification:section:caller_shell:boundary_content",
+      "kind": "section:boundary_content",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "boundary_content",
+      "source_path": "caller_shell.component_domain_blocks",
+      "order_index": 4
+    },
+    {
+      "id": "specification:section:caller_shell:dependency_refs",
+      "kind": "section:dependency_refs",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "label": "dependency_refs",
+      "source_path": "caller_shell.component_shared_refs",
+      "order_index": 5
+    },
+    {
+      "id": "specification:domain:wizard_step:evaluate_choice",
+      "kind": "domain_block",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "evaluate_choice",
+      "source_path": "wizard_step.component_domain_blocks.evaluate_choice",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:wizard_step:boundary_placement",
+      "kind": "section:boundary_placement",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "boundary_placement",
+      "source_path": "wizard_step.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:wizard_step:entry_boundary",
+      "kind": "section:entry_boundary",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "entry_boundary",
+      "source_path": "wizard_step.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "specification:boundary:wizard_step",
+      "kind": "component_boundary",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "wizard_step",
+      "source_path": "wizard_step",
+      "order_index": 2
+    },
+    {
+      "id": "specification:section:wizard_step:inbound_interface",
+      "kind": "section:inbound_interface",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "inbound_interface",
+      "source_path": "wizard_step.component_input_interface",
+      "order_index": 2
+    },
+    {
+      "id": "specification:section:wizard_step:exit_semantics",
+      "kind": "section:exit_semantics",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "exit_semantics",
+      "source_path": "wizard_step.component_output_interface",
+      "order_index": 3
+    },
+    {
+      "id": "specification:section:wizard_step:boundary_content",
+      "kind": "section:boundary_content",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "boundary_content",
+      "source_path": "wizard_step.component_domain_blocks",
+      "order_index": 4
+    },
+    {
+      "id": "specification:section:wizard_step:dependency_refs",
+      "kind": "section:dependency_refs",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "label": "dependency_refs",
+      "source_path": "wizard_step.component_shared_refs",
+      "order_index": 5
+    }
+  ],
+  "specification_edges": [
+    {
+      "id": "specification_edge:contains_domain_block:after_success:render_success",
+      "kind": "contains_domain_block",
+      "source_id": "specification:section:after_success:boundary_content",
+      "target_id": "specification:domain:after_success:render_success",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success.component_domain_blocks",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:after_success:boundary_placement",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:after_success",
+      "target_id": "specification:section:after_success:boundary_placement",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:after_success:entry_boundary",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:after_success",
+      "target_id": "specification:section:after_success:entry_boundary",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success",
+      "order_index": 1
+    },
+    {
+      "id": "specification_edge:contains_section:after_success:inbound_interface",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:after_success",
+      "target_id": "specification:section:after_success:inbound_interface",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success",
+      "order_index": 2
+    },
+    {
+      "id": "specification_edge:contains_section:after_success:exit_semantics",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:after_success",
+      "target_id": "specification:section:after_success:exit_semantics",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success",
+      "order_index": 3
+    },
+    {
+      "id": "specification_edge:contains_section:after_success:boundary_content",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:after_success",
+      "target_id": "specification:section:after_success:boundary_content",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success",
+      "order_index": 4
+    },
+    {
+      "id": "specification_edge:contains_section:after_success:dependency_refs",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:after_success",
+      "target_id": "specification:section:after_success:dependency_refs",
+      "source_boundary_id": "after_success",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "source_path": "after_success",
+      "order_index": 5
+    },
+    {
+      "id": "specification_edge:contains_domain_block:caller_shell:render_shell",
+      "kind": "contains_domain_block",
+      "source_id": "specification:section:caller_shell:boundary_content",
+      "target_id": "specification:domain:caller_shell:render_shell",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell.component_domain_blocks",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:caller_shell:boundary_placement",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:caller_shell",
+      "target_id": "specification:section:caller_shell:boundary_placement",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:caller_shell:entry_boundary",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:caller_shell",
+      "target_id": "specification:section:caller_shell:entry_boundary",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell",
+      "order_index": 1
+    },
+    {
+      "id": "specification_edge:contains_section:caller_shell:inbound_interface",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:caller_shell",
+      "target_id": "specification:section:caller_shell:inbound_interface",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell",
+      "order_index": 2
+    },
+    {
+      "id": "specification_edge:contains_section:caller_shell:exit_semantics",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:caller_shell",
+      "target_id": "specification:section:caller_shell:exit_semantics",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell",
+      "order_index": 3
+    },
+    {
+      "id": "specification_edge:contains_section:caller_shell:boundary_content",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:caller_shell",
+      "target_id": "specification:section:caller_shell:boundary_content",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell",
+      "order_index": 4
+    },
+    {
+      "id": "specification_edge:contains_section:caller_shell:dependency_refs",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:caller_shell",
+      "target_id": "specification:section:caller_shell:dependency_refs",
+      "source_boundary_id": "caller_shell",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "source_path": "caller_shell",
+      "order_index": 5
+    },
+    {
+      "id": "specification_edge:contains_domain_block:wizard_step:evaluate_choice",
+      "kind": "contains_domain_block",
+      "source_id": "specification:section:wizard_step:boundary_content",
+      "target_id": "specification:domain:wizard_step:evaluate_choice",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step.component_domain_blocks",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:wizard_step:boundary_placement",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:wizard_step",
+      "target_id": "specification:section:wizard_step:boundary_placement",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:wizard_step:entry_boundary",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:wizard_step",
+      "target_id": "specification:section:wizard_step:entry_boundary",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step",
+      "order_index": 1
+    },
+    {
+      "id": "specification_edge:contains_section:wizard_step:inbound_interface",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:wizard_step",
+      "target_id": "specification:section:wizard_step:inbound_interface",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step",
+      "order_index": 2
+    },
+    {
+      "id": "specification_edge:contains_section:wizard_step:exit_semantics",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:wizard_step",
+      "target_id": "specification:section:wizard_step:exit_semantics",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step",
+      "order_index": 3
+    },
+    {
+      "id": "specification_edge:contains_section:wizard_step:boundary_content",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:wizard_step",
+      "target_id": "specification:section:wizard_step:boundary_content",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step",
+      "order_index": 4
+    },
+    {
+      "id": "specification_edge:contains_section:wizard_step:dependency_refs",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:wizard_step",
+      "target_id": "specification:section:wizard_step:dependency_refs",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "source_path": "wizard_step",
+      "order_index": 5
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "entry_point:after_success",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "flow_node_id": "flow:entry:after_success",
+      "slot_ref": "shell.after_success",
+      "mount_kind": "mapper-managed",
+      "order_index": 0
+    },
+    {
+      "id": "entry_point:caller_shell",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "flow_node_id": "flow:entry:caller_shell",
+      "slot_ref": "page.root",
+      "mount_kind": "host-static",
+      "order_index": 1
+    },
+    {
+      "id": "entry_point:wizard_step",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "flow_node_id": "flow:entry:wizard_step",
+      "slot_ref": "shell.step",
+      "mount_kind": "mapper-managed",
+      "order_index": 2
+    }
+  ],
+  "exit_points": [
+    {
+      "id": "exit_point:after_success:close",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "flow_node_id": "flow:exit:after_success:close",
+      "exit_id": "close",
+      "outcome": "exit",
+      "continuation_target_boundary_id": null,
+      "return_target_boundary_id": null,
+      "order_index": 0
+    },
+    {
+      "id": "exit_point:caller_shell:complete",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "flow_node_id": "flow:exit:caller_shell:complete",
+      "exit_id": "complete",
+      "outcome": "exit",
+      "continuation_target_boundary_id": null,
+      "return_target_boundary_id": null,
+      "order_index": 0
+    },
+    {
+      "id": "exit_point:wizard_step:cancel",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "flow_node_id": "flow:exit:wizard_step:cancel",
+      "exit_id": "cancel",
+      "outcome": "return",
+      "continuation_target_boundary_id": null,
+      "return_target_boundary_id": "caller_shell",
+      "order_index": 1
+    },
+    {
+      "id": "exit_point:wizard_step:success",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "flow_node_id": "flow:exit:wizard_step:success",
+      "exit_id": "success",
+      "outcome": "continue",
+      "continuation_target_boundary_id": "after_success",
+      "return_target_boundary_id": null,
+      "order_index": 0
+    }
+  ],
+  "mounted_child_relations": [
+    {
+      "id": "mounted_child_relation:caller_shell:after_success",
+      "parent_boundary_id": "caller_shell",
+      "child_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "topology_edge_id": "topology_edge:mounted_child:caller_shell:after_success",
+      "order_index": 1
+    },
+    {
+      "id": "mounted_child_relation:caller_shell:wizard_step",
+      "parent_boundary_id": "caller_shell",
+      "child_boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "topology_edge_id": "topology_edge:mounted_child:caller_shell:wizard_step",
+      "order_index": 0
+    }
+  ],
+  "continuation_mappings": [
+    {
+      "id": "continuation_mapping:wizard_step:success",
+      "source_exit_point_id": "exit_point:wizard_step:success",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "flow_edge_id": "flow_edge:continue:wizard_step:success:after_success",
+      "order_index": 0
+    }
+  ],
+  "return_mappings": [
+    {
+      "id": "return_mapping:wizard_step:cancel",
+      "source_exit_point_id": "exit_point:wizard_step:cancel",
+      "source_boundary_id": "wizard_step",
+      "target_boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "flow_edge_id": "flow_edge:return:wizard_step:cancel:caller_shell",
+      "order_index": 1
+    }
+  ],
+  "dependency_edges": [],
+  "context_shell_hints": [
+    {
+      "id": "context_shell:after_success",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "parent_boundary_id": "caller_shell",
+      "local_role": "continuation",
+      "mount_kind": "mapper-managed",
+      "shell_hint": "mapper_managed_shell",
+      "order_index": 0
+    },
+    {
+      "id": "context_shell:caller_shell",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "parent_boundary_id": null,
+      "local_role": "shell",
+      "mount_kind": "host-static",
+      "shell_hint": "host_static_shell",
+      "order_index": 1
+    },
+    {
+      "id": "context_shell:wizard_step",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "parent_boundary_id": "caller_shell",
+      "local_role": "step",
+      "mount_kind": "mapper-managed",
+      "shell_hint": "mapper_managed_shell",
+      "order_index": 2
+    }
+  ],
+  "trace_projection_hints": [
+    {
+      "id": "trace_projection:after_success",
+      "boundary_id": "after_success",
+      "projection_unit_id": "projection_unit:after_success",
+      "entry_point_id": "entry_point:after_success",
+      "exit_point_ids": [
+        "exit_point:after_success:close"
+      ],
+      "mounted_child_relation_ids": [],
+      "continuation_mapping_ids": [],
+      "return_mapping_ids": [],
+      "order_index": 0
+    },
+    {
+      "id": "trace_projection:caller_shell",
+      "boundary_id": "caller_shell",
+      "projection_unit_id": "projection_unit:caller_shell",
+      "entry_point_id": "entry_point:caller_shell",
+      "exit_point_ids": [
+        "exit_point:caller_shell:complete"
+      ],
+      "mounted_child_relation_ids": [
+        "mounted_child_relation:caller_shell:wizard_step",
+        "mounted_child_relation:caller_shell:after_success"
+      ],
+      "continuation_mapping_ids": [],
+      "return_mapping_ids": [],
+      "order_index": 1
+    },
+    {
+      "id": "trace_projection:wizard_step",
+      "boundary_id": "wizard_step",
+      "projection_unit_id": "projection_unit:wizard_step",
+      "entry_point_id": "entry_point:wizard_step",
+      "exit_point_ids": [
+        "exit_point:wizard_step:success",
+        "exit_point:wizard_step:cancel"
+      ],
+      "mounted_child_relation_ids": [],
+      "continuation_mapping_ids": [
+        "continuation_mapping:wizard_step:success"
+      ],
+      "return_mapping_ids": [
+        "return_mapping:wizard_step:cancel"
+      ],
+      "order_index": 2
+    }
+  ]
+}

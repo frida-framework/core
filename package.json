@@ -30,7 +30,9 @@
       "types": "./dist/types.d.ts",
       "import": "./dist/types.js"
     },
-    "./schemas/frida-contract.schema.json": "./schemas/frida-contract.schema.json"
+    "./schemas/frida-contract.schema.json": "./schemas/frida-contract.schema.json",
+    "./schemas/frida-visual-overlay.schema.json": "./schemas/frida-visual-overlay.schema.json",
+    "./schemas/frida-visual-viewer-runtime.schema.json": "./schemas/frida-visual-viewer-runtime.schema.json"
   },
   "files": [
     "dist",
@@ -42,7 +44,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "node -e \"import('node:fs').then(fs=>fs.rmSync('dist',{recursive:true,force:true}))\"",
-    "verify": "npm run build && node dist/cli.js migration-report && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs && npm run verify:task-packs && npm run verify:zero-start",
+    "verify": "npm run build && node dist/cli.js migration-report && node templates/tooling/verify/check-component-boundary-contract.mjs && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs && npm run verify:task-packs && npm run verify:zero-start",
+    "frida:visual": "node dist/cli.js visual",
+    "frida:visual-viewer": "node dist/cli.js visual-viewer",
+    "frida:visual-viewer:demo": "node dist/cli.js visual-viewer --overlay templates/tooling/verify/fixtures/visual-overlay/mounted_child_boundary.overlay.json --out dist/reference-viewer/demo/index.html --title \"Mounted Child Demo\"",
+    "verify:visual": "npm run build && node templates/tooling/verify/check-visual-contract-consistency.mjs && npm run frida:visual && node templates/tooling/verify/check-visual-no-skip.mjs && node templates/tooling/verify/check-visual-schema-determinism.mjs && node templates/tooling/verify/check-visual-overlay-goldens.mjs && node templates/tooling/verify/check-visual-viewer-runtime.mjs && node templates/tooling/verify/check-visual-reference-viewer.mjs && node templates/tooling/verify/check-verify-visual-separation.mjs",
+    "verify:component-boundary": "node templates/tooling/verify/check-component-boundary-contract.mjs",
     "verify:task-packs": "node templates/tooling/verify/tasks-taskpacks-schema.mjs && node templates/tooling/verify/tasks-taskpacks-immutable.mjs",
     "verify:zero-start": "node dist/zero-start-determinism.js",
     "prepack": "npm run clean && npm run build"

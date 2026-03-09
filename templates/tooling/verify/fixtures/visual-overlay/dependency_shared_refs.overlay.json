@@ -1,0 +1,443 @@
+{
+  "meta": {
+    "schema_id": "frida-visual-overlay",
+    "schema_version": "1.0.0",
+    "generated_at": "1970-01-01T00:00:00.000Z",
+    "contract_sha256": "c12480884dcf02b255a8a18e0da7a35f4bae869ac23e25e0a3071f235005e7b1",
+    "source": "templates/tooling/verify/fixtures/visual-overlay/dependency_shared_refs.yaml",
+    "overlay_path": "fixtures/visual-overlay/out/dependency_shared_refs.overlay.json",
+    "builder_entrypoint": "src/visual.ts",
+    "builder_command": "frida-core visual",
+    "projection_authority_ref": "FRIDA_VISUAL.component_projection",
+    "projection_unit_count": 1,
+    "component_boundary_count": 1,
+    "topology_node_count": 1,
+    "topology_edge_count": 0,
+    "flow_node_count": 4,
+    "flow_edge_count": 4,
+    "specification_node_count": 12,
+    "specification_edge_count": 7,
+    "dependency_edge_count": 4
+  },
+  "projection_units": [
+    {
+      "id": "projection_unit:dependency_shared_refs",
+      "boundary_id": "dependency_shared_refs",
+      "source_kind": "contract_root",
+      "source_path": "$root",
+      "contract_path": "templates/tooling/verify/fixtures/visual-overlay/dependency_shared_refs.yaml",
+      "order_index": 0
+    }
+  ],
+  "component_boundaries": [
+    {
+      "id": "boundary:dependency_shared_refs",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root",
+      "parent_boundary_id": null,
+      "local_role": "leaf",
+      "slot_ref": "app.panel",
+      "mount_kind": "mapper-managed",
+      "entry_point_id": "entry_point:dependency_shared_refs",
+      "exit_point_ids": [
+        "exit_point:dependency_shared_refs:complete"
+      ],
+      "mounted_child_boundary_ids": [],
+      "content_node_ids": [
+        "render_panel"
+      ],
+      "dependency_targets": [
+        "shared.adapter.router",
+        "shared.analytics.emit",
+        "shared.policy.auth",
+        "shared.tokens.theme"
+      ],
+      "inbound_interface_keys": [
+        "request"
+      ],
+      "order_index": 0
+    }
+  ],
+  "topology_nodes": [
+    {
+      "id": "topology:boundary:dependency_shared_refs",
+      "kind": "component_boundary",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "dependency_shared_refs",
+      "source_path": "$root.component_hierarchy_position",
+      "order_index": 0
+    }
+  ],
+  "topology_edges": [],
+  "flow_nodes": [
+    {
+      "id": "flow:domain:dependency_shared_refs:render_panel",
+      "kind": "domain_block",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "render_panel",
+      "source_path": "$root.component_domain_blocks.render_panel",
+      "order_index": 0
+    },
+    {
+      "id": "flow:entry:dependency_shared_refs",
+      "kind": "entry_point",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "dependency_shared_refs:entry",
+      "source_path": "$root.component_mount_point",
+      "order_index": 0
+    },
+    {
+      "id": "flow:exit:dependency_shared_refs:complete",
+      "kind": "exit_point",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "complete",
+      "source_path": "$root.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow:inbound_interface:dependency_shared_refs",
+      "kind": "inbound_interface",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "dependency_shared_refs:inbound",
+      "source_path": "$root.component_input_interface",
+      "order_index": 0
+    }
+  ],
+  "flow_edges": [
+    {
+      "id": "flow_edge:domain_to_exit:dependency_shared_refs:render_panel:complete",
+      "kind": "domain_block_to_exit",
+      "source_id": "flow:domain:dependency_shared_refs:render_panel",
+      "target_id": "flow:exit:dependency_shared_refs:complete",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_domain_blocks.render_panel",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:entry_to_inbound_interface:dependency_shared_refs",
+      "kind": "entry_to_inbound_interface",
+      "source_id": "flow:entry:dependency_shared_refs",
+      "target_id": "flow:inbound_interface:dependency_shared_refs",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_mount_point",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_domain:dependency_shared_refs:render_panel",
+      "kind": "inbound_interface_to_domain_block",
+      "source_id": "flow:inbound_interface:dependency_shared_refs",
+      "target_id": "flow:domain:dependency_shared_refs:render_panel",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_domain_blocks.render_panel",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_exit:dependency_shared_refs:complete",
+      "kind": "inbound_interface_to_exit",
+      "source_id": "flow:inbound_interface:dependency_shared_refs",
+      "target_id": "flow:exit:dependency_shared_refs:complete",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_output_interface.exits[0]",
+      "order_index": 0
+    }
+  ],
+  "specification_nodes": [
+    {
+      "id": "specification:dependency_target:shared.adapter.router",
+      "kind": "dependency_target",
+      "boundary_id": null,
+      "projection_unit_id": null,
+      "label": "shared.adapter.router",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 0
+    },
+    {
+      "id": "specification:dependency_target:shared.analytics.emit",
+      "kind": "dependency_target",
+      "boundary_id": null,
+      "projection_unit_id": null,
+      "label": "shared.analytics.emit",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 1
+    },
+    {
+      "id": "specification:dependency_target:shared.policy.auth",
+      "kind": "dependency_target",
+      "boundary_id": null,
+      "projection_unit_id": null,
+      "label": "shared.policy.auth",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 2
+    },
+    {
+      "id": "specification:dependency_target:shared.tokens.theme",
+      "kind": "dependency_target",
+      "boundary_id": null,
+      "projection_unit_id": null,
+      "label": "shared.tokens.theme",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 3
+    },
+    {
+      "id": "specification:boundary:dependency_shared_refs",
+      "kind": "component_boundary",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "dependency_shared_refs",
+      "source_path": "$root",
+      "order_index": 0
+    },
+    {
+      "id": "specification:domain:dependency_shared_refs:render_panel",
+      "kind": "domain_block",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "render_panel",
+      "source_path": "$root.component_domain_blocks.render_panel",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:dependency_shared_refs:boundary_placement",
+      "kind": "section:boundary_placement",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "boundary_placement",
+      "source_path": "$root.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:dependency_shared_refs:entry_boundary",
+      "kind": "section:entry_boundary",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "entry_boundary",
+      "source_path": "$root.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:dependency_shared_refs:inbound_interface",
+      "kind": "section:inbound_interface",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "inbound_interface",
+      "source_path": "$root.component_input_interface",
+      "order_index": 2
+    },
+    {
+      "id": "specification:section:dependency_shared_refs:exit_semantics",
+      "kind": "section:exit_semantics",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "exit_semantics",
+      "source_path": "$root.component_output_interface",
+      "order_index": 3
+    },
+    {
+      "id": "specification:section:dependency_shared_refs:boundary_content",
+      "kind": "section:boundary_content",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "boundary_content",
+      "source_path": "$root.component_domain_blocks",
+      "order_index": 4
+    },
+    {
+      "id": "specification:section:dependency_shared_refs:dependency_refs",
+      "kind": "section:dependency_refs",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "label": "dependency_refs",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 5
+    }
+  ],
+  "specification_edges": [
+    {
+      "id": "specification_edge:contains_domain_block:dependency_shared_refs:render_panel",
+      "kind": "contains_domain_block",
+      "source_id": "specification:section:dependency_shared_refs:boundary_content",
+      "target_id": "specification:domain:dependency_shared_refs:render_panel",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_domain_blocks",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:dependency_shared_refs:boundary_placement",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:dependency_shared_refs",
+      "target_id": "specification:section:dependency_shared_refs:boundary_placement",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:dependency_shared_refs:entry_boundary",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:dependency_shared_refs",
+      "target_id": "specification:section:dependency_shared_refs:entry_boundary",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root",
+      "order_index": 1
+    },
+    {
+      "id": "specification_edge:contains_section:dependency_shared_refs:inbound_interface",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:dependency_shared_refs",
+      "target_id": "specification:section:dependency_shared_refs:inbound_interface",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root",
+      "order_index": 2
+    },
+    {
+      "id": "specification_edge:contains_section:dependency_shared_refs:exit_semantics",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:dependency_shared_refs",
+      "target_id": "specification:section:dependency_shared_refs:exit_semantics",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root",
+      "order_index": 3
+    },
+    {
+      "id": "specification_edge:contains_section:dependency_shared_refs:boundary_content",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:dependency_shared_refs",
+      "target_id": "specification:section:dependency_shared_refs:boundary_content",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root",
+      "order_index": 4
+    },
+    {
+      "id": "specification_edge:contains_section:dependency_shared_refs:dependency_refs",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:dependency_shared_refs",
+      "target_id": "specification:section:dependency_shared_refs:dependency_refs",
+      "source_boundary_id": "dependency_shared_refs",
+      "target_boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root",
+      "order_index": 5
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "entry_point:dependency_shared_refs",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "flow_node_id": "flow:entry:dependency_shared_refs",
+      "slot_ref": "app.panel",
+      "mount_kind": "mapper-managed",
+      "order_index": 0
+    }
+  ],
+  "exit_points": [
+    {
+      "id": "exit_point:dependency_shared_refs:complete",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "flow_node_id": "flow:exit:dependency_shared_refs:complete",
+      "exit_id": "complete",
+      "outcome": "exit",
+      "continuation_target_boundary_id": null,
+      "return_target_boundary_id": null,
+      "order_index": 0
+    }
+  ],
+  "mounted_child_relations": [],
+  "continuation_mappings": [],
+  "return_mappings": [],
+  "dependency_edges": [
+    {
+      "id": "dependency_edge:dependency_shared_refs:0:shared.adapter.router",
+      "source_boundary_id": "dependency_shared_refs",
+      "source_node_id": "specification:section:dependency_shared_refs:dependency_refs",
+      "target_ref": "shared.adapter.router",
+      "target_node_id": "specification:dependency_target:shared.adapter.router",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 0
+    },
+    {
+      "id": "dependency_edge:dependency_shared_refs:1:shared.analytics.emit",
+      "source_boundary_id": "dependency_shared_refs",
+      "source_node_id": "specification:section:dependency_shared_refs:dependency_refs",
+      "target_ref": "shared.analytics.emit",
+      "target_node_id": "specification:dependency_target:shared.analytics.emit",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 1
+    },
+    {
+      "id": "dependency_edge:dependency_shared_refs:2:shared.policy.auth",
+      "source_boundary_id": "dependency_shared_refs",
+      "source_node_id": "specification:section:dependency_shared_refs:dependency_refs",
+      "target_ref": "shared.policy.auth",
+      "target_node_id": "specification:dependency_target:shared.policy.auth",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 2
+    },
+    {
+      "id": "dependency_edge:dependency_shared_refs:3:shared.tokens.theme",
+      "source_boundary_id": "dependency_shared_refs",
+      "source_node_id": "specification:section:dependency_shared_refs:dependency_refs",
+      "target_ref": "shared.tokens.theme",
+      "target_node_id": "specification:dependency_target:shared.tokens.theme",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "source_path": "$root.component_shared_refs",
+      "order_index": 3
+    }
+  ],
+  "context_shell_hints": [
+    {
+      "id": "context_shell:dependency_shared_refs",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "parent_boundary_id": null,
+      "local_role": "leaf",
+      "mount_kind": "mapper-managed",
+      "shell_hint": "mapper_managed_shell",
+      "order_index": 0
+    }
+  ],
+  "trace_projection_hints": [
+    {
+      "id": "trace_projection:dependency_shared_refs",
+      "boundary_id": "dependency_shared_refs",
+      "projection_unit_id": "projection_unit:dependency_shared_refs",
+      "entry_point_id": "entry_point:dependency_shared_refs",
+      "exit_point_ids": [
+        "exit_point:dependency_shared_refs:complete"
+      ],
+      "mounted_child_relation_ids": [],
+      "continuation_mapping_ids": [],
+      "return_mapping_ids": [],
+      "order_index": 0
+    }
+  ]
+}

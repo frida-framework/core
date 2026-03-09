@@ -222,6 +222,27 @@ FRIDA_ENFORCEMENT:
       text: "Guards and invariants MUST be explicit and easy to extract."
     - id: no_interface_spec
       text: "UI/CLI interfaces are out of contract scope and may evolve independently."
+    - id: component_boundary_sections_complete
+      text: "Component-level contracts MUST declare the full canonical component_* boundary surface."
+      scope: kernel
+    - id: component_boundary_refs_resolve
+      text: "Mounted child boundary refs and continuation/return targets MUST resolve when declared."
+      scope: kernel
+    - id: component_output_exit_semantics_canonical
+      text: "component_output_interface exit entries MUST declare outcomes and remain the canonical source for exit semantics."
+      scope: kernel
+    - id: component_child_non_auto_expand
+      text: "Mounted child internals MUST remain collapsed in the parent specification view until explicit drill-in."
+      scope: kernel
+    - id: component_shared_refs_dependency_only
+      text: "component_shared_refs MUST remain dependency-only and MUST NOT redefine ownership or boundary semantics."
+      scope: kernel
+    - id: component_legacy_namespace_forbidden
+      text: "Legacy component-boundary section names are forbidden in active contract definitions unless explicitly historical/deprecated."
+      scope: kernel
+    - id: component_boundary_visual_primary
+      text: "Component boundary semantics are the primary visual interpretation unit; YAML depth is secondary."
+      scope: kernel
   policies:
     - id: GUARD_CONTRACT_SCHEMA_FIRST
       kind: chain
@@ -290,6 +311,38 @@ FRIDA_ENFORCEMENT:
         verification.antitask per FRIDA_ANTITASK_SPEC.report_proof.
       enforcement: hard
       spec_ref: FRIDA_ANTITASK_SPEC
+    - id: GUARD_COMPONENT_BOUNDARY_SECTIONS_COMPLETE
+      kind: chain
+      statement: "Component-level contracts MUST declare all canonical component_* boundary sections."
+      enforcement: hard
+    - id: GUARD_COMPONENT_BOUNDARY_REFS_RESOLVE
+      kind: chain
+      statement: "Mounted child boundary refs and continuation/return targets MUST resolve when declared."
+      enforcement: hard
+    - id: GUARD_COMPONENT_EXIT_SEMANTICS_COMPLETE
+      kind: chain
+      statement: "component_output_interface exit entries MUST include required outcome semantics."
+      enforcement: hard
+    - id: GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE
+      kind: chain
+      statement: "Parent specification view MUST NOT inline mounted child internals; child expansion requires explicit drill-in."
+      enforcement: hard
+    - id: GUARD_COMPONENT_SHARED_REFS_DEPENDENCY_ONLY
+      kind: ban
+      statement: "component_shared_refs MUST remain dependency-only and MUST NOT carry ownership, hierarchy, entry, or exit semantics."
+      enforcement: hard
+    - id: GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN
+      kind: ban
+      statement: "Legacy component-boundary section names are forbidden in active contract definitions."
+      enforcement: hard
+    - id: GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN
+      kind: ban
+      statement: "Mixed legacy/new component-boundary namespace usage is forbidden in active component contract definitions."
+      enforcement: hard
+    - id: GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST
+      kind: drift
+      statement: "Visualization semantics MUST remain boundary-first, with YAML depth secondary and exits sourced from component_output_interface."
+      enforcement: hard
   triggers:
     - id: schema_version_missing
       trigger: schema_version_missing
@@ -347,6 +400,38 @@ FRIDA_ENFORCEMENT:
       trigger: antitask_verification_missing
       action: HALT
       error_code: ANTITASK_VERIFICATION_MISSING
+    - id: component_boundary_section_missing
+      trigger: component_boundary_section_missing
+      action: HALT
+      error_code: COMPONENT_BOUNDARY_SECTION_MISSING
+    - id: component_boundary_ref_unresolved
+      trigger: component_boundary_ref_unresolved
+      action: HALT
+      error_code: COMPONENT_BOUNDARY_REF_UNRESOLVED
+    - id: component_output_exit_outcome_missing
+      trigger: component_output_exit_outcome_missing
+      action: HALT
+      error_code: COMPONENT_OUTPUT_EXIT_OUTCOME_MISSING
+    - id: component_parent_child_inline_violation
+      trigger: component_parent_child_inline_violation
+      action: HALT
+      error_code: COMPONENT_PARENT_CHILD_INLINE_VIOLATION
+    - id: component_shared_refs_boundary_override
+      trigger: component_shared_refs_boundary_override
+      action: HALT
+      error_code: COMPONENT_SHARED_REFS_BOUNDARY_OVERRIDE
+    - id: component_legacy_term_detected
+      trigger: component_legacy_term_detected
+      action: HALT
+      error_code: COMPONENT_LEGACY_TERM_DETECTED
+    - id: component_namespace_mixed
+      trigger: component_namespace_mixed
+      action: HALT
+      error_code: COMPONENT_NAMESPACE_MIXED
+    - id: component_visual_semantics_drift
+      trigger: component_visual_semantics_drift
+      action: HALT
+      error_code: COMPONENT_VISUAL_SEMANTICS_DRIFT
   antitask_spec_ref: FRIDA_ANTITASK_SPEC
 
 FRIDA_AGENT_LIFECYCLE:
@@ -445,6 +530,12 @@ FRIDA_VALIDATION_RULES:
     - GUARD_CONTRACT_SCHEMA_FIRST
     - GUARD_CONTRACT_SOURCE_DECLARED
     - GUARD_CONTRACT_NOT_RUNTIME
+    - GUARD_COMPONENT_BOUNDARY_SECTIONS_COMPLETE
+    - GUARD_COMPONENT_BOUNDARY_REFS_RESOLVE
+    - GUARD_COMPONENT_EXIT_SEMANTICS_COMPLETE
+    - GUARD_COMPONENT_SHARED_REFS_DEPENDENCY_ONLY
+    - GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN
+    - GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN
   repo_guards:
     - GUARD_ARTIFACT_NO_MANUAL_EDITS
     - GUARD_WORKSPACE_TEMP_ONLY
@@ -463,6 +554,8 @@ FRIDA_VALIDATION_RULES:
     - refs_resolve_via_exports
   visual_guards:
     - GUARD_VISUAL_DETERMINISM
+    - GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE
+    - GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST
     - visual_overlay_only
     - visual_on_demand
     - visual_determinism

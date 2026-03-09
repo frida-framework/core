@@ -6,24 +6,383 @@ FRIDA_VISUAL:
   version: 1.0.0
   overlay_format: json
   overlay_pathRef: "PATHS.visual.overlayFile"
+  overlay_schema_v1:
+    id: "frida-visual-overlay"
+    version: "1.0.0"
+    schema_file: "schemas/frida-visual-overlay.schema.json"
+    output_pathRef: "PATHS.visual.overlayFile"
+    projection_authorityRef: "FRIDA_VISUAL.component_projection"
+    builder_entrypoint: "src/visual.ts"
+    builder_cli: "frida-core visual"
+    derived_artifact_rule: "Overlay JSON is a read-only derived artifact. UI and runtime MUST read overlay output, not raw contract, for visual semantics."
+    verification_rule: "verify:visual MUST materialize PATHS.visual.overlayFile before drift comparison and determinism checks."
+    stable_id_rule: "Overlay ids MUST be stable and derived from projection unit ids, boundary ids, exit ids, relation ids, and canonical source paths."
+    ordering_rule: "Overlay arrays MUST be sorted deterministically by boundary/order/id rules so identical contract input yields identical normalized output."
+    validation_failures:
+      - "missing required boundary semantics"
+      - "unresolved mounted child refs"
+      - "unresolved continuation targets"
+      - "unresolved return targets"
+      - "illegal child inline expansion into parent specification overlay"
+      - "dependency edge misuse"
+      - "invalid outcome semantics in exits"
+  viewer_runtime_v1:
+    id: "frida-visual-viewer-runtime"
+    version: "1.0.0"
+    schema_file: "schemas/frida-visual-viewer-runtime.schema.json"
+    authority_rule: "This block is the authoritative runtime/viewer contract for UI state that consumes visual overlay output."
+    runtime_entrypoint: "src/visual-viewer.ts"
+    overlay_input_ref: "FRIDA_VISUAL.overlay_schema_v1"
+    runtime_vocabulary:
+      scope: "Current boundary-local runtime scope selected by explicit viewer navigation."
+      focus: "Currently selected overlay-derived entity inside the active scope."
+      lod: "Current level of detail inside the active scope; allowed values are topology, flow, and specification."
+      context_shell: "Overlay-derived caller, entry, exit, continuation, return, and position hints for the active scope."
+      enter: "Explicit cross-boundary navigation into another boundary through an overlay-declared portal."
+      peek: "Transient child-boundary preview that does not change current scope or auto-expand internals."
+      back: "History restoration for prior runtime scopes or transient peek state."
+      up: "Explicit move to the parent boundary of the current scope."
+      trace: "Separate projection mode that highlights overlay trace semantics without acting as a fourth LOD."
+      navigation_stack: "Stable history frames that preserve prior scope, LOD, focus, and trace state."
+    vocabulary_separation:
+      source_contract_vocabulary:
+        - component_hierarchy_position
+        - component_mount_point
+        - component_input_interface
+        - component_output_interface
+        - component_domain_blocks
+        - component_shared_refs
+      overlay_vocabulary:
+        - topology
+        - flow
+        - specification
+        - boundary
+        - entry
+        - exit
+        - continuation
+        - mounted_child_relation
+      runtime_vocabulary:
+        - scope
+        - focus
+        - lod
+        - context_shell
+        - enter
+        - peek
+        - back
+        - up
+        - trace
+        - navigation_stack
+      rule: "Runtime state MUST use runtime vocabulary for viewer actions and state keys; source contract vocabulary MUST NOT be reused as runtime state semantics."
+    state_model:
+      current_scope: "Stores current boundary id, parent boundary id, caller boundary id, navigation origin, portal refs, and depth."
+      current_lod: "Stores the current local LOD for the active scope."
+      focus: "Stores the currently focused overlay-derived entity id and runtime focus kind."
+      context_shell: "Stores active-scope caller, entry, public exits, mounted-child portals, continuation targets, return targets, shell hint, current position hint, and minimap hooks."
+      peek_state: "Stores an optional transient child preview without mutating current scope."
+      navigation_stack: "Stores prior scope frames including prior scope, lod, focus, peek, and trace state."
+      trace_state: "Stores whether trace is open plus current boundary, entry, exit, and mapping ids."
+    actions:
+      enter:
+        rule: "Enter MUST target an overlay-declared mounted_child_relation, continuation mapping, or return mapping."
+      peek:
+        rule: "Peek MUST target an overlay-declared mounted child relation and MUST NOT mutate current scope."
+      up:
+        rule: "Up MUST resolve only through the current scope parent_boundary_id from overlay component boundary records."
+      back:
+        rule: "Back MUST restore the previous navigation frame or close transient peek state."
+      change_lod:
+        rule: "LOD changes are local to the current scope and MUST NOT auto-expand child internals."
+      set_focus:
+        rule: "Focus MUST target an existing overlay-derived entity id."
+      open_trace:
+        rule: "Trace opens against the current scope boundary or one of its exit points and remains independent from LOD."
+      close_trace:
+        rule: "Close trace resets trace state without mutating scope."
+      center_on_entry:
+        rule: "Centers focus on the current scope entry point only."
+      center_on_exit:
+        rule: "Centers focus on an exit point that belongs to the current scope only."
+    consumption_rules:
+      data_source_rule: "Overlay JSON is the sole runtime semantic source. Viewer/runtime MUST NOT consume raw contract truth for navigation semantics."
+      exit_rule: "Runtime MUST read exit_points, continuation_mappings, and return_mappings from overlay and MUST NOT re-infer them."
+      mounted_child_rule: "Runtime MUST read mounted_child_relations from overlay and MUST NOT auto-expand child internals across boundaries."
+      scope_rule: "Specification LOD remains boundary-local to current scope."
+    context_shell_rules:
+      caller_entry: "context_shell MUST expose caller boundary id and current entry point id for the active scope."
+      public_exits: "context_shell MUST expose public exit point ids from overlay exit_points for the active scope."
+      continuation_return_hints: "context_shell MUST expose continuation and return target boundary ids from overlay mappings for the active scope."
+      current_position: "context_shell MUST expose a current position hint derived from whether the active boundary has a parent."
+      minimap_hooks: "If overlay provides mounted child relations, context_shell MUST expose minimap boundary ids for current, parent, and mounted-child anchors."
+    reference_viewer:
+      cli_entrypoint: "frida-core visual-viewer"
+      browser_runtime_entrypoint: "src/visual-reference-viewer-app.ts"
+      output_rule: "Reference viewer MUST render overlay-only topology, flow, and specification views and MUST keep boundary transitions explicit."
+      demo_overlay: "templates/tooling/verify/fixtures/visual-overlay/mounted_child_boundary.overlay.json"
+      live_reference_component_blocks:
+        - "visual_demo_root"
+        - "visual_demo_summary"
+        - "visual_demo_details"
+    example:
+      runtime_state:
+        current_scope:
+          boundary_id: "dashboard_summary"
+          caller_boundary_id: "dashboard_root"
+          via: "enter"
+        current_lod: "flow"
+        focus:
+          entity_kind: "exit_point"
+          entity_id: "exit_point:dashboard_summary:open_details"
+        context_shell:
+          entry_point_id: "entry_point:dashboard_summary"
+          public_exit_point_ids:
+            - "exit_point:dashboard_summary:open_details"
+            - "exit_point:dashboard_summary:return_to_dashboard"
+          continuation_target_boundary_ids:
+            - "route_details_panel"
+          return_target_boundary_ids:
+            - "dashboard_root"
+        trace_state:
+          open: true
+          projection_mode: "exit"
+      runtime_actions:
+        - "peek route_details_panel"
+        - "enter route_details_panel"
+        - "back"
+        - "change_lod specification"
+        - "open_trace exit_point:dashboard_summary:open_details"
   lod_levels:
     topology:
       zoom: [0.0, 0.35]
-      nodes: "top-level block keys"
-      edges: "Ref-suffixed cross-block references"
+      nodes: "Current component boundary plus explicit mounted child boundary anchors"
+      edges: "Hierarchy, mount, and dependency edges that stay relative to the current component boundary"
       labels: block_id
     flow:
       zoom: [0.35, 0.65]
-      nodes: "second-level keys (sections within blocks)"
-      edges: "intra-block Ref links"
+      nodes: "Boundary-local interface and exit sections for the current component boundary"
+      edges: "Inbound, outbound, continuation, return, and dependency links resolved inside the current component boundary"
       labels: section_id
     specification:
       zoom: [0.65, 1.0]
-      nodes: "leaf entries (rules, guards, invariants)"
-      edges: "all Ref/Refs"
+      nodes: "Boundary-local leaf entries under the established current component boundary"
+      edges: "All boundary-local Ref/Refs plus explicit drill-in targets"
       labels: full_path
+  component_projection:
+    authoritative_rule: "This block is the authoritative source for deterministic source-contract-to-visual projection semantics for component-boundary contracts."
+    primary_unit: "component-level contract file"
+    primary_projection_unit:
+      source_contract_surface: "component-level contract file"
+      derived_visual_scope: "current component boundary"
+      rule: "A component-level contract file projects exactly one current component boundary at a time."
+    projection_domains:
+      topology:
+        rule: "Projects placement, parent-child and containment anchors, mount anchors, mounted child boundary anchors, and dependency edges relative to the current component boundary."
+        source_sections:
+          - component_hierarchy_position
+          - component_mount_point
+          - component_domain_blocks
+          - component_shared_refs
+      flow:
+        rule: "Projects inbound interfaces, canonical exits, outcomes, continuation and return targeting, mount transitions, and dependency edges relative to the current component boundary."
+        source_sections:
+          - component_mount_point
+          - component_input_interface
+          - component_output_interface
+          - component_domain_blocks
+          - component_shared_refs
+      specification:
+        rule: "Projects boundary-local declarations and internal detail for the current component boundary only."
+        source_sections:
+          - component_hierarchy_position
+          - component_mount_point
+          - component_input_interface
+          - component_output_interface
+          - component_domain_blocks
+          - component_shared_refs
+    current_boundary_establishment:
+      order:
+        - component_hierarchy_position
+        - component_mount_point
+        - component_input_interface
+        - component_output_interface
+      rule: "YAML depth may expand detail only after the current component boundary is established."
+    lod_scope:
+      topology: "Shows topology placement, explicit mounted child boundary declarations, and dependency edges relative to the current component boundary."
+      flow: "Shows typed inbound and outbound interfaces plus canonical exits, outcomes, continuation, return, and dependency edges relative to the current component boundary."
+      specification: "Shows local boundary declarations and component_domain_blocks detail for the current component boundary only."
+    mapping_rules:
+      component_hierarchy_position:
+        topology:
+          placement: "Projects placement of the current component boundary within its declared parent or host context."
+          parent_child: "Projects parent-child relation and containment anchors for the current component boundary."
+          containment_anchor: "Projects containment anchors only for the current component boundary."
+        flow: "Projects no entry, exit, continuation, or return semantics."
+        specification: "Projects boundary-local placement metadata only."
+      component_mount_point:
+        topology:
+          entry_boundary: "Projects the current component boundary entry anchor at slotRef."
+          mounted_child_boundaries: "Each mounted_child_boundaryRefs entry projects a mounted child boundary anchor."
+          mount_transition: "Each mounted child boundary anchor projects a mount transition from the current component boundary entry anchor."
+        flow:
+          entry_semantics: "Defines the canonical entry boundary and drill-in origin for the current component boundary."
+        specification: "Projects mount metadata only; mounted child internals remain collapsed until explicit drill-in."
+      component_input_interface:
+        topology: "Projects no ownership or containment changes."
+        flow:
+          inbound_interface: "Projects the inbound interface boundary for the current component boundary."
+        specification: "Projects boundary-local inbound interface declarations."
+      component_output_interface:
+        topology: "Projects no ownership or containment changes."
+        flow:
+          exit_nodes: "Each exits[*].id projects a canonical exit node."
+          outcome_semantics: "Each exits[*].outcome projects the exit outcome semantics."
+          continuation_semantics: "Each exits[*].target_boundaryRef projects continuation targeting when present."
+          return_semantics: "Each exits[*].return_target_boundaryRef projects return targeting when present."
+        specification: "Projects boundary-local outbound interface declarations and exit metadata."
+      component_domain_blocks:
+        topology: "Projects boundary-local internal topology only after current boundary establishment."
+        flow: "Projects boundary-local internal flow only after current boundary establishment."
+        specification: "Projects boundary-local detail only after current boundary establishment."
+      component_shared_refs:
+        topology: "Projects dependency edges only when shared refs are surfaced at topology level."
+        flow: "Projects dependency edges only when shared refs are surfaced at flow level."
+        specification: "Projects dependency refs only inside the current component boundary."
+        override_rule: "component_shared_refs MUST NOT override ownership, hierarchy, containment, entry, exit, mount, continuation, or return semantics."
+    boundary_semantics:
+      boundary_first_rule: "Component boundary semantics are established before topology, flow, or specification detail is expanded."
+      yaml_depth_rule: "YAML depth is secondary and may add detail only inside an already established current component boundary."
+    entry_semantics:
+      source_section: "component_mount_point"
+      rule: "component_mount_point defines the canonical entry boundary for the current component boundary."
+      child_entry_rule: "Cross-component drill-in MUST target only explicit mounted child boundaries declared in component_mount_point.mounted_child_boundaryRefs."
+    exit_semantics:
+      source_section: "component_output_interface"
+      rule: "component_output_interface.exits define canonical exit nodes and exit outcomes for flow projection."
+      allowed_outcomes:
+        - continue
+        - return
+        - exit
+      outcome_target_rules:
+        continue: "Requires target_boundaryRef and forbids return_target_boundaryRef."
+        return: "Requires return_target_boundaryRef and forbids target_boundaryRef."
+        exit: "Forbids target_boundaryRef and return_target_boundaryRef."
+    mounted_child_semantics:
+      source_field: "component_mount_point.mounted_child_boundaryRefs"
+      boundary_rule: "Mounted child semantics are derived only from explicit mounted child boundary refs."
+      parent_view_rule: "Parent specification view MUST NOT auto-expand mounted child internals."
+      non_auto_expand_rule: "Absent mounted_child_boundaryRefs mean no mounted child boundary is projected for drill-in."
+    drill_in:
+      source_field: "component_mount_point.mounted_child_boundaryRefs"
+      rule: "Cross-component drill-in is explicit and boundary-aware."
+      parent_view_rule: "Parent specification view MUST NOT auto-expand mounted child internals."
+    drill_out:
+      source_fields:
+        - component_output_interface.outcome
+        - component_output_interface.target_boundaryRef
+        - component_output_interface.return_target_boundaryRef
+      rule: "Return and continuation targeting derive only from component_output_interface exit entries."
+    continuation_return_semantics:
+      source_fields:
+        continuation: "component_output_interface.target_boundaryRef"
+        return: "component_output_interface.return_target_boundaryRef"
+      rule: "Continuation and return semantics MUST be derived only from component_output_interface exit entries."
+    dependency_projection:
+      source_section: "component_shared_refs"
+      rule: "component_shared_refs create dependency edges only and MUST NOT override ownership, hierarchy, entry, exit, mount, continuation, or return semantics."
+    projection_example:
+      note: "Illustrative mapping from source contract semantics to derived visual semantics."
+      source_contract:
+        source_contract_file: "dashboard_summary component contract file"
+        component_hierarchy_position:
+          parent_boundaryRef: "dashboard_root"
+          local_role: "screen_fragment"
+        component_mount_point:
+          slotRef: "UI_STRUCTURE.dashboard.root.summarySlot"
+          mount_kind: "mapper-managed"
+          mounted_child_boundaryRefs:
+            - "route_details_panel"
+        component_input_interface:
+          selected_route_id: "string"
+          selected_day: "date"
+        component_output_interface:
+          exits:
+            - id: "open_details"
+              outcome: "continue"
+              target_boundaryRef: "route_details_panel"
+            - id: "return_to_dashboard"
+              outcome: "return"
+              return_target_boundaryRef: "dashboard_root"
+        component_domain_blocks:
+          summary_stack:
+            purpose: "Internal source-contract detail for the current component boundary."
+        component_shared_refs:
+          refs:
+            - "GLOSSARY.route"
+            - "RESOURCES.maps_api"
+      derived_visual_semantics:
+        metadata:
+          schema_id: "frida-visual-overlay"
+          schema_version: "1.0.0"
+        topology:
+          current_component_boundary: "dashboard_summary"
+          parent_boundary: "dashboard_root"
+          entry_boundary: "UI_STRUCTURE.dashboard.root.summarySlot"
+          mounted_child_boundaries:
+            - "route_details_panel"
+        flow:
+          entry_points:
+            - "entry_point:dashboard_summary"
+          inbound_interface:
+            - "selected_route_id"
+            - "selected_day"
+          exits:
+            - id: "open_details"
+              outcome: "continue"
+              continuation_target: "route_details_panel"
+            - id: "return_to_dashboard"
+              outcome: "return"
+              return_target: "dashboard_root"
+        specification:
+          local_domain_blocks:
+            - "summary_stack"
+          dependency_refs:
+            - "GLOSSARY.route"
+            - "RESOURCES.maps_api"
+        mounted_child_relations:
+          - parent_boundary: "dashboard_summary"
+            child_boundary: "route_details_panel"
+        context_shell_hints:
+          - mount_kind: "mapper-managed"
+            local_role: "screen_fragment"
+        trace_projection_hints:
+          - boundary: "dashboard_summary"
+            continuation_exit_ids:
+              - "open_details"
+            return_exit_ids:
+              - "return_to_dashboard"
   determinism:
-    rule: "Same contract input MUST produce identical visual overlay output (up to graph isomorphism)."
+    rule: "Same contract input MUST produce identical visual overlay output after generatedAt normalization; ordering and interpretation MUST remain stable enough for golden tests."
+    stable_interpretation:
+      section_order:
+        - component_hierarchy_position
+        - component_mount_point
+        - component_input_interface
+        - component_output_interface
+        - component_domain_blocks
+        - component_shared_refs
+      domain_order:
+        - topology
+        - flow
+        - specification
+      list_order_rules:
+        component_mount_point.mounted_child_boundaryRefs: "Preserve source list order."
+        component_output_interface.exits: "Preserve source list order."
+        component_shared_refs.refs: "Preserve source list order."
+    stable_identity:
+      node_rule: "Derived node identity MUST use canonical source paths inside the current component boundary."
+      edge_rule: "Derived edge identity MUST use source path + source key + edge type + target ref."
+    stable_sort:
+      node_rule: "Nodes MUST be ordered by projection selector order, then canonical source path."
+      edge_rule: "Edges MUST be ordered by source path, then source key, then edge type, then target ref."
   ref_to_edge_mapping:
     rule: "Every Ref-suffixed value resolves to a directed edge source→target in overlay."
   generation_trigger: "on_demand"
@@ -31,10 +390,28 @@ FRIDA_VISUAL:
     - id: overlay_read_only
       text: "Overlay is read-only and derived from contract. Manual edits are forbidden."
     - id: lod_semantic_zoom
-      text: "Zoom level determines Level-of-Detail. No user configuration needed."
+      text: "Zoom level determines Level-of-Detail relative to the current component boundary. No user configuration needed, and semantic interpretation takes priority over raw YAML depth."
     - id: edge_from_refs
       text: "Edges are extracted from Ref/Refs keys only. No inferred edges."
+    - id: component_boundary_semantics_primary
+      text: >-
+        For component-level contract files, component_hierarchy_position,
+        component_mount_point, component_input_interface,
+        component_output_interface, component_domain_blocks, and
+        component_shared_refs define boundary semantics first. YAML depth is
+        secondary and MUST NOT override those canonical meanings.
+    - id: component_projection_authority
+      text: "FRIDA_VISUAL.component_projection is the authoritative source for source-contract-to-visual projection semantics for component-boundary contracts."
+    - id: component_boundary_flow_canon
+      text: >-
+        component_mount_point is the canonical drill-in entry boundary,
+        component_output_interface is the canonical source for exit semantics
+        and outbound flow projection, component_domain_blocks project internal
+        content, and component_shared_refs project shared dependencies without
+        changing ownership boundaries.
+    - id: deterministic_projection_ordering
+      text: "Projection ordering, node identity, edge identity, and list interpretation MUST remain stable for reproducible overlays and future golden tests."
     - id: layout_not_prescribed
       text: "Contract does not prescribe layout algorithm. Any layout producing correct topology is valid."
     - id: progressive_disclosure
-      text: "Low zoom = topology only. High zoom = full specification detail."
+      text: "Low zoom = boundary topology only. High zoom = local specification detail; mounted child internals require explicit drill-in."
