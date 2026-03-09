@@ -1,0 +1,135 @@
+# ─── FRIDA LAYER FL01: IDENTITY & META ───────────────────────────────────────
+
+CONTRACT_META:
+  _visibility: private
+  id: frida-contract-meta
+  version: 5.1.0
+  owner: frida-core
+  updated_at: "2026-03-09"
+  scope:
+    repository: hanszel/frida
+    package: "@hanszel/core"
+    purpose: >-
+      Schema-driven generation engine, zone enforcement, visual overlay extraction,
+      agent session control, and warm-first Frida bootstrap/reconcile with explicit demo seeding mode.
+    interface_term: "In Frida, 'interface' means a management-layer contract block that defines an allowed contract-management operation and its repository boundary."
+    interface_visibility_default: "FRIDA_INTERFACE_* blocks are public unless `_visibility: private` is explicitly set."
+    layer_prefix_rule: "Frida core contract layers use FL##-*.yaml; Frida-managed app contract layers use AL##-*.yaml."
+    layer_number_format: "Two digits exactly (`FL01`, `AL02`)."
+    app_template_term: "A template is a named Frida-shipped app-contract seed; `template_app_basic` is the neutral zero-start baseline."
+    app_extension_term: "An app extension is a named optional app-contract layer activated only by linking its AL## file in the target app contract index."
+    interface_boundaries:
+      self_contract_management:
+        block: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+        repository_scope: frida_repo_only
+        mutation_scope: frida_contract_only
+        deployment_scope: not_deployed_to_target_repo
+      update_app_by_spec:
+        block: FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+        repository_scope: target_app_repo_only
+        mutation_scope: target_app_contract_only
+        deployment_scope: public
+      update_app_by_code:
+        block: FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+        repository_scope: target_app_repo_only
+        mutation_scope: target_app_contract_only
+        deployment_scope: public
+  source_ref: FRIDA_CORE_CONTRACT
+
+CONTRACT_UNIQUENESS:
+  _visibility: private
+  id: frida-contract-uniqueness-policy
+  version: 1.0.0
+  first_rule: true
+  rule: "Any contract entity MUST be declared exactly once."
+  control:
+    enforcement: warn_only
+    fail_on_duplicate: false
+    warning_code: CONTRACT_DUPLICATE_ENTITY
+  strictness_freeze:
+    change_requires_explicit_owner_instruction: true
+    note: "Strictness level changes require explicit owner approval."
+  projection_rule:
+    allow_projection_via_source_ref: true
+    note: "Blocks may reference other blocks via source_ref without duplication."
+
+meta:
+  id: frida-meta
+  version: 1.0.0
+  schemaVersion: "6.1"
+  mode: schema
+  contractArtifactRef: "PATHS.contract.coreContractFile"
+
+core:
+  id: frida-assembly-core
+  version: 1.0.0
+  contracticalSourceBlocks:
+    - CONTRACT_META
+    - CONTRACT_UNIQUENESS
+    - FRIDA_SCHEMA_SUPPORT
+    - FRIDA_ARCHITECTURE_DECISIONS
+    - FRIDA_FOUNDATION_PRINCIPLES
+    - PATHS
+    - FRIDA_CONFIG_SPEC
+    - FRIDA_ASSEMBLY_PROTOCOL
+    - FRIDA_REFS
+    - FRIDA_CONFIG
+    - FRIDA_RUNTIME_CONFIG
+    - FRIDA_ROOT_LAYOUT_POLICY
+    - FRIDA_CONFIG_FIELD_DOCS
+    - ZONES
+    - INT_FRIDA_ZONES
+    - FRIDA_TASK_PROFILES
+    - FRIDA_ENFORCEMENT
+    - FRIDA_AGENT_LIFECYCLE
+    - FRIDA_ENFORCEMENT_TYPES
+    - FRIDA_REPORTING
+    - FRIDA_VALIDATION_CHECKLIST
+    - FRIDA_TEMPLATE_INTEGRITY
+    - FRIDA_TEMPLATE_HASH_TOOL
+    - FRIDA_CLI
+    - FRIDA_VISUAL
+    - FRIDA_GUARD_SPEC
+    - FRIDA_INVARIANT_SPEC
+    - FRIDA_ANTITASK_SPEC
+    - FRIDA_INTERFACE_VERIFY
+    - FRIDA_INTERFACE_AUDIT
+    - FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+    - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+    - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+    - FRIDA_INTERFACE_TASKSET
+    - FRIDA_AGENT_ENTRY_PROTOCOL
+    - FRIDA_INTERFACE_ROUTING
+    - FRIDA_INT_AGENT_ROUTING
+    - FRIDA_CLAUSE_INDEX
+    - FRIDA_CONTRACT_BOOTSTRAP
+    - FRIDA_BOOTSTRAP_SURFACE_POLICY
+    - FRIDA_BOOTSTRAP_PACKAGE_MANIFEST
+    - FRIDA_APP_TEMPLATE_MODEL
+  selectorGrammar: jsonpath-lite
+  generatorPipelineContracts:
+    - "schema-validate"
+    - "normalize"
+    - "resolve-selectors"
+    - "run-artifact-generator"
+    - "run-adapter-generators"
+    - "emit-manifest"
+  pathRefs:
+    contractArtifact: "contract/contract.index.yaml"
+    templatesFrida: "templates/frida"
+    templatesDocs: "templates/docs-gen"
+  outputContracts:
+    - "AGENTS.md"
+    - ".frida/contract/specs/ROUTER.xml"
+    - ".frida/contract/profiles/*.xml"
+    - ".frida/contract/AGENTS.md"
+    - ".frida/contract/docs/policy/*.md"
+    - ".frida/contract/docs/reference/*.md"
+    - ".frida/config.yaml"
+    - ".frida/templates/config.template.yaml"
+    - ".frida/contract/app/**"
+    - ".frida/contract/frida/**"
+    - ".frida/contract/artifacts/frida.ir.json"
+    - ".frida/contract/artifacts/frida.permissions.json"
+    - ".frida/contract/artifacts/frida.graph.mmd"
+    - ".frida/contract/artifacts/frida.adapter.generated.json"

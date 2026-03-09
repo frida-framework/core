@@ -1,56 +1,79 @@
-# ─── LAYER 4: AGENT FRAMEWORK ────────────────────────────────────────────────
+# ─── FRIDA LAYER FL05: AGENT FRAMEWORK ──────────────────────────────────────
 
 FRIDA_TASK_PROFILES:
   _visibility: private
   id: frida-task-profiles
   version: 1.0.0
-  governance:
+  frida_governance:
     role: ARCHITECT_AGENT
     keywords:
       - governance
       - contract
       - frida
+      - self-contract
     invariants: []
     security:
       read_allow:
-        - "tasks/**"
+        - "frida-tasks/**"
+        - "contract/**"
+        - "schemas/**"
+        - "src/**"
+        - "templates/**"
+        - "README.md"
+        - "package.json"
         - ".frida/AGENTS.md"
         - ".frida/config.yaml"
         - ".frida/templates/config.template.yaml"
         - ".frida/contract/**"
         - ".frida/reports/*.yaml"
       edit_allow:
-        - "tasks/inbox/**"
+        - "contract/**"
+        - "schemas/**"
+        - "src/**"
+        - "templates/**"
+        - "README.md"
+        - "package.json"
+        - "frida-tasks/README.md"
       create_allow:
         - ".frida/reports/*.yaml"
       forbid:
         - ".frida/inbox/**"
+        - "tasks/**"
       edit_forbid:
         - ".frida/**"
-        - "tasks/TASK-*.md"
-        - "tasks/**/TASK-*.md"
+        - "frida-tasks/TASK-*.md"
+        - "frida-tasks/**/TASK-*.md"
+        - "tasks/**"
         - ".frida/reports/*.yaml"
-  task_setter:
+  frida_task_setter:
     role: TASK_SETTER_AGENT
     keywords:
       - task
       - formulation
       - spec
+      - frida-tasks
     invariants:
       - no_scope_creep
     security:
       read_allow:
-        - "tasks/**"
-        - ".frida/reports/*.yaml"
+        - "frida-tasks/**"
+        - "contract/**"
+        - "schemas/**"
+        - "templates/management/**"
       create_allow:
-        - "tasks/TASK-*.md"
+        - "frida-tasks/TASK-*.md"
         - ".frida/reports/*.yaml"
       edit_allow: []
       forbid:
         - ".frida/inbox/**"
+        - "tasks/**"
       edit_forbid:
-        - "tasks/README.md"
-  readonly_observer:
+        - "frida-tasks/TASK-*.md"
+        - "frida-tasks/**/TASK-*.md"
+        - ".frida/reports/*.yaml"
+        - "frida-tasks/README.md"
+        - "tasks/**"
+  frida_readonly_observer:
     role: READONLY_AGENT
     keywords:
       - observe
@@ -66,7 +89,11 @@ FRIDA_TASK_PROFILES:
         - ".frida/reports/*.yaml"
       forbid:
         - ".frida/inbox/**"
+        - "tasks/**"
       edit_forbid:
+        - "frida-tasks/TASK-*.md"
+        - "frida-tasks/**/TASK-*.md"
+        - ".frida/reports/*.yaml"
         - "**"
 
 FRIDA_ENFORCEMENT:
@@ -130,6 +157,33 @@ FRIDA_ENFORCEMENT:
       scope: kernel
     - id: report_on_every_run
       text: "Every agent run MUST produce a job report, regardless of outcome."
+      scope: kernel
+    - id: interfaces_default_public
+      text: "FRIDA_INTERFACE_* blocks are public unless `_visibility: private` is explicitly declared."
+      scope: kernel
+    - id: private_interfaces_not_deployed
+      text: "Private interfaces MUST NOT be projected into target-repo Frida contract mirrors."
+      scope: kernel
+    - id: frida_tasks_core_repo_only
+      text: "`frida-tasks/` is a Frida-core-only task surface. It MUST NOT be created or read outside the Frida repo."
+      scope: kernel
+    - id: tasks_dir_forbidden_in_frida_core
+      text: "`tasks/` is forbidden as a task surface inside the Frida repo."
+      scope: kernel
+    - id: int_frida_zones_private
+      text: "`INT_FRIDA_ZONES` is a private Frida-core-only routing block. It MUST NOT be projected into target repos."
+      scope: kernel
+    - id: layer_file_prefixes_repository_scoped
+      text: "Frida core layer files MUST use `FL##-*.yaml`; Frida-managed app layer files MUST use `AL##-*.yaml`."
+      scope: kernel
+    - id: app_template_basic_neutral
+      text: "`template_app_basic` MUST remain vendor-neutral and MUST NOT declare backend or implementation-specific app surfaces by default."
+      scope: kernel
+    - id: app_extensions_link_driven
+      text: "App extensions are active only when their AL## layer is linked in the target app contract index. Presence of inactive extension files alone has no effect."
+      scope: kernel
+    - id: app_update_interfaces_non_inventive
+      text: "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC and FRIDA_INTERFACE_UPDATE_APP_BY_CODE MUST operate only within baseline or already-designed app extensions and MUST NOT invent new backend/vendor structures."
       scope: kernel
     - id: strict_path_refs
       text: "Literal paths are forbidden outside the PATHS block. Keys MUST end in *Ref."
@@ -300,10 +354,14 @@ FRIDA_AGENT_LIFECYCLE:
   id: frida-agent-lifecycle
   version: 1.0.0
   phases:
-    - id: ROUTE
-      action: "Resolve zone from working directory path. Load zone-specific AGENTS.md."
+    - id: LOAD_ROUTER
+      action: "Load the root routing contract from ROUTER.xml before selecting interface or profile."
+    - id: RESOLVE_INTERFACE
+      action: "Resolve the management interface first, using repository-scoped routing rules."
     - id: LOAD_PROFILE
-      action: "Match task context to FRIDA_TASK_PROFILES. Load security permissions and invariants."
+      action: "Resolve the repository-scoped profile block allowed for the selected interface, then load permissions and invariants."
+    - id: ROUTE_ZONE
+      action: "Resolve zone from working directory path using the repository-scoped zone block. Load contractual zone AGENTS.md."
     - id: VALIDATE_ANTITASK
       action: "Verify that the task does not violate invariants or guards."
     - id: EXECUTE
@@ -314,6 +372,7 @@ FRIDA_AGENT_LIFECYCLE:
       action: "Emit job report for SUCCESS or HALT."
   phase_invariants:
     - "no_profile_match MUST HALT"
+    - "Interface resolution happens before profile resolution"
     - "Contractical zone AGENTS.md path resolution is zone-driven"
     - "No writes outside explicit edit/create permissions"
   session:
@@ -391,6 +450,11 @@ FRIDA_VALIDATION_RULES:
     - GUARD_WORKSPACE_TEMP_ONLY
     - GUARD_FRIDA_INTERNAL_NO_AGENT
     - GUARD_FRIDA_INBOX_NO_AGENT
+    - interfaces_default_public
+    - private_interfaces_not_deployed
+    - frida_tasks_core_repo_only
+    - tasks_dir_forbidden_in_frida_core
+    - int_frida_zones_private
   layer_guards:
     - guard_chain_structural
     - schema_version_fixed

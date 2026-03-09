@@ -1,6 +1,6 @@
 <!-- AUTO-GENERATED FROM CONTRACT - DO NOT EDIT MANUALLY -->
 
-# Frida Internal Artifacts - AGENTS.md
+# Frida_managed - AGENTS.md
 
 ## ABSOLUTE PROHIBITION
 
@@ -20,8 +20,8 @@ These files are:
 These files cannot be changed directly. If you need to modify behavior:
 
 1. Check if the change should be in the mapper layer
-2. Check if the change should be in the contract
-3. Rerun Frida generation after updating the source surface
+2. Check if the change should be in the contract (wiki)
+3. Consult with the team before attempting any modifications
 
 **Any manual edits will be lost on next sync.**
 

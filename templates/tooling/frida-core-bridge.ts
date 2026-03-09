@@ -107,9 +107,6 @@ export const getExpectedAgentsMd = requireExport<(zone: Zone) => string>('getExp
 export const validateZoneAgentsMd = requireExport<(targetPath: string) => ValidationResult>('validateZoneAgentsMd');
 
 export type FridaAdapter = Record<string, unknown>;
-export type FridaExtensionSpec = {
-  generatorBindings?: string[];
-} & Record<string, unknown>;
 export type Zone = Record<string, unknown>;
 export type ZoneCandidate = Record<string, unknown>;
 export type DecisionStep = Record<string, unknown>;

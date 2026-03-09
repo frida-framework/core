@@ -1,4 +1,4 @@
-# ─── LAYER 3A: CORE-CONFIGURATION ───────────────────────────────────────────
+# ─── FRIDA LAYER FL04: CORE-CONFIGURATION ───────────────────────────────────
 # Purpose: Single core-configuration layer for engine contract configuration details.
 # All concrete settings live here; other contract layers should use dry references only.
 
@@ -57,11 +57,9 @@ PATHS:
   templates:
     fridaDir: "templates/frida"
     docsDir: "templates/docs-gen"
-  scaffold:
-    appDir: "scaffold/app"
-    visualizerDir: "scaffold/visualizer"
+    appBasicDir: "templates/template_app_basic"
   bootstrap:
-    assetsRootDir: "scaffold"
+    assetsRootDir: "templates/template_app_basic"
     manifestFile: "contract/bootstrap-package.manifest.yaml"
     manifestSchemaFile: "schemas/frida-bootstrap-package-manifest.schema.json"
     stateFile: ".frida/contract/internal/bootstrap-state.yaml"
@@ -175,44 +173,101 @@ FRIDA_CONFIG:
     filename_pattern: "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
     exists_check: false
     access_validation:
-      enabled: false
+      enabled: true
       on_disabled: warn_only_skip_fail
-      policy_paths:
-        read_allow_required:
-          - "tasks/**"
-        read_allow_governance_required:
-          - ".frida/AGENTS.md"
-          - ".frida/config.yaml"
-          - ".frida/templates/config.template.yaml"
-          - ".frida/contract/**"
-          - ".frida/reports/*.yaml"
-        edit_allow_architect_required:
-          - "tasks/inbox/**"
-        edit_allow_non_architect_required:
-          - "tasks/README.md"
-          - "tasks/**/README.md"
-        edit_forbid_required:
-          - "tasks/TASK-*.md"
-          - "tasks/**/TASK-*.md"
-          - ".frida/reports/*.yaml"
-        forbid_must_include:
-          - ".frida/inbox/**"
-        forbid_must_not_include:
-          - "tasks/**"
-          - "tasks/README.md"
-          - "tasks/**/README.md"
-          - "tasks/TASK-*.md"
-          - "tasks/**/TASK-*.md"
-        create_allow_required_all_profiles:
-          - ".frida/reports/*.yaml"
-        create_allow_non_task_setter_allowed_only:
-          - "tasks/sessions/*.md"
-          - "tasks/sessions/[0-9]*-*.md"
-          - ".frida/reports/*.yaml"
-        create_allow_task_setter_required:
-          - "tasks/TASK-*.md"
-        create_allow_task_setter_forbidden:
-          - "tasks/**"
+      repo_policies:
+        frida_core:
+          read_allow_required: []
+          read_allow_governance_required:
+            - "frida-tasks/**"
+            - "contract/**"
+            - "schemas/**"
+            - "src/**"
+            - "templates/**"
+            - "README.md"
+            - "package.json"
+            - ".frida/AGENTS.md"
+            - ".frida/config.yaml"
+            - ".frida/templates/config.template.yaml"
+            - ".frida/contract/**"
+            - ".frida/reports/*.yaml"
+          read_allow_task_setter_required:
+            - "frida-tasks/**"
+            - "contract/**"
+            - "schemas/**"
+            - "templates/management/**"
+          edit_allow_architect_required:
+            - "contract/**"
+            - "schemas/**"
+            - "src/**"
+            - "templates/**"
+            - "README.md"
+            - "package.json"
+          edit_allow_architect_allowed_only:
+            - "contract/**"
+            - "schemas/**"
+            - "src/**"
+            - "templates/**"
+            - "README.md"
+            - "package.json"
+            - "frida-tasks/README.md"
+          edit_allow_non_architect_required: []
+          edit_forbid_required:
+            - "frida-tasks/TASK-*.md"
+            - "frida-tasks/**/TASK-*.md"
+            - ".frida/reports/*.yaml"
+          forbid_must_include:
+            - ".frida/inbox/**"
+            - "tasks/**"
+          forbid_must_not_include:
+            - "frida-tasks/**"
+            - "frida-tasks/TASK-*.md"
+            - "frida-tasks/**/TASK-*.md"
+          create_allow_required_all_profiles:
+            - ".frida/reports/*.yaml"
+          create_allow_non_task_setter_allowed_only:
+            - ".frida/reports/*.yaml"
+          create_allow_task_setter_required:
+            - "frida-tasks/TASK-*.md"
+          create_allow_task_setter_forbidden:
+            - "frida-tasks/**"
+            - "tasks/**"
+        target_app:
+          read_allow_required:
+            - "tasks/**"
+          read_allow_governance_required:
+            - ".frida/AGENTS.md"
+            - ".frida/config.yaml"
+            - ".frida/templates/config.template.yaml"
+            - ".frida/contract/**"
+            - ".frida/reports/*.yaml"
+          edit_allow_architect_required:
+            - "tasks/inbox/**"
+          edit_allow_non_architect_required:
+            - "tasks/README.md"
+            - "tasks/**/README.md"
+          edit_forbid_required:
+            - "tasks/TASK-*.md"
+            - "tasks/**/TASK-*.md"
+            - ".frida/reports/*.yaml"
+          forbid_must_include:
+            - ".frida/inbox/**"
+          forbid_must_not_include:
+            - "tasks/**"
+            - "tasks/README.md"
+            - "tasks/**/README.md"
+            - "tasks/TASK-*.md"
+            - "tasks/**/TASK-*.md"
+          create_allow_required_all_profiles:
+            - ".frida/reports/*.yaml"
+          create_allow_non_task_setter_allowed_only:
+            - "tasks/sessions/*.md"
+            - "tasks/sessions/[0-9]*-*.md"
+            - ".frida/reports/*.yaml"
+          create_allow_task_setter_required:
+            - "tasks/TASK-*.md"
+          create_allow_task_setter_forbidden:
+            - "tasks/**"
   visual:
     overlay_pathRef: "PATHS.fridaContract.visualOverlayFile"
     generation_mode: on_demand
@@ -232,7 +287,7 @@ FRIDA_RUNTIME_CONFIG:
   version: 1.0.0
   file: ".frida/config.yaml"
   template_file: ".frida/templates/config.template.yaml"
-  source_of_truth: canon
+  source_of_truth: contract
   generated_from: "FRIDA_CONFIG.reporting"
   ownership:
     runtime_config_file: user_owned
@@ -436,15 +491,9 @@ FRIDA_CONFIG_FIELD_DOCS:
     - path: "PATHS.templates.docsDir"
       what: "Directory containing docs-generation templates."
       purpose: "Separates docs templates from core Frida templates."
-    - path: "PATHS.scaffold"
-      what: "Namespace for bootstrap scaffold source directories."
-      purpose: "Groups reference app and visualizer seed source paths."
-    - path: "PATHS.scaffold.appDir"
-      what: "Scaffold directory for reference app seed."
-      purpose: "Defines source path used by bootstrap deployment."
-    - path: "PATHS.scaffold.visualizerDir"
-      what: "Scaffold directory for reference visualizer seed."
-      purpose: "Defines source path for bootstrap visualizer assets."
+    - path: "PATHS.templates.appBasicDir"
+      what: "Directory containing the neutral `template_app_basic` zero-start seed."
+      purpose: "Defines the canonical package-local source for baseline app-template files and inactive app-extension layers."
     - path: "PATHS.bootstrap"
       what: "Namespace for bootstrap reconcile/package-manifest paths."
       purpose: "Centralizes bootstrap package reference assets and manifest metadata paths."
@@ -522,7 +571,7 @@ FRIDA_CONFIG_FIELD_DOCS:
       purpose: "Centralizes engine path dependencies as typed refs to `PATHS`."
     - path: "FRIDA_CONFIG.paths.canon_inputFileRef"
       what: "Ref to the canonical assembled contract artifact path."
-      purpose: "Allows generator to reload the assembled canon contract from canonical location."
+      purpose: "Allows generator to reload the assembled contract from the canonical location."
     - path: "FRIDA_CONFIG.paths.agents_bootloaderFileRef"
       what: "Ref to root AGENTS bootloader path."
       purpose: "Ensures generator writes bootloader to the contract-defined location."

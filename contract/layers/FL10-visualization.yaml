@@ -1,4 +1,4 @@
-# ─── LAYER 7: VISUALIZATION ──────────────────────────────────────────────────
+# ─── FRIDA LAYER FL10: VISUALIZATION ─────────────────────────────────────────
 
 FRIDA_VISUAL:
   _visibility: public

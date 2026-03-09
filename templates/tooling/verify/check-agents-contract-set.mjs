@@ -3,7 +3,7 @@
  * Enforce contract AGENTS.md set.
  *
  * Policy:
- * - Contract set = root bootloader + one zone AGENTS.md per contract:ZONES.
+ * - Contract set = root bootloader + one zone AGENTS.md per repository-scoped zone block.
  * - Every expected contract AGENTS.md path must exist on disk.
  * - Extra tracked AGENTS.md files outside the contract set fail verification.
  */
@@ -92,7 +92,7 @@ function resolveZoneAgentsPath(contract, zoneId, zoneData) {
   const zonePathGlob = resolvePathLike(contract, zoneData.pathGlobRef) || resolvePathLike(contract, zoneData.path);
   if (zonePathGlob) return ensureAgentsFilePath(stripWildcards(zonePathGlob));
 
-  throw new Error(`ZONES.${zoneId} has no resolvable agents path (agentsPathDirRef|agentsPath|pathGlobRef|path)`);
+  throw new Error(`zone.${zoneId} has no resolvable agents path (agentsPathDirRef|agentsPath|pathGlobRef|path)`);
 }
 
 function isZoneDefinition(value) {
@@ -103,18 +103,27 @@ function isZoneDefinition(value) {
   );
 }
 
+function getZoneBlockName(contract) {
+  return contract.INT_FRIDA_ZONES && typeof contract.INT_FRIDA_ZONES === 'object'
+    ? 'INT_FRIDA_ZONES'
+    : 'ZONES';
+}
+
 function getZoneEntries(contract) {
-  if (!contract.ZONES || typeof contract.ZONES !== 'object') {
+  const blockName = getZoneBlockName(contract);
+  const zones = contract[blockName];
+  if (!zones || typeof zones !== 'object') {
     return [];
   }
 
-  return Object.entries(contract.ZONES).filter(([, value]) => isZoneDefinition(value));
+  return Object.entries(zones).filter(([, value]) => isZoneDefinition(value));
 }
 
 function loadContract() {
   const contract = loadModularContract(ROOT);
-  if (!contract.ZONES || typeof contract.ZONES !== 'object') {
-    throw new Error('ZONES block not found in contract');
+  const blockName = getZoneBlockName(contract);
+  if (!contract[blockName] || typeof contract[blockName] !== 'object') {
+    throw new Error(`${blockName} block not found in contract`);
   }
   return contract;
 }
@@ -182,7 +191,7 @@ try {
     }
 
     console.error('Recovery:');
-    console.error('  1. Keep AGENTS.md only at contract paths from contract:ZONES + root bootloader.');
+    console.error('  1. Keep AGENTS.md only at contract paths from the repository-scoped zone block + root bootloader.');
     console.error('  2. Remove/rename counterfeit tracked AGENTS.md files or add proper zone definition.');
     console.error('  3. Regenerate artifacts: npm run frida:gen');
     process.exit(1);

@@ -1,6 +1,6 @@
 {
   "name": "@hanszel/core",
-  "version": "0.2.0",
+  "version": "3.1.0",
   "description": "Schema-driven Frida Core generation engine",
   "private": false,
   "type": "module",
@@ -42,7 +42,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "node -e \"import('node:fs').then(fs=>fs.rmSync('dist',{recursive:true,force:true}))\"",
-    "verify": "npm run build && node dist/cli.js migration-report && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs",
+    "verify": "npm run build && node dist/cli.js migration-report && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs && npm run verify:task-packs && npm run verify:zero-start",
+    "verify:task-packs": "node templates/tooling/verify/tasks-taskpacks-schema.mjs && node templates/tooling/verify/tasks-taskpacks-immutable.mjs",
+    "verify:zero-start": "node dist/zero-start-determinism.js",
     "prepack": "npm run clean && npm run build"
   },
   "publishConfig": {

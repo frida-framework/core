@@ -1,4 +1,4 @@
-# ─── LAYER 6: CLI & INTEGRITY ────────────────────────────────────────────────
+# ─── FRIDA LAYER FL07: CLI & INTEGRITY ───────────────────────────────────────
 
 FRIDA_TEMPLATE_INTEGRITY:
   _visibility: public
@@ -17,6 +17,30 @@ FRIDA_TEMPLATE_INTEGRITY:
     kind: nail
     check_command: "frida-core check-templates"
     exit_code_on_drift: 1
+
+FRIDA_TEMPLATE_HASH_TOOL:
+  _visibility: private
+  id: frida-template-hash-tool
+  version: 1.0.0
+  repository_scope: frida_repo_only
+  purpose: "Repo-local maintenance tool for checking manifest-declared template hashes."
+  invocation:
+    command: "frida-core hash"
+    default_manifest: "contract/template-integrity.manifest.yaml"
+    flags:
+      - "--manifest <path>"
+      - "--contract <path>"
+  behavior:
+    mode: verify_only
+    manifest_rewrite_support: false
+    bootstrap_package_manifest_support: false
+    checks:
+      - "Validate the target manifest against its schema."
+      - "Compare declared sha256 values against current file contents."
+      - "Return non-zero when files are missing or hashes differ."
+  followup_rule:
+    on_mismatch: "Update sha256 values manually in the affected manifest and rerun the tool."
+    note: "This tool does not regenerate `contract/template-integrity.manifest.yaml` and does not rewrite `contract/bootstrap-package.manifest.yaml`."
 
 FRIDA_CLI:
   _visibility: public

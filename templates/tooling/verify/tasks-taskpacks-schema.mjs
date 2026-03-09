@@ -1,36 +1,64 @@
 #!/usr/bin/env node
 /**
- * Validate contract Task Pack schema for tasks/TASK-*.md files.
+ * Validate contract Task Pack schema for repo-scoped TASK-*.md files.
  *
  * Rules:
- * - File name must match tasks/TASK-<ID>.md
+ * - In repo `frida`, only frida-tasks/TASK-<ID>.md is allowed; tasks/ is forbidden
+ * - Outside repo `frida`, only tasks/TASK-<ID>.md is allowed; frida-tasks/ is forbidden
  * - YAML frontmatter is required
  * - Required fields:
- *   id, status, profile_id, title, summary, acceptance_criteria, verification_cmd
+ *   id, status, profile_id, interface_ref, title, summary, acceptance_criteria, verification_cmd
  * - Allowed status values: OPEN | DONE | DRIFT
- * - profile_id must be a key from contract TASK_PROFILES
+ * - profile_id must be a key from the repository-scoped profile block
+ * - interface_ref must match the allowed management interface for the current repo scope
  * - zone_hint is optional, but if present must be a non-empty string
  */
 
 import { readdir, readFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import process from 'node:process';
 import path from 'node:path';
 import YAML from 'yaml';
 import { loadModularContract } from '../lib/load-contract.mjs';
 
-const TASKS_DIR = 'tasks';
 const ROOT_DIR = path.resolve(process.cwd());
 const TASK_FILE_RE = /^TASK-([A-Za-z0-9._-]+)\.md$/;
 const REQUIRED_FIELDS = [
   'id',
   'status',
   'profile_id',
+  'interface_ref',
   'title',
   'summary',
   'acceptance_criteria',
   'verification_cmd',
 ];
 const ALLOWED_STATUS = new Set(['OPEN', 'DONE', 'DRIFT']);
+
+function isFridaSelfRepo() {
+  try {
+    const packageJson = JSON.parse(requireText(path.join(ROOT_DIR, 'package.json')));
+    return packageJson?.name === '@hanszel/core' && existsSync(path.join(ROOT_DIR, 'contract', 'contract.index.yaml'));
+  } catch {
+    return false;
+  }
+}
+
+function requireText(filePath) {
+  return readFileSync(filePath, 'utf8');
+}
+
+function resolveTaskSurface() {
+  const selfRepo = isFridaSelfRepo();
+  return {
+    selfRepo,
+    tasksDir: selfRepo ? 'frida-tasks' : 'tasks',
+    forbiddenDir: selfRepo ? 'tasks' : 'frida-tasks',
+    allowedInterfaces: selfRepo
+      ? new Set(['FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT'])
+      : new Set(['FRIDA_INTERFACE_UPDATE_APP_BY_SPEC', 'FRIDA_INTERFACE_UPDATE_APP_BY_CODE']),
+  };
+}
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -77,7 +105,7 @@ function parseFrontmatter(content, filePath) {
   }
 }
 
-function validateTaskPack({ filePath, fileName, data, knownProfiles }) {
+function validateTaskPack({ filePath, fileName, data, knownProfiles, allowedInterfaces }) {
   const errors = [];
   const idFromFile = fileName.replace(/^TASK-/, '').replace(/\.md$/, '');
 
@@ -110,7 +138,17 @@ function validateTaskPack({ filePath, fileName, data, knownProfiles }) {
       errors.push(`${filePath}: 'profile_id' must be a non-empty string.`);
     } else if (!knownProfiles.has(data.profile_id)) {
       errors.push(
-        `${filePath}: unknown 'profile_id' '${data.profile_id}'. Must be one of TASK_PROFILES keys: ${[...knownProfiles].sort().join(', ')}.`
+        `${filePath}: unknown 'profile_id' '${data.profile_id}'. Must be one of the repository-scoped profile ids: ${[...knownProfiles].sort().join(', ')}.`
+      );
+    }
+  }
+
+  if ('interface_ref' in data) {
+    if (!isNonEmptyString(data.interface_ref)) {
+      errors.push(`${filePath}: 'interface_ref' must be a non-empty string.`);
+    } else if (!allowedInterfaces.has(data.interface_ref)) {
+      errors.push(
+        `${filePath}: invalid 'interface_ref' '${data.interface_ref}'. Allowed values for this repo: ${[...allowedInterfaces].sort().join(', ')}.`
       );
     }
   }
@@ -150,11 +188,16 @@ function validateTaskPack({ filePath, fileName, data, knownProfiles }) {
 
 async function loadKnownTaskProfiles() {
   const contract = loadModularContract(ROOT_DIR);
-  const taskProfiles = contract?.TASK_PROFILES;
+  const taskProfiles = contract?.TASK_PROFILES
+    || (contract?.FRIDA_TASK_PROFILES && typeof contract.FRIDA_TASK_PROFILES === 'object'
+      ? Object.fromEntries(
+          Object.entries(contract.FRIDA_TASK_PROFILES).filter(([key]) => !['_visibility', 'id', 'version'].includes(key))
+        )
+      : null);
 
   if (!taskProfiles || typeof taskProfiles !== 'object' || Array.isArray(taskProfiles)) {
     throw new Error(
-      `Could not read TASK_PROFILES from modular contract.`
+      `Could not read TASK_PROFILES or FRIDA_TASK_PROFILES from modular contract.`
     );
   }
 
@@ -162,6 +205,13 @@ async function loadKnownTaskProfiles() {
 }
 
 async function main() {
+  const { tasksDir, forbiddenDir, allowedInterfaces } = resolveTaskSurface();
+
+  if (existsSync(path.join(ROOT_DIR, forbiddenDir))) {
+    console.error(`❌ Forbidden task surface detected: ${forbiddenDir}/`);
+    process.exit(1);
+  }
+
   let knownProfiles;
   try {
     knownProfiles = await loadKnownTaskProfiles();
@@ -170,21 +220,30 @@ async function main() {
     process.exit(1);
   }
 
-  const entries = await readdir(TASKS_DIR, { withFileTypes: true });
+  let entries = [];
+  try {
+    entries = await readdir(tasksDir, { withFileTypes: true });
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      console.log(`✅ No ${tasksDir}/TASK-*.md files found; Task Pack schema check passed.`);
+      return;
+    }
+    throw error;
+  }
   const taskFiles = entries
     .filter((entry) => entry.isFile() && TASK_FILE_RE.test(entry.name))
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 
   if (taskFiles.length === 0) {
-    console.log('✅ No tasks/TASK-*.md files found; Task Pack schema check passed.');
+    console.log(`✅ No ${tasksDir}/TASK-*.md files found; Task Pack schema check passed.`);
     return;
   }
 
   const violations = [];
 
   for (const fileName of taskFiles) {
-    const filePath = path.join(TASKS_DIR, fileName).replace(/\\/g, '/');
+    const filePath = path.join(tasksDir, fileName).replace(/\\/g, '/');
     const raw = await readFile(filePath, 'utf8');
     const parsed = parseFrontmatter(raw, filePath);
 
@@ -198,6 +257,7 @@ async function main() {
       fileName,
       data: parsed.data,
       knownProfiles,
+      allowedInterfaces,
     });
     violations.push(...fileErrors);
   }
@@ -207,7 +267,7 @@ async function main() {
     for (const violation of violations) {
       console.error(`- ${violation}`);
     }
-    console.error('\nFix the listed frontmatter issues in tasks/TASK-*.md files.');
+    console.error(`\nFix the listed frontmatter issues in ${tasksDir}/TASK-*.md files.`);
     process.exit(1);
   }
 

@@ -1,0 +1,99 @@
+PATHS:
+  contract:
+    contractArtifact: .frida/inbox/app-contract/contract.index.yaml
+  agents:
+    bootloaderFile: AGENTS.md
+  frida:
+    root: .frida
+    contractDir: .frida/contract
+    reportsDir: .frida/reports
+    ir: .frida/contract/artifacts/frida.ir.json
+    permissions: .frida/contract/artifacts/frida.permissions.json
+    graph: .frida/contract/artifacts/frida.graph.mmd
+    visualOverlayFile: .frida/contract/visual/canon-overlay.json
+  fridaContract:
+    rootDir: .frida/contract
+    specsDir: .frida/contract/specs
+    profilesDir: .frida/contract/profiles
+    docsPolicyDir: .frida/contract/docs/policy
+    docsReferenceDir: .frida/contract/docs/reference
+    internalDir: .frida
+    bootloaderFile: .frida/contract/AGENTS.md
+  fridaInbox:
+    rootDir: .frida/inbox
+    appContractDir: .frida/inbox/app-contract
+    contractIndexFile: .frida/inbox/app-contract/contract.index.yaml
+  tooling:
+    templates:
+      frida:
+        root: .frida/templates/frida
+      docsGen:
+        root: .frida/templates/docs-gen
+    verify:
+      checkAgentsContractSetScript: scripts/verify/check-agents-contract-set.mjs
+    schemas:
+      fridaContractSchema: node_modules/@hanszel/core/schemas/frida-contract.schema.json
+  docs:
+    policyDir: .frida/contract/docs/policy
+    referenceDir: .frida/contract/docs/reference
+    policyBoundariesFile: .frida/contract/docs/policy/BOUNDARIES.md
+    policyImmutabilityFile: .frida/contract/docs/policy/IMMUTABILITY.md
+    referenceApiFile: .frida/contract/docs/reference/API_REFERENCE.md
+  temp:
+    rootDir: .temp
+
+FRIDA_CONFIG:
+  version: "1.0"
+  paths:
+    canon_inputFileRef: PATHS.fridaInbox.contractIndexFile
+    agents_bootloaderFileRef: PATHS.agents.bootloaderFile
+    specs_rootRef: PATHS.fridaContract.specsDir
+    profiles_rootRef: PATHS.fridaContract.profilesDir
+    docs_policyDirRef: PATHS.fridaContract.docsPolicyDir
+    docs_referenceDirRef: PATHS.fridaContract.docsReferenceDir
+    frida_internalRef: PATHS.frida.root
+    templates_fridaRef: PATHS.tooling.templates.frida.root
+    templates_docsRef: PATHS.tooling.templates.docsGen.root
+  reporting:
+    collect_in_repo: true
+    repo_path: ".frida/reports"
+    file_ext: ".yaml"
+    filename_pattern: "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
+    exists_check: false
+  visual:
+    overlay_outputFileRef: PATHS.frida.visualOverlayFile
+
+meta:
+  schemaVersion: "6.0"
+  mode: schema
+  contractArtifactRef: PATHS.fridaInbox.contractIndexFile
+
+core:
+  contracticalSourceBlocks:
+    - PATHS
+    - FRIDA_CONFIG
+    - GUARDS
+    - ZONES
+    - TASK_PROFILES
+    - INVARIANTS
+    - meta
+    - core
+  selectorGrammar: jsonpath-lite
+  generatorPipelineContracts:
+    - validate
+    - resolve_sources
+    - generate_artifacts
+  pathRefs:
+    contractArtifact: PATHS.fridaInbox.contractIndexFile
+    templatesFrida: PATHS.tooling.templates.frida.root
+    templatesDocs: PATHS.tooling.templates.docsGen.root
+  outputContracts:
+    - PATHS.agents.bootloaderFile
+    - PATHS.fridaContract.specsDir
+    - PATHS.fridaContract.profilesDir
+    - PATHS.docs.policyBoundariesFile
+    - PATHS.docs.referenceApiFile
+
+PATH_STATUS:
+  defaults:
+    exists: false

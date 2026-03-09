@@ -6,7 +6,7 @@ import type {
 } from './bootstrap-manifest.ts';
 import { entryAppliesToMode } from './bootstrap-manifest.ts';
 
-export type BootstrapReconcileMode = 'warm' | 'cold-engine' | 'component';
+export type BootstrapReconcileMode = 'warm' | 'cold-engine' | 'zero-start' | 'component';
 
 export type BootstrapPlanOperation =
   | {
@@ -35,6 +35,14 @@ export type BootstrapPlanOperation =
   }
   | {
     kind: 'copy_file';
+    sourcePath: string;
+    sourceAbsolutePath: string;
+    targetPath: string;
+    targetAbsolutePath: string;
+    reason: string;
+  }
+  | {
+    kind: 'seed_file';
     sourcePath: string;
     sourceAbsolutePath: string;
     targetPath: string;
@@ -246,10 +254,11 @@ function resolveManifestEntries(
 ): { entries: BootstrapPackageManifestEntry[]; modeOut: BootstrapReconcileMode } {
   const baseEntries = manifest.entries.filter((entry) => entryAppliesToMode(entry, mode));
   if (!componentName) {
-    return {
-      entries: baseEntries,
-      modeOut: mode === 'warm' ? 'warm' : 'cold-engine',
-    };
+    const modeOut: BootstrapReconcileMode =
+      mode === 'warm' ? 'warm'
+        : mode === 'zero-start' ? 'zero-start'
+          : 'cold-engine';
+    return { entries: baseEntries, modeOut };
   }
 
   const selected = baseEntries.filter((entry) => entryMatchesComponent(entry, componentName));
@@ -298,8 +307,10 @@ function sortOperations(ops: BootstrapPlanOperation[]): BootstrapPlanOperation[]
         return 4;
       case 'copy_file':
         return 5;
-      case 'note':
+      case 'seed_file':
         return 6;
+      case 'note':
+        return 7;
     }
   };
 
@@ -366,17 +377,6 @@ export function buildBootstrapPlan(options: BuildBootstrapPlanOptions): Bootstra
       continue;
     }
 
-    if (entry.ownership_class === 'user_owned') {
-      addNote(ops, seen, `PRESERVE user-owned runtime config: ${target}`);
-      continue;
-    }
-
-    if (entry.ownership_class === 'user_data') {
-      addEnsureDir(ops, seen, targetDir, target, `Preserve user data scope (${entry.id})`);
-      addNote(ops, seen, `PRESERVE user data: ${target}`);
-      continue;
-    }
-
     if (entry.apply_mode === 'ensure_dir') {
       if (entry.kind !== 'dir' && entry.kind !== 'tree') {
         throw new BootstrapPlanBuildError(
@@ -402,6 +402,49 @@ export function buildBootstrapPlan(options: BuildBootstrapPlanOptions): Bootstra
       continue;
     }
 
+    if (entry.apply_mode === 'seed_if_absent') {
+      if (entry.kind !== 'file') {
+        throw new BootstrapPlanBuildError(
+          'BOOTSTRAP_RECONCILE_PLAN_CONFLICT',
+          `seed_if_absent entry ${entry.id} must be kind=file`
+        );
+      }
+      if (!entry.source) {
+        throw new BootstrapPlanBuildError(
+          'BOOTSTRAP_RECONCILE_PLAN_CONFLICT',
+          `seed_if_absent entry ${entry.id} is missing source`
+        );
+      }
+      const sourcePath = toPosixRelativePath(entry.source);
+      const key = `seed_file:${target}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        addEnsureDir(ops, seen, targetDir, path.posix.dirname(target), `Parent directory for ${entry.id}`);
+        ops.push({
+          kind: 'seed_file',
+          sourcePath,
+          sourceAbsolutePath: path.resolve(options.packageRoot, options.manifest.assets_root, entry.source),
+          targetPath: target,
+          targetAbsolutePath: toAbsoluteTargetPath(targetDir, target),
+          reason: `Seed template file if absent (${entry.id})`,
+        });
+      }
+      continue;
+    }
+
+    if (entry.ownership_class === 'user_owned') {
+      addNote(ops, seen, `PRESERVE user-owned runtime config: ${target}`);
+      continue;
+    }
+
+    if (entry.ownership_class === 'user_data') {
+      if (entry.kind === 'dir' || entry.kind === 'tree') {
+        addEnsureDir(ops, seen, targetDir, target, `Preserve user data scope (${entry.id})`);
+      }
+      addNote(ops, seen, `PRESERVE user data: ${target}`);
+      continue;
+    }
+
     if (entry.apply_mode === 'generated') {
       if (entry.kind === 'dir' && !entry.prune_scope) {
         addEnsureDir(ops, seen, targetDir, target, `Ensure generated directory root (${entry.id})`);
@@ -410,7 +453,7 @@ export function buildBootstrapPlan(options: BuildBootstrapPlanOptions): Bootstra
     }
   }
 
-  const requiresGeneration = modeOut === 'warm' || modeOut === 'cold-engine'
+  const requiresGeneration = modeOut === 'warm' || modeOut === 'cold-engine' || modeOut === 'zero-start'
     ? true
     : entries.some((entry) => entry.ownership_class === 'engine_generated');
 

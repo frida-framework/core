@@ -1,0 +1,423 @@
+GUARDS:
+  version: "1.0"
+  date: "1970-01-01"
+  globalGuardRefs: []
+  guards: []
+
+ZONE_RESOLUTION:
+  scope:
+    execution: Resolve execution zone for a concrete target path.
+  constraints:
+    - Execution zone source of truth is contract:ZONES only.
+    - Root fallback zone MUST resolve "." through the generic "**" path pattern.
+
+VERIFICATION_POLICY:
+  zoneVerification:
+    requirements:
+      - Verification command MUST be one-shot (finite execution).
+      - Verification command MUST be deterministic and non-interactive.
+      - Verification command MUST return process exit code for pass/fail.
+    noOpValues:
+      - n/a
+
+ZONES:
+  workspaceRoot:
+    owner: Platform
+    path: "**"
+    readOnly: false
+    purpose: Generic root fallback zone for repository-level tasks and root-path resolution.
+    agentsPath: "."
+    agentsTemplate: mapper
+    constraints:
+      - Use this zone only when no more specific zone matches.
+    verification: npx frida-core check zone --path .
+    guardRefs: []
+  docs:
+    owner: Docs
+    path: "docs/**"
+    readOnly: false
+    purpose: Human-authored documentation.
+    agentsPath: "docs"
+    agentsTemplate: mapper
+    constraints:
+      - Keep onboarding and policy docs in markdown.
+    verification: n/a
+    guardRefs: []
+  sourceCode:
+    owner: App
+    path: "src/**"
+    readOnly: false
+    purpose: Application source code.
+    agentsPath: "src"
+    agentsTemplate: mapper
+    constraints:
+      - Keep app logic outside .frida managed surfaces.
+    verification: n/a
+    guardRefs: []
+  scripts:
+    owner: Platform
+    path: "scripts/**"
+    readOnly: false
+    purpose: Repository tooling and verification scripts.
+    agentsPath: "scripts"
+    agentsTemplate: service
+    constraints:
+      - Prefer one-shot deterministic verification commands.
+    verification: n/a
+    guardRefs: []
+  tests:
+    owner: QA
+    path: "tests/**"
+    readOnly: false
+    purpose: Automated tests.
+    agentsPath: "tests"
+    agentsTemplate: mapper
+    constraints:
+      - Keep tests deterministic and non-interactive.
+    verification: n/a
+    guardRefs: []
+  tasks:
+    owner: Platform
+    path: "tasks/**"
+    readOnly: false
+    purpose: Task packs and orchestration notes.
+    agentsPath: "tasks"
+    agentsTemplate: mapper
+    constraints:
+      - Task packs are immutable; create new files instead of editing existing task instructions.
+    verification: n/a
+    guardRefs: []
+  agentInbox:
+    owner: Platform
+    path: "tasks/inbox/**"
+    readOnly: false
+    purpose: Inbox for architecture and governance requests.
+    agentsPath: "tasks/inbox"
+    agentsTemplate: mapper
+    constraints:
+      - Keep inbox items self-contained and acceptance-oriented.
+    verification: n/a
+    guardRefs: []
+  agentSessions:
+    owner: Platform
+    path: "tasks/sessions/**"
+    readOnly: false
+    purpose: Append-only session telemetry.
+    agentsPath: "tasks/sessions"
+    agentsTemplate: mapper
+    constraints:
+      - New run means new session report file.
+    verification: n/a
+    guardRefs: []
+  tempWorkspace:
+    owner: Platform
+    path: ".temp/**"
+    readOnly: false
+    purpose: Ephemeral scratch area for agent-created temporary artifacts.
+    agentsPath: ".temp"
+    agentsTemplate: service
+    constraints:
+      - Temporary files must stay under .temp/.
+    verification: n/a
+    guardRefs: []
+  fridaInternalArtifacts:
+    owner: Platform
+    path: ".frida/**"
+    readOnly: true
+    whyReadOnly: Internal FRIDA artifacts generated from package and contract state.
+    consequence: Manual edits are overwritten by bootstrap or generation.
+    howToChange: Update the source contract or bootstrap package, then rerun FRIDA.
+    forbiddenOps:
+      - any direct edits
+    agentsPath: ".frida"
+    agentsTemplate: notouch
+    guardRefs: []
+
+TASK_PROFILES:
+  app_core:
+    description: Generic application development profile for frontend and host-side repository work.
+    keywords:
+      - app
+      - frontend
+      - react
+      - component
+      - page
+      - ui
+      - feature
+      - hook
+      - refactor
+      - typescript
+    role: APP_AGENT
+    security:
+      read_allow:
+        - src/**
+        - scripts/**
+        - docs/**
+        - tasks/**
+        - .temp/**
+      edit_allow:
+        - src/**
+        - scripts/**
+        - docs/**
+        - tasks/README.md
+        - tasks/**/README.md
+        - .temp/**
+      create_allow:
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - .frida/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  visual_design:
+    description: Visual system and styling profile.
+    keywords:
+      - css
+      - style
+      - design
+      - tailwind
+      - layout
+      - visual
+      - appearance
+      - theme
+    role: DESIGN_AGENT
+    security:
+      read_allow:
+        - src/**
+        - docs/**
+        - tasks/**
+        - .temp/**
+      edit_allow:
+        - src/**
+        - docs/**
+        - tasks/README.md
+        - tasks/**/README.md
+        - .temp/**
+      create_allow:
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - .frida/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  qa_engineer:
+    description: Testing, verification, and regression profile.
+    keywords:
+      - test
+      - tests
+      - e2e
+      - spec
+      - verify
+      - regression
+      - coverage
+      - fixture
+      - quality
+    role: QA_AGENT
+    security:
+      read_allow:
+        - tests/**
+        - src/**
+        - scripts/**
+        - tasks/**
+        - .temp/**
+      edit_allow:
+        - tests/**
+        - tasks/README.md
+        - tasks/**/README.md
+        - .temp/**
+      create_allow:
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - .frida/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+      - error_explicit
+  app_task_setter:
+    description: Task orchestration profile for creating new task packs and keeping task readmes current.
+    keywords:
+      - task setter
+      - task pack
+      - create task pack
+      - tasks/TASK-
+      - orchestration
+    role: TASK_SETTER_AGENT
+    security:
+      read_allow:
+        - tasks/**
+        - docs/**
+        - .temp/**
+      edit_allow:
+        - tasks/README.md
+        - tasks/**/README.md
+        - .temp/**
+      create_allow:
+        - tasks/TASK-*.md
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - .frida/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+        - src/**
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  app_architect_inbox:
+    description: Architecture proposal intake profile.
+    keywords:
+      - inbox
+      - architecture request
+      - proposal
+      - contract impact
+    role: ARCHITECT_AGENT
+    security:
+      read_allow:
+        - tasks/**
+        - docs/**
+        - .frida/**
+        - .temp/**
+      edit_allow:
+        - tasks/inbox/**
+        - tasks/inbox/README.md
+      create_allow:
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - src/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  ci_debugger:
+    description: CI, workflow, and repository automation profile.
+    keywords:
+      - ci
+      - github actions
+      - workflow
+      - pipeline
+      - deploy
+      - sync
+      - git
+      - checkout
+    role: DEVOPS_AGENT
+    security:
+      read_allow:
+        - .github/**
+        - scripts/**
+        - package.json
+        - tasks/**
+        - docs/**
+        - .temp/**
+      edit_allow:
+        - .github/**
+        - scripts/**
+        - package.json
+        - tasks/README.md
+        - tasks/**/README.md
+        - tasks/inbox/**
+        - .temp/**
+      create_allow:
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - .frida/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  app_governance:
+    description: Contract, policy, and FRIDA governance profile.
+    keywords:
+      - frida
+      - contract
+      - governance
+      - documentation
+      - policy
+      - agents.md
+    role: ARCHITECT_AGENT
+    security:
+      read_allow:
+        - .frida/**
+        - docs/**
+        - tasks/**
+        - .temp/**
+      edit_allow:
+        - tasks/inbox/**
+        - tasks/inbox/README.md
+      create_allow:
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - src/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  app_readonly_observer:
+    description: Read-only audit and review profile.
+    keywords:
+      - audit
+      - diagnostics
+      - readiness
+      - review
+      - observe
+      - health-check
+    role: READONLY_AGENT
+    security:
+      read_allow:
+        - "**"
+      edit_allow: []
+      create_allow:
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid: []
+      edit_forbid:
+        - "**"
+    invariants:
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+
+INVARIANTS:
+  no_scope_creep:
+    id: ARCH_01
+    text: MUST NOT add functionality outside the requested scope.
+    category: architecture
+  temp_dot_temp_only:
+    id: OPS_01
+    text: Temporary files, logs, and scratch artifacts MUST be stored only under .temp/**.
+    category: operations
+  temp_ephemeral_session:
+    id: OPS_02
+    text: Files under .temp/** are ephemeral and MUST NOT be relied on across sessions.
+    category: operations
+  error_explicit:
+    id: DATA_01
+    text: Async operations MUST fail explicitly rather than silently.
+    category: data

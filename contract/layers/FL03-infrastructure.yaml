@@ -1,4 +1,4 @@
-# ─── LAYER 3: INFRASTRUCTURE ─────────────────────────────────────────────────
+# ─── FRIDA LAYER FL03: INFRASTRUCTURE ────────────────────────────────────────
 
 FRIDA_ASSEMBLY_PROTOCOL:
   _visibility: private
@@ -97,14 +97,29 @@ ZONES:
   _visibility: public
   id: frida-zones
   version: 1.0.0
+  scope: target_app_repo_only
+  scope_note: >
+    ZONES are public routing entities outside the Frida core repository.
+    Application repos define their own ZONES block in the app contract.
+    The Frida core repository does not expose its private routing entities
+    through this block; it uses a separate private internal-zone block instead.
+  deployment_scope: public
+  ownership_rule:
+    - "Public zone entities belong to the target repository contract, not to the Frida core repo."
+    - "Frida core MUST NOT describe its own private routing surfaces in ZONES."
+  routing_rule:
+    - "Target-repo routing resolves only against the target repo ZONES block."
+    - "Private Frida-repo internal zones are never deployed to target repos."
+
+INT_FRIDA_ZONES:
+  _visibility: private
+  id: int-frida-zones
+  version: 1.0.0
   scope: frida_engine_repo_only
   scope_note: >
     These zones define routing surfaces for working WITHIN the Frida engine
-    repository (frida-core package source). They are NOT the zones of target
-    application repos that deploy Frida. Application repos define their own
-    ZONES block in their app contract (app-framework layer). The two ZONES
-    blocks are completely independent and never appear in the same context:
-    core ZONES govern frida-core development; app ZONES govern app development.
+    repository (frida-core package source). They are private engine entities
+    and MUST NOT be projected into target application repos.
   templates:
     hard_zone: true
     pathGlobRef: "PATHS.scopes.templatesAll"
@@ -143,7 +158,7 @@ ZONES:
         action: "If no zone matches, HALT with error."
     invariants:
       - "Zone MUST NOT be inferred from profile keywords or working_dir heuristics."
-      - "Zone is resolved ONLY by matching path against ZONES entries."
+      - "Zone is resolved ONLY by matching path against the repository-scoped zone block."
   verification_policy:
     rules:
       - "Verification commands MUST be one-shot and non-interactive."
@@ -156,17 +171,17 @@ ZONES:
         match:
           pathPrefix: "templates/"
         zone: templates
-        agentsRef: "ZONES.templates.agentsPath"
+        agentsRef: "INT_FRIDA_ZONES.templates.agentsPath"
       - id: frida_managed
         match:
           pathPrefix: ".frida/"
         zone: frida_managed
-        agentsRef: "ZONES.frida_managed.agentsPath"
+        agentsRef: "INT_FRIDA_ZONES.frida_managed.agentsPath"
       - id: non_templates
         match:
           default: true
         zone: non_templates
-        agentsRef: "ZONES.non_templates.agentsPath"
+        agentsRef: "INT_FRIDA_ZONES.non_templates.agentsPath"
     rules:
       - "Profile routing uses zone-driven AGENTS.md lookup."
       - "No profile match MUST halt execution."

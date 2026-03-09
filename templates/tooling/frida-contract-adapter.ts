@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import { fridaContractSchemaRef, type FridaAdapter, type FridaExtensionSpec } from './frida-core-bridge.ts';
+import { fridaContractSchemaRef, type FridaAdapter } from './frida-core-bridge.ts';
 
 interface AdapterOptions {
   rootDir?: string;
@@ -9,7 +9,6 @@ interface AdapterOptions {
 }
 
 interface AdapterConfig {
-  bindingSet: Set<string>;
   boundariesTemplateAbs: string;
   apiReferenceTemplateAbs: string;
 }
@@ -37,18 +36,6 @@ function resolveTemplatePath(
     }
   }
   return fallback;
-}
-
-function resolveGeneratorBindings(extensions: FridaExtensionSpec[]): Set<string> {
-  const bindings = new Set<string>();
-  for (const extension of extensions) {
-    for (const binding of extension.generatorBindings || []) {
-      if (typeof binding === 'string' && binding.trim()) {
-        bindings.add(binding.trim());
-      }
-    }
-  }
-  return bindings;
 }
 
 function loadAdapterConfig(rootDir: string, contractPath: string): AdapterConfig {
@@ -85,10 +72,6 @@ function loadAdapterConfig(rootDir: string, contractPath: string): AdapterConfig
     contract = {};
   }
 
-  const extensions = Array.isArray(contract.extensions)
-    ? (contract.extensions as FridaExtensionSpec[])
-    : [];
-
   const boundariesTemplatePath = resolveTemplatePath(
     contract,
     [
@@ -108,7 +91,6 @@ function loadAdapterConfig(rootDir: string, contractPath: string): AdapterConfig
   );
 
   return {
-    bindingSet: resolveGeneratorBindings(extensions),
     boundariesTemplateAbs: path.resolve(rootDir, boundariesTemplatePath),
     apiReferenceTemplateAbs: path.resolve(rootDir, apiReferenceTemplatePath),
   };
@@ -123,75 +105,70 @@ export function createContractDrivenAdapter(options: AdapterOptions = {}): Frida
     id: 'contract-driven-host',
     schemaRef: fridaContractSchemaRef,
     registerGenerators(registry) {
-      if (config.bindingSet.has('docs.boundaries')) {
-        registry.register({
-          id: 'contract.docs.boundaries',
-          deterministic: true,
-          inputs: ['ZONES', 'FRIDA_GUARDS_BASELINE', 'PROJECT_GUARDS', 'GUARDS'],
-          outputs: ['docs/policy/BOUNDARIES.md'],
-          run(context) {
-            const template = context.utils.loadTemplate(
-              path.dirname(config.boundariesTemplateAbs),
-              path.basename(config.boundariesTemplateAbs),
-            );
-            const enforcedGuards = context.effectiveGuards.guards.filter((guard: any) => guard.enforcement);
-            context.utils.write(
-              path.join(context.runtimePaths.docsPolicyDir, 'BOUNDARIES.md'),
-              template({ zones: context.zones, enforcedGuards }),
-              true,
-            );
-          },
-        });
-      }
+      registry.register({
+        id: 'contract.docs.boundaries',
+        deterministic: true,
+        inputs: ['ZONES', 'FRIDA_GUARDS_BASELINE', 'PROJECT_GUARDS', 'GUARDS'],
+        outputs: ['docs/policy/BOUNDARIES.md'],
+        run(context) {
+          const template = context.utils.loadTemplate(
+            path.dirname(config.boundariesTemplateAbs),
+            path.basename(config.boundariesTemplateAbs),
+          );
+          const enforcedGuards = context.effectiveGuards.guards.filter((guard: any) => guard.enforcement);
+          context.utils.write(
+            path.join(context.runtimePaths.docsPolicyDir, 'BOUNDARIES.md'),
+            template({ zones: context.zones, enforcedGuards }),
+            true,
+          );
+        },
+      });
 
-      if (config.bindingSet.has('docs.api_reference')) {
-        registry.register({
-          id: 'contract.docs.api-reference',
-          deterministic: true,
-          inputs: ['FUNCTIONS_REGISTRY'],
-          outputs: ['docs/reference/API_REFERENCE.md'],
-          run(context) {
-            const edgeFunctions = context.contract['FUNCTIONS_REGISTRY']?.edge_functions;
-            if (!edgeFunctions || typeof edgeFunctions !== 'object' || Object.keys(edgeFunctions).length === 0) {
-              console.warn('⚠️  FUNCTIONS_REGISTRY missing; API_REFERENCE.md generation skipped.');
-              return;
-            }
+      registry.register({
+        id: 'contract.docs.api-reference',
+        deterministic: true,
+        inputs: ['FUNCTIONS_REGISTRY'],
+        outputs: ['docs/reference/API_REFERENCE.md'],
+        run(context) {
+          const edgeFunctions = context.contract['FUNCTIONS_REGISTRY']?.edge_functions;
+          if (!edgeFunctions || typeof edgeFunctions !== 'object' || Object.keys(edgeFunctions).length === 0) {
+            return;
+          }
 
-            const normalizedFunctions = Object.entries(edgeFunctions).map(([name, data]: [string, any]) => {
-              const functionPath =
-                context.utils.resolveRefValue(context.contract, data.path, `FUNCTIONS_REGISTRY.edge_functions.${name}.path`) ||
-                context.utils.resolveRefValue(context.contract, data.dirRef, `FUNCTIONS_REGISTRY.edge_functions.${name}.dirRef`) ||
-                context.utils.resolveRefValue(context.contract, data.pathDirRef, `FUNCTIONS_REGISTRY.edge_functions.${name}.pathDirRef`) ||
-                '';
+          const normalizedFunctions = Object.entries(edgeFunctions).map(([name, data]: [string, any]) => {
+            const functionPath =
+              context.utils.resolveRefValue(context.contract, data.path, `FUNCTIONS_REGISTRY.edge_functions.${name}.path`) ||
+              context.utils.resolveRefValue(context.contract, data.dirRef, `FUNCTIONS_REGISTRY.edge_functions.${name}.dirRef`) ||
+              context.utils.resolveRefValue(context.contract, data.pathDirRef, `FUNCTIONS_REGISTRY.edge_functions.${name}.pathDirRef`) ||
+              '';
 
-              const functionEntry =
-                context.utils.resolveRefValue(context.contract, data.entry, `FUNCTIONS_REGISTRY.edge_functions.${name}.entry`) ||
-                context.utils.resolveRefValue(context.contract, data.entryFileRef, `FUNCTIONS_REGISTRY.edge_functions.${name}.entryFileRef`) ||
-                '';
+            const functionEntry =
+              context.utils.resolveRefValue(context.contract, data.entry, `FUNCTIONS_REGISTRY.edge_functions.${name}.entry`) ||
+              context.utils.resolveRefValue(context.contract, data.entryFileRef, `FUNCTIONS_REGISTRY.edge_functions.${name}.entryFileRef`) ||
+              '';
 
-              return {
-                name,
-                path: functionPath,
-                entry: functionEntry,
-                purpose: data.purpose || '',
-              };
-            });
+            return {
+              name,
+              path: functionPath,
+              entry: functionEntry,
+              purpose: data.purpose || '',
+            };
+          });
 
-            const template = context.utils.loadTemplate(
-              path.dirname(config.apiReferenceTemplateAbs),
-              path.basename(config.apiReferenceTemplateAbs),
-            );
-            context.utils.write(
-              path.join(context.runtimePaths.docsReferenceDir, 'API_REFERENCE.md'),
-              template({
-                edgeFunctions: normalizedFunctions,
-                notes: context.contract['FUNCTIONS_REGISTRY']?.notes || [],
-              }),
-              true,
-            );
-          },
-        });
-      }
+          const template = context.utils.loadTemplate(
+            path.dirname(config.apiReferenceTemplateAbs),
+            path.basename(config.apiReferenceTemplateAbs),
+          );
+          context.utils.write(
+            path.join(context.runtimePaths.docsReferenceDir, 'API_REFERENCE.md'),
+            template({
+              edgeFunctions: normalizedFunctions,
+              notes: context.contract['FUNCTIONS_REGISTRY']?.notes || [],
+            }),
+            true,
+          );
+        },
+      });
     },
     registerSelectors() {
       return [];

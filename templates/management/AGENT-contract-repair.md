@@ -1,6 +1,6 @@
 <!-- AUTO-GENERATED FROM CONTRACT - DO NOT EDIT MANUALLY -->
 
-# Canon Diagnostics & Repair
+# Contract Diagnostics & Repair
 
 > Reactive diagnostics: symptom -> cause -> algorithm.
 
@@ -8,13 +8,13 @@
 
 ## Principle
 
-`CANON -> ANTITASK -> DEVELOPMENT`
+`CONTRACT -> ANTITASK -> DEVELOPMENT`
 
-Repair always starts with Canon, then Antitask is regenerated, then development proceeds.
+Repair always starts with contract, then Antitask is regenerated, then development proceeds.
 
-Interpretation principle: **no heuristics**. For Canon-tier, only explicit contract data is used.
+Interpretation principle: **no heuristics**. For contract tier, only explicit contract data is used.
 
-If repair requires contract block edits, invoke Canon Fixer via AGENT-canon-update.
+If repair requires contract block edits, invoke Contract Fixer via AGENT-contract-update.
 Other agents prepare only patch proposals without direct editing.
 
 ---
@@ -34,7 +34,7 @@ Other agents prepare only patch proposals without direct editing.
 
 ## Missing artifacts
 
-1. Check if path exists in ZONES.
+1. Check if path exists in the repository-scoped zone block.
 2. If yes — run generation pipeline.
 3. If no — add zone to contract, then run generation.
 
@@ -45,7 +45,7 @@ Other agents prepare only patch proposals without direct editing.
 1. Check metadata counts in root bootloader.
 2. Count actual generated files in zones.
 3. Run generation pipeline.
-4. If mismatch persists — check ZONES for missing pathGlobRef/agentsPathDirRef.
+4. If mismatch persists — check the repository-scoped zone block for missing pathGlobRef/agentsPathDirRef.
 
 ---
 
@@ -60,7 +60,7 @@ Other agents prepare only patch proposals without direct editing.
    - `.specs/**`
    - `.frida/**`
    - `AGENTS.md` (root)
-   - `{zone.agentsPath}/AGENTS.md` (resolved from zone.agentsPathDirRef) for zones from ZONES
+   - `{zone.agentsPath}/AGENTS.md` (resolved from zone.agentsPathDirRef) for zones from the repository-scoped zone block
 4. If drift in generated files — restore only those paths (no mass rollback):
    - Base safe restore:
      `git restore --worktree --staged -- contract/ docs/policy/ .specs/ .frida/ AGENTS.md`
@@ -76,7 +76,7 @@ Other agents prepare only patch proposals without direct editing.
    - Do NOT use mass rollback commands.
    - Pass file list and diff to human for manual resolution.
 6. Never edit generated files manually.
-7. If drift is intentional: update canon first (contract blocks), run wiki→repo sync, then regenerate (`npm run frida:gen`; `npm run docs:generate` is alias).
+7. If drift is intentional: update contract first, then regenerate (`npm run frida:gen`; `npm run docs:generate` is alias).
 
 Source of truth and priorities determined by `contract:DOCS.sourcesModel`.
 
@@ -86,13 +86,13 @@ Source of truth and priorities determined by `contract:DOCS.sourcesModel`.
 
 ### Profile routing
 
-1. Determine profile_id from TASK_PROFILES via router rules.
+1. Determine profile_id from the repository-scoped profile block via router rules.
 2. Verify profile covers task via security allowlists.
 3. If profile not determinable — `no_profile_match = HALT`.
 
 ### Zone resolution
 
-1. For each target path, find matching zones from ZONES.
+1. For each target path, find matching zones from the repository-scoped zone block.
 2. Normalize paths per ZONE_RESOLUTION.normalization.
 3. Apply selection order: longest literal prefix → fewer wildcards → lexicographic.
 4. Verify actions within allowed zone with its guardRefs.
@@ -104,13 +104,13 @@ Source of truth and priorities determined by `contract:DOCS.sourcesModel`.
 1. Read verification output message.
 2. Find guard id in GUARDS.
 3. Fix code to comply with guard statement.
-4. If violation caused by changed requirements — update canon first via AGENT-canon-update, then re-verify.
+4. If violation caused by changed requirements — update contract first via AGENT-contract-update, then re-verify.
 
 Common guards (full list in GUARDS):
 
 | ID | Essence |
 |----|---------|
-| `canon.source.wiki` | Source of truth defined by `contract:DOCS.sourcesModel` |
+| `contract.source.wiki` | Source of truth defined by `contract:DOCS.sourcesModel` |
 | `ui.no-direct-supabase` | UI must not import Supabase directly |
 | `deploy.edge.no-direct-cli` | Deployment only via CI |
 | `workspace.snapshot-immutable` | Workspace data is a snapshot, not live-updated |
@@ -140,8 +140,8 @@ Common guards (full list in GUARDS):
 
 ## HALT Conditions
 
-- Cannot determine root cause between canon, antitask, and generated surface.
-- `no_profile_match`: profile not determinable from TASK_PROFILES.
+- Cannot determine root cause between contract, antitask, and generated surface.
+- `no_profile_match`: profile not determinable from the repository-scoped profile block.
 - Contract block changes required but human has not confirmed.
 - No PR or no PR approval for contract changes.
 - Unresolvable conflict between source model and actual artifacts.

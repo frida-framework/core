@@ -1,4 +1,4 @@
-# ─── LAYER 6: BUILDTIME ──────────────────────────────────────────────────────
+# ─── FRIDA LAYER FL08: BUILDTIME ─────────────────────────────────────────────
 # Purpose: Build-time mechanisms — how contract data is transformed into
 #          application artifacts (agent context, component surgery).
 

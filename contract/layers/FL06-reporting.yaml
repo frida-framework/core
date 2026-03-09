@@ -1,4 +1,4 @@
-# ─── LAYER 5: REPORTING & VALIDATION ─────────────────────────────────────────
+# ─── FRIDA LAYER FL06: REPORTING & VALIDATION ────────────────────────────────
 
 FRIDA_REPORTING:
   _visibility: private
@@ -9,7 +9,7 @@ FRIDA_REPORTING:
   access:
     create_all_profiles: true
     read_only_profiles:
-      - governance
+      - frida_readonly_observer
     update_delete_allowed_profiles: []
   run_report:
     required_on:

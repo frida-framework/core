@@ -21,6 +21,8 @@ import { loadContractDocument } from './contract-path.ts';
 
 // === CONFIG ===
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ENGINE_PACKAGE_ROOT = path.resolve(MODULE_DIR, '..');
 
 // === TYPES ===
 export interface Zone {
@@ -56,6 +58,14 @@ export interface ValidationResult {
     exists: boolean;
     decision_trace: DecisionStep[];
     error?: string;
+}
+
+function isEngineSelfRepo(rootDir: string): boolean {
+    return path.resolve(rootDir) === ENGINE_PACKAGE_ROOT;
+}
+
+function getZoneBlockName(contractRoot: string): 'ZONES' | 'INT_FRIDA_ZONES' {
+    return isEngineSelfRepo(contractRoot) ? 'INT_FRIDA_ZONES' : 'ZONES';
 }
 
 function resolvePathRef(contract: Record<string, any>, ref: string): string | null {
@@ -102,11 +112,13 @@ function isZoneDefinition(value: unknown): value is Record<string, any> {
 }
 
 function getZoneEntries(contract: Record<string, any>): Array<[string, Record<string, any>]> {
-    if (!contract.ZONES || typeof contract.ZONES !== 'object') {
+    const blockName = getZoneBlockName(ROOT_DIR);
+    const zones = contract[blockName];
+    if (!zones || typeof zones !== 'object') {
         return [];
     }
 
-    return Object.entries(contract.ZONES)
+    return Object.entries(zones)
         .filter(([, value]) => isZoneDefinition(value)) as Array<[string, Record<string, any>]>;
 }
 
@@ -116,8 +128,9 @@ export function loadZones(contractPath?: string): Map<string, Zone> {
     const contract = loaded.parsed;
     const zones = new Map<string, Zone>();
 
-    if (!contract.ZONES) {
-        throw new Error('ZONES block not found in contract');
+    const zoneBlockName = getZoneBlockName(ROOT_DIR);
+    if (!contract[zoneBlockName]) {
+        throw new Error(`${zoneBlockName} block not found in contract`);
     }
 
     for (const [id, data] of getZoneEntries(contract)) {
@@ -126,7 +139,7 @@ export function loadZones(contractPath?: string): Map<string, Zone> {
             resolvePathLike(contract, zoneData.pathGlobRef) ||
             resolvePathLike(contract, zoneData.path);
         if (!zonePath) {
-            throw new Error(`ZONES.${id}.path is missing or unresolved (pathGlobRef|path expected)`);
+            throw new Error(`${zoneBlockName}.${id}.path is missing or unresolved (pathGlobRef|path expected)`);
         }
 
         const zoneAgentsPath =
@@ -198,7 +211,7 @@ function matchesZonePath(workingDir: string, zonePattern: string): boolean {
  * Uses "most specific matching path" algorithm from contract.
  * 
  * IMPORTANT: Zone MUST NOT be inferred from profile allowlists, scope, or working_dir guess.
- * Zone is resolved ONLY by matching path against contract:ZONES entries.
+ * Zone is resolved ONLY by matching path against the repository-scoped zone block.
  */
 export function resolveZone(workingDir: string, zones: Map<string, Zone>): { zone: Zone | null; trace: DecisionStep } {
     const candidates: ZoneCandidate[] = [];

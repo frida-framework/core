@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
- * Enforce immutability of TASK-*.md files in the tasks directory.
+ * Enforce immutability of repo-scoped TASK-*.md files.
  *
- * This script fails if any existing file matching tasks/TASK-.md or
- * tasks/subdir/TASK-.md is modified or deleted.
+ * In repo `frida`, only frida-tasks/TASK-*.md is allowed and tasks/ is forbidden.
+ * Outside repo `frida`, only tasks/TASK-*.md is allowed and frida-tasks/ is forbidden.
+ *
+ * This script fails if any existing file matching the repo task surface is
+ * modified or deleted.
  * New TASK-.md files are allowed (additions only).
  *
  * Usage:
@@ -18,16 +21,34 @@
  */
 
 import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 
 const BASE_REF = process.env.BASE_REF || 'origin/main...HEAD';
-const TASK_FILE_PATTERN = /^tasks\/.*\/TASK-.*\.md$/;
-// Also match files directly in tasks/ root
-const TASK_FILE_ROOT_PATTERN = /^tasks\/TASK-.*\.md$/;
+
+function isFridaSelfRepo() {
+  try {
+    const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+    return packageJson?.name === '@hanszel/core' && existsSync('contract/contract.index.yaml');
+  } catch {
+    return false;
+  }
+}
+
+const SELF_REPO = isFridaSelfRepo();
+const TASKS_DIR = SELF_REPO ? 'frida-tasks' : 'tasks';
+const FORBIDDEN_DIR = SELF_REPO ? 'tasks' : 'frida-tasks';
+const TASK_FILE_PATTERN = new RegExp(`^${TASKS_DIR}\\/.*\\/TASK-.*\\.md$`);
+const TASK_FILE_ROOT_PATTERN = new RegExp(`^${TASKS_DIR}\\/TASK-.*\\.md$`);
 
 // Status codes that indicate immutability violations
 const VIOLATION_STATUSES = ['M', 'D', 'R'];
 
-console.log('🔍 Checking immutability of TASK-*.md files in tasks/...\n');
+if (existsSync(FORBIDDEN_DIR)) {
+  console.error(`❌ Forbidden task surface detected: ${FORBIDDEN_DIR}/`);
+  process.exit(1);
+}
+
+console.log(`🔍 Checking immutability of TASK-*.md files in ${TASKS_DIR}/...\n`);
 
 function getChangedFiles() {
   try {
@@ -105,7 +126,7 @@ if (violations.length > 0) {
   
   console.error('\nTASK-*.md files are immutable once created.');
   console.error('Allowed actions:');
-  console.error('  ✓ Add new TASK-*.md files');
+  console.error(`  ✓ Add new ${TASKS_DIR}/TASK-*.md files`);
   console.error('  ✗ Modify existing TASK-*.md files');
   console.error('  ✗ Delete existing TASK-*.md files');
   console.error('  ✗ Rename existing TASK-*.md files');

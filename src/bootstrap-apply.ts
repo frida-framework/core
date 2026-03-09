@@ -13,6 +13,7 @@ export interface BootstrapApplyResult {
   deleteFileCount: number;
   ensureDirCount: number;
   copyFileCount: number;
+  seedFileCount: number;
 }
 
 function isSameOrChildAbsolutePath(candidate: string, root: string): boolean {
@@ -46,6 +47,8 @@ function renderOperation(op: BootstrapPlanOperation): string {
       return `ENSURE_DIR ${op.targetPath}  # ${op.reason}`;
     case 'copy_file':
       return `COPY_FILE  ${op.sourcePath} -> ${op.targetPath}  # ${op.reason}`;
+    case 'seed_file':
+      return `SEED_FILE  ${op.sourcePath} -> ${op.targetPath}  # ${op.reason} (skipped if target exists)`;
     case 'note':
       return `NOTE       ${op.message}`;
   }
@@ -87,6 +90,15 @@ function applyCopyFile(op: Extract<BootstrapPlanOperation, { kind: 'copy_file' }
   fs.copyFileSync(op.sourceAbsolutePath, op.targetAbsolutePath);
 }
 
+function applySeedFile(op: Extract<BootstrapPlanOperation, { kind: 'seed_file' }>): boolean {
+  if (fs.existsSync(op.targetAbsolutePath)) {
+    return false; // already present, preserve
+  }
+  fs.mkdirSync(path.dirname(op.targetAbsolutePath), { recursive: true });
+  fs.copyFileSync(op.sourceAbsolutePath, op.targetAbsolutePath);
+  return true;
+}
+
 export function applyBootstrapPlan(
   plan: BootstrapOperationPlan,
   options: BootstrapApplyOptions = {}
@@ -105,13 +117,20 @@ export function applyBootstrapPlan(
   const copyOps = plan.operations.filter(
     (op): op is Extract<BootstrapPlanOperation, { kind: 'copy_file' }> => op.kind === 'copy_file'
   );
+  const seedOps = plan.operations.filter(
+    (op): op is Extract<BootstrapPlanOperation, { kind: 'seed_file' }> => op.kind === 'seed_file'
+  );
 
+  let seedFileCount = 0;
   if (!dryRun) {
     for (const op of resetOps) applyResetDir(op);
     for (const op of deleteDirOps) applyDeleteDir(op);
     for (const op of deleteFileOps) applyDeleteFile(op);
     for (const op of ensureOps) applyEnsureDir(op);
     for (const op of copyOps) applyCopyFile(op);
+    for (const op of seedOps) {
+      if (applySeedFile(op)) seedFileCount++;
+    }
   }
 
   return {
@@ -121,5 +140,6 @@ export function applyBootstrapPlan(
     deleteFileCount: deleteFileOps.length,
     ensureDirCount: ensureOps.length,
     copyFileCount: copyOps.length,
+    seedFileCount,
   };
 }

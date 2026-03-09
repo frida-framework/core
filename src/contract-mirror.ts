@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as yaml from 'yaml';
 
 export const APP_CONTRACT_SOURCE_DIR_REL_PATH = '.frida/inbox/app-contract';
 export const APP_CONTRACT_SOURCE_INDEX_REL_PATH = `${APP_CONTRACT_SOURCE_DIR_REL_PATH}/contract.index.yaml`;
@@ -52,6 +53,111 @@ function replaceDirectoryTree(sourceDir: string, targetDir: string): void {
   fs.rmSync(targetDir, { recursive: true, force: true });
   fs.mkdirSync(targetDir, { recursive: true });
   copyTreeContentsRecursive(sourceDir, targetDir);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function collectNonDeployableBlocks(sourceDir: string): Set<string> {
+  const layersDir = path.join(sourceDir, 'layers');
+  const blocks = new Set<string>();
+
+  if (!fs.existsSync(layersDir) || !fs.statSync(layersDir).isDirectory()) {
+    return blocks;
+  }
+
+  for (const entry of fs.readdirSync(layersDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.yaml')) continue;
+    const filePath = path.join(layersDir, entry.name);
+    const parsed = yaml.parse(fs.readFileSync(filePath, 'utf-8'));
+    if (!isPlainObject(parsed)) continue;
+
+    for (const [key, value] of Object.entries(parsed)) {
+      if (!isPlainObject(value)) continue;
+      if (value._visibility === 'private') {
+        blocks.add(key);
+      }
+    }
+  }
+
+  return blocks;
+}
+
+function isNonDeployableBlockRef(value: string, nonDeployableBlocks: Set<string>): boolean {
+  for (const block of nonDeployableBlocks) {
+    if (value === block || value.startsWith(`${block}.`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function sanitizeProjectedNode(node: unknown, nonDeployableBlocks: Set<string>): unknown {
+  if (typeof node === 'string') {
+    return isNonDeployableBlockRef(node, nonDeployableBlocks) ? undefined : node;
+  }
+
+  if (Array.isArray(node)) {
+    return node
+      .map((item) => sanitizeProjectedNode(item, nonDeployableBlocks))
+      .filter((item) => item !== undefined);
+  }
+
+  if (!isPlainObject(node)) {
+    return node;
+  }
+
+  const interfaceRef = node.interface_ref;
+  const blockRef = node.block;
+  if (typeof interfaceRef === 'string' && nonDeployableBlocks.has(interfaceRef)) {
+    return undefined;
+  }
+  if (typeof blockRef === 'string' && nonDeployableBlocks.has(blockRef)) {
+    return undefined;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (nonDeployableBlocks.has(key)) {
+      continue;
+    }
+    const sanitized = sanitizeProjectedNode(value, nonDeployableBlocks);
+    if (sanitized !== undefined) {
+      result[key] = sanitized;
+    }
+  }
+  return result;
+}
+
+function walkYamlFiles(dirPath: string, files: string[] = []): string[] {
+  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+    const entryPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      walkYamlFiles(entryPath, files);
+      continue;
+    }
+    if (entry.isFile() && (entry.name.endsWith('.yaml') || entry.name.endsWith('.yml'))) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+}
+
+function sanitizeProjectedContractMirror(targetDir: string, nonDeployableBlocks: Set<string>): void {
+  if (nonDeployableBlocks.size === 0) {
+    return;
+  }
+
+  for (const filePath of walkYamlFiles(targetDir)) {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const parsed = yaml.parse(raw);
+    const sanitized = sanitizeProjectedNode(parsed, nonDeployableBlocks);
+    if (!isPlainObject(sanitized)) {
+      continue;
+    }
+    fs.writeFileSync(filePath, yaml.stringify(sanitized, { lineWidth: 120 }), 'utf-8');
+  }
 }
 
 function resolvePathNode(contract: Record<string, any>, ref: string): any | null {
@@ -186,7 +292,9 @@ export function emitFridaContractSourceMirror(targetRootDir: string, packageRoot
   ensureFileExists(sourceIndex, 'FRIDA_CONTRACT_SOURCE_MISSING', 'frida package contract index');
 
   const targetDir = path.resolve(absoluteTargetRoot, FRIDA_CONTRACT_ENGINE_MIRROR_DIR_REL_PATH);
+  const nonDeployableBlocks = collectNonDeployableBlocks(sourceDir);
   replaceDirectoryTree(sourceDir, targetDir);
+  sanitizeProjectedContractMirror(targetDir, nonDeployableBlocks);
   return targetDir;
 }
 

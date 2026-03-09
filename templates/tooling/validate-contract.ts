@@ -460,7 +460,9 @@ class ContractValidator {
       }
     }
 
-    for (const [zoneId, zone] of Object.entries(this.contract.ZONES || {})) {
+    const zones = this.contract.INT_FRIDA_ZONES || this.contract.ZONES || {};
+    const zoneBlockName = this.contract.INT_FRIDA_ZONES ? 'INT_FRIDA_ZONES' : 'ZONES';
+    for (const [zoneId, zone] of Object.entries(zones)) {
       const refs = (zone as any).guardRefs || [];
       if (!Array.isArray(refs)) continue;
       for (const ref of refs) {
@@ -468,7 +470,7 @@ class ContractValidator {
           this.errors.push({
             code: 'UNRESOLVED_GUARD_REF',
             message: `Zone guardRef '${ref}' is not defined in effective guard registry`,
-            location: `ZONES.${zoneId}.guardRefs`
+            location: `${zoneBlockName}.${zoneId}.guardRefs`
           });
         }
       }

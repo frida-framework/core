@@ -67,7 +67,16 @@ export function normalizeContractModel(contract: Record<string, any>): ContractN
 
   if (Array.isArray(contract.FRIDA_EXTENSIONS)) {
     deprecatedFields.push('FRIDA_EXTENSIONS');
-    warnings.push("Deprecated block FRIDA_EXTENSIONS is present. Move extension data to top-level 'extensions'.");
+    warnings.push(
+      "Deprecated block FRIDA_EXTENSIONS is present. Activate shipped app extensions by linking their AL## layer files in contract.index.yaml instead.",
+    );
+  }
+
+  if (Array.isArray(contract.extensions)) {
+    deprecatedFields.push('extensions');
+    warnings.push(
+      "Top-level 'extensions' activation block is no longer supported. Activate shipped app extensions by linking their AL## layer files in contract.index.yaml.",
+    );
   }
 
   if (typeof contract.meta?.mode === 'string' && contract.meta.mode !== 'schema') {
@@ -110,9 +119,18 @@ export function collectMigrationIssues(contract: Record<string, any>, strict = f
   if (Array.isArray(contract.FRIDA_EXTENSIONS)) {
     issues.push({
       field: 'FRIDA_EXTENSIONS',
-      replacement: 'extensions',
+      replacement: 'contract.index.yaml layer links',
       severity: strict ? 'error' : 'warning',
-      message: "Deprecated extension block is still present. Use top-level 'extensions'.",
+      message: 'Deprecated extension block is still present. Activate shipped app extensions by linking their AL## layer files in contract.index.yaml.',
+    });
+  }
+
+  if (Array.isArray(contract.extensions)) {
+    issues.push({
+      field: 'extensions',
+      replacement: 'contract.index.yaml layer links',
+      severity: strict ? 'error' : 'warning',
+      message: "Top-level 'extensions' activation block is no longer supported.",
     });
   }
 

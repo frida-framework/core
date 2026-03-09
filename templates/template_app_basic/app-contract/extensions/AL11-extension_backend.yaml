@@ -1,0 +1,58 @@
+APP_EXTENSION_BACKEND:
+  id: extension_backend
+  kind: capability
+  template_id: template_app_basic
+  summary: "Generic backend capability surfaces for app repositories."
+  requires: []
+  intent_keywords:
+    - backend
+    - api
+    - auth
+    - database
+    - schema
+    - migration
+    - service
+  activation:
+    mode: linked_layer_only
+    rule: "This extension is active only when its AL## layer is linked in contract.index.yaml."
+  contributes:
+    TASK_PROFILES:
+      backend_core:
+        description: Backend and integration profile for APIs, services, schema, and repository tooling.
+        keywords:
+          - backend
+          - api
+          - auth
+          - database
+          - schema
+          - migration
+          - edge function
+          - service
+        role: BACKEND_AGENT
+        security:
+          read_allow:
+            - src/**
+            - scripts/**
+            - docs/**
+            - tasks/**
+            - .temp/**
+          edit_allow:
+            - src/**
+            - scripts/**
+            - docs/**
+            - tasks/README.md
+            - tasks/**/README.md
+            - .temp/**
+          create_allow:
+            - tasks/sessions/*.md
+            - .frida/reports/*.yaml
+          forbid:
+            - .frida/**
+          edit_forbid:
+            - tasks/TASK-*.md
+            - tasks/**/TASK-*.md
+        invariants:
+          - no_scope_creep
+          - temp_dot_temp_only
+          - temp_ephemeral_session
+          - error_explicit

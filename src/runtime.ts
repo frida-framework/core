@@ -117,6 +117,11 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
     console.warn(warning);
   }
 
+  // Fresh app-side bootstrap needs local template mirrors before the generator can render outputs.
+  if (!isEngineSelfRepo(loaded.rootDir)) {
+    emitTemplatesMirror(loaded.rootDir, ENGINE_PACKAGE_ROOT);
+  }
+
   await runFridaArtifactGenerator({});
 
   const runtimeConfigArtifacts = ensureRuntimeConfigArtifacts(loaded.rootDir, getContractReportingSettings(loaded.parsed));

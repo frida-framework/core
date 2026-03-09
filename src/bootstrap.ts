@@ -11,9 +11,10 @@ import { validateFridaRootLayout } from './frida-layout.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(MODULE_DIR, '..');
-const BOOTSTRAP_DEMO_ASSETS_ROOT = path.resolve(REPO_ROOT, 'scaffold');
+const BOOTSTRAP_APP_TEMPLATE_ROOT = path.resolve(REPO_ROOT, 'templates', 'template_app_basic');
+const ZERO_START_GENERATED_AT = '1970-01-01T00:00:00.000Z';
 
-type BootstrapCliMode = 'warm' | 'cold-engine' | 'demo' | 'component' | 'help' | 'invalid';
+type BootstrapCliMode = 'warm' | 'cold-engine' | 'demo' | 'zero-start' | 'component' | 'help' | 'invalid';
 
 interface BootstrapArgs {
   mode: BootstrapCliMode;
@@ -57,14 +58,19 @@ function parseArgs(args: string[]): BootstrapArgs {
   }
 
   const normalizedMode = (requestedMode || 'warm').trim().toLowerCase();
-  if (normalizedMode !== 'warm' && normalizedMode !== 'cold-engine' && normalizedMode !== 'demo') {
+  if (
+    normalizedMode !== 'warm' &&
+    normalizedMode !== 'cold-engine' &&
+    normalizedMode !== 'demo' &&
+    normalizedMode !== 'zero-start'
+  ) {
     return {
       mode: 'invalid',
       targetDir: null,
       componentName: null,
       dryRun,
       requestedMode,
-      error: `Invalid --mode value: ${requestedMode}. Expected warm|cold-engine|demo.`,
+      error: `Invalid --mode value: ${requestedMode}. Expected warm|cold-engine|demo|zero-start.`,
     };
   }
 
@@ -96,14 +102,19 @@ Usage:
   frida-core bootstrap --target <dir> --mode warm
   frida-core bootstrap --target <dir> --mode cold-engine
   frida-core bootstrap --target <dir> --mode demo
+  frida-core bootstrap --target <dir> --mode zero-start
   frida-core bootstrap --component <name> [--target <dir>]
-  frida-core bootstrap --dry-run --target <dir> [--mode warm|cold-engine|demo]
+  frida-core bootstrap --dry-run --target <dir> [--mode warm|cold-engine|demo|zero-start]
   frida-core bootstrap --help
 
 Modes:
   - warm (default): reconcile Frida-managed surfaces to package reference, prune managed drift, then run generation.
   - cold-engine: explicit engine-only onboarding (no app-contract writes), then run generation.
   - demo: explicit zero-deploy-only demo/reference seed flow (demo app + demo app-contract seed), if assets are available.
+  - zero-start: first-time onboarding for a clean repository. Deploys FRIDA infrastructure and seeds template_app_basic
+    (README.md, package.json, baseline app-contract layers, and inactive extension layers) under .frida/inbox/app-contract/,
+    then runs generation.
+    Fails with ZERO_START_ALREADY_DEPLOYED if Frida is already deployed; use warm mode for subsequent reconcile.
 
 Rules:
   - bootstrap is manual-only and must not be auto-invoked transitively.
@@ -205,26 +216,41 @@ function printDetectionSummary(targetDir: string): void {
   console.log(`  zone AGENTS.md (.frida): ${detection.markers.fridaManagedZoneAgents ? 'yes' : 'no'}`);
 }
 
-function ensureDemoAssetsOrFail(): { ok: true } | { ok: false; code: number } {
-  if (fs.existsSync(BOOTSTRAP_DEMO_ASSETS_ROOT) && fs.statSync(BOOTSTRAP_DEMO_ASSETS_ROOT).isDirectory()) {
+function ensureAppTemplateAssetsOrFail(): { ok: true } | { ok: false; code: number } {
+  if (fs.existsSync(BOOTSTRAP_APP_TEMPLATE_ROOT) && fs.statSync(BOOTSTRAP_APP_TEMPLATE_ROOT).isDirectory()) {
     return { ok: true };
   }
 
   return {
     ok: false,
     code: printBootstrapFailure('BOOTSTRAP_ASSETS_MISSING', [
-      `expected assets root: ${BOOTSTRAP_DEMO_ASSETS_ROOT}`,
-      'Demo bootstrap assets are not present in this package build.',
+      `expected app-template root: ${BOOTSTRAP_APP_TEMPLATE_ROOT}`,
+      'Zero-start app-template assets are not present in this package build.',
     ]),
   };
 }
 
-async function runPostGeneration(targetDir: string): Promise<number> {
+async function runPostGeneration(targetDir: string, generatedAtOverride?: string): Promise<number> {
   try {
-    await runFridaGeneration({
-      rootDir: targetDir,
-      contractPath: APP_CONTRACT_INBOX_INDEX_REL_PATH,
-    });
+    const previousGeneratedAt = process.env.FRIDA_GENERATED_AT;
+    try {
+      if (generatedAtOverride) {
+        process.env.FRIDA_GENERATED_AT = generatedAtOverride;
+      }
+
+      await runFridaGeneration({
+        rootDir: targetDir,
+        contractPath: APP_CONTRACT_INBOX_INDEX_REL_PATH,
+      });
+    } finally {
+      if (generatedAtOverride) {
+        if (previousGeneratedAt === undefined) {
+          delete process.env.FRIDA_GENERATED_AT;
+        } else {
+          process.env.FRIDA_GENERATED_AT = previousGeneratedAt;
+        }
+      }
+    }
 
     const loadedManifest = loadBootstrapPackageManifest(REPO_ROOT);
     const cleanupPlan = buildBootstrapPlan({
@@ -329,6 +355,88 @@ async function runReconcileMode(
   return runPostGeneration(absoluteTarget);
 }
 
+async function runZeroStartMode(targetDir: string, dryRun: boolean): Promise<number> {
+  const absoluteTarget = path.resolve(process.cwd(), targetDir);
+
+  const detection = detectFridaDeployment(absoluteTarget);
+  const appContractDir = path.join(absoluteTarget, '.frida', 'inbox', 'app-contract');
+
+  if (detection.present || fs.existsSync(appContractDir)) {
+    const details: string[] = [`target=${absoluteTarget}`];
+    if (detection.present) {
+      details.push(`frida_markers=${detection.markerCount}`);
+    } else {
+      details.push('zero-start marker: .frida/inbox/app-contract already exists');
+    }
+    details.push('Frida is already deployed in this repository. Use warm mode (default) for reconcile/repair.');
+    return printBootstrapFailure('ZERO_START_ALREADY_DEPLOYED', details);
+  }
+
+
+  let loadedManifest;
+  try {
+    loadedManifest = loadBootstrapPackageManifest(REPO_ROOT);
+  } catch (error) {
+    if (error instanceof BootstrapManifestLoadError) {
+      return printBootstrapFailure(error.code, [error.message]);
+    }
+    return printBootstrapFailure('BOOTSTRAP_PACKAGE_MANIFEST_INVALID', [
+      error instanceof Error ? error.message : String(error),
+    ]);
+  }
+
+  let plan;
+  try {
+    plan = buildBootstrapPlan({
+      packageRoot: loadedManifest.packageRoot,
+      targetDir: absoluteTarget,
+      manifest: loadedManifest.manifest,
+      mode: 'zero-start',
+    });
+  } catch (error) {
+    if (error instanceof BootstrapPlanBuildError) {
+      return printBootstrapFailure(error.code, [error.message]);
+    }
+    return printBootstrapFailure('BOOTSTRAP_RECONCILE_PLAN_CONFLICT', [
+      error instanceof Error ? error.message : String(error),
+    ]);
+  }
+
+  printDetectionSummary(absoluteTarget);
+  console.log(renderBootstrapPlan(plan));
+  const applyResult = applyBootstrapPlan(plan, { dryRun });
+  console.log(
+    `bootstrap zero-start ${dryRun ? 'dry-run' : 'apply'} completed: reset=${applyResult.resetDirCount}, delete_dir=${applyResult.deleteDirCount}, delete_file=${applyResult.deleteFileCount}, ensure=${applyResult.ensureDirCount}, copy=${applyResult.copyFileCount}, seed=${applyResult.seedFileCount}`
+  );
+
+  if (!dryRun) {
+    const postGenCode = await runPostGeneration(absoluteTarget, ZERO_START_GENERATED_AT);
+    if (postGenCode !== 0) {
+      return postGenCode;
+    }
+
+    console.log(`
+Bootstrap zero-start complete.
+
+FRIDA infrastructure has been deployed to ${absoluteTarget}.
+Seeded template_app_basic: README.md, package.json, .frida/inbox/app-contract/contract.index.yaml, .frida/inbox/app-contract/layers/*, .frida/inbox/app-contract/extensions/*
+
+Next steps:
+  1. Install FRIDA package in the new repository:
+       cd ${absoluteTarget} && npm install
+  2. Verify the seeded repository:
+       cd ${absoluteTarget} && npm run frida:check
+  3. Review README.md and .frida/inbox/app-contract/ for the seeded template_app_basic contract surface.
+  4. Edit the seeded app-contract files — replace placeholder values and expand layers as the repo grows.
+  5. For subsequent reconcile/repair:
+       npm run frida:bootstrap
+`);
+  }
+
+  return 0;
+}
+
+
 async function runComponentMode(componentName: string, targetDir: string, dryRun: boolean): Promise<number> {
   const absoluteTarget = path.resolve(process.cwd(), targetDir);
   const detection = detectFridaDeployment(absoluteTarget);
@@ -408,7 +516,7 @@ function runDemoMode(targetDir: string, dryRun: boolean): number {
     return printBootstrapFailure('DEMO_MODE_ZERO_DEPLOY_REQUIRED', details);
   }
 
-  const assetsCheck = ensureDemoAssetsOrFail();
+  const assetsCheck = ensureAppTemplateAssetsOrFail();
   if (!assetsCheck.ok) return assetsCheck.code;
 
   if (dryRun) {
@@ -446,6 +554,10 @@ export async function runFridaBootstrapCli(args: string[] = []): Promise<number>
 
     if (parsed.mode === 'demo') {
       return runDemoMode(parsed.targetDir!, parsed.dryRun);
+    }
+
+    if (parsed.mode === 'zero-start') {
+      return runZeroStartMode(parsed.targetDir!, parsed.dryRun);
     }
 
     return runReconcileMode(parsed.mode, parsed.targetDir!, parsed.dryRun);

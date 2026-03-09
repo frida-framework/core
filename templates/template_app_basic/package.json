@@ -1,0 +1,19 @@
+{
+  "name": "replace-me-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Application repository managed by FRIDA zero-start bootstrap.",
+  "scripts": {
+    "frida:gen": "frida-core gen",
+    "frida:bootstrap": "frida-core bootstrap --target .",
+    "frida:check:zone": "frida-core check zone --path .",
+    "frida:check:contract-set": "frida-core check contract-set",
+    "frida:check": "npm run frida:check:zone && npm run frida:check:contract-set",
+    "frida:migration-report": "frida-core migration-report",
+    "frida:build": "frida-core build",
+    "frida:visual": "frida-core visual"
+  },
+  "devDependencies": {
+    "@hanszel/core": "file:../frida"
+  }
+}

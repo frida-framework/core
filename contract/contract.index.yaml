@@ -4,13 +4,13 @@
 # Blocks list declares all top-level keys exported by the layer.
 # ──────────────────────────────────────────────────────────────────────────────
 
-schema_version: "3.1"
+schema_version: "6.1"
 contract_id: "FRIDA_CORE_CONTRACT"
-version: "2.3.0"
+version: "5.1.0"
 
 layers:
   - id: identity
-    path: contract/layers/identity.yaml
+    path: contract/layers/FL01-identity.yaml
     visibility: private
     keywords:
       - contract-meta
@@ -23,7 +23,7 @@ layers:
       - core
 
   - id: architecture
-    path: contract/layers/architecture.yaml
+    path: contract/layers/FL02-architecture.yaml
     visibility: private
     keywords:
       - adr
@@ -35,7 +35,7 @@ layers:
       - FRIDA_FOUNDATION_PRINCIPLES
 
   - id: infrastructure
-    path: contract/layers/infrastructure.yaml
+    path: contract/layers/FL03-infrastructure.yaml
     visibility: mixed
     keywords:
       - zones
@@ -46,9 +46,10 @@ layers:
       - FRIDA_ASSEMBLY_PROTOCOL
       - FRIDA_REFS
       - ZONES
+      - INT_FRIDA_ZONES
 
   - id: core-configuration
-    path: contract/layers/core-configuration.yaml
+    path: contract/layers/FL04-core-configuration.yaml
     visibility: mixed
     keywords:
       - config
@@ -65,7 +66,7 @@ layers:
       - FRIDA_CONFIG_FIELD_DOCS
 
   - id: agent-framework
-    path: contract/layers/agent-framework.yaml
+    path: contract/layers/FL05-agent-framework.yaml
     visibility: private
     keywords:
       - profiles
@@ -79,7 +80,7 @@ layers:
       - FRIDA_VALIDATION_RULES
 
   - id: reporting
-    path: contract/layers/reporting.yaml
+    path: contract/layers/FL06-reporting.yaml
     visibility: private
     keywords:
       - reporting
@@ -89,18 +90,19 @@ layers:
       - FRIDA_VALIDATION_CHECKLIST
 
   - id: cli
-    path: contract/layers/cli.yaml
-    visibility: public
+    path: contract/layers/FL07-cli.yaml
+    visibility: mixed
     keywords:
       - cli
       - integrity
       - integration
     blocks:
       - FRIDA_TEMPLATE_INTEGRITY
+      - FRIDA_TEMPLATE_HASH_TOOL
       - FRIDA_CLI
 
   - id: buildtime
-    path: contract/layers/buildtime.yaml
+    path: contract/layers/FL08-buildtime.yaml
     visibility: public
     keywords:
       - buildtime
@@ -111,7 +113,7 @@ layers:
       - FRIDA_MAPPER_MODEL
 
   - id: bootstrap
-    path: contract/layers/bootstrap.yaml
+    path: contract/layers/FL09-bootstrap.yaml
     visibility: public
     keywords:
       - bootstrap
@@ -123,9 +125,10 @@ layers:
       - FRIDA_CONTRACT_BOOTSTRAP
       - FRIDA_BOOTSTRAP_SURFACE_POLICY
       - FRIDA_BOOTSTRAP_PACKAGE_MANIFEST
+      - FRIDA_APP_TEMPLATE_MODEL
 
   - id: visualization
-    path: contract/layers/visualization.yaml
+    path: contract/layers/FL10-visualization.yaml
     visibility: public
     keywords:
       - visual
@@ -135,10 +138,13 @@ layers:
       - FRIDA_VISUAL
 
   - id: management
-    path: contract/layers/management.yaml
+    path: contract/layers/FL11-management.yaml
     visibility: mixed
     keywords:
       - management
+      - interfaces
+      - self-contract
+      - app-contract
       - guard-spec
       - antitask
     blocks:
@@ -147,14 +153,29 @@ layers:
       - FRIDA_ANTITASK_SPEC
       - FRIDA_INTERFACE_VERIFY
       - FRIDA_INTERFACE_AUDIT
-      - CONTRACT_MANAGEMENT_INTERFACE
-      - FRIDA_INTERFACE_UPDATE_SPEC
-      - FRIDA_INTERFACE_UPDATE_CODE
+      - FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+      - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+      - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
       - FRIDA_INTERFACE_TASKSET
       - FRIDA_VERSION_POLICY
 
+  - id: agent-entry
+    path: contract/layers/FL13-agent-entry.yaml
+    visibility: mixed
+    keywords:
+      - agents
+      - routing
+      - entrypoint
+      - clauses
+      - profiles
+    blocks:
+      - FRIDA_AGENT_ENTRY_PROTOCOL
+      - FRIDA_INTERFACE_ROUTING
+      - FRIDA_INT_AGENT_ROUTING
+      - FRIDA_CLAUSE_INDEX
+
   - id: wiki
-    path: contract/layers/wiki.yaml
+    path: contract/layers/FL12-wiki.yaml
     visibility: public
     keywords:
       - wiki

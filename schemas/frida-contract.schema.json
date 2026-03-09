@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.frida.dev/frida-contract.schema.json",
-  "title": "Frida Contract Schema v3.1",
-  "description": "Schema for the consolidated Frida core contract. 32 required engine blocks + optional app blocks.",
+  "title": "Frida Contract Schema v6.1",
+  "description": "Schema for the consolidated Frida core contract and Frida-managed app contract surfaces.",
   "type": "object",
   "required": [
     "meta",
@@ -11,7 +11,7 @@
     "ZONES"
   ],
   "properties": {
-    "CANON_META": {
+    "CONTRACT_META": {
       "type": "object",
       "required": [
         "id",
@@ -49,12 +49,21 @@
             },
             "purpose": {
               "type": "string"
+            },
+            "interface_term": {
+              "type": "string"
+            },
+            "interface_visibility_default": {
+              "type": "string"
+            },
+            "interface_boundaries": {
+              "type": "object"
             }
           }
         }
       }
     },
-    "CANON_UNIQUENESS": {
+    "CONTRACT_UNIQUENESS": {
       "type": "object",
       "required": [
         "rule",
@@ -281,7 +290,7 @@
     "PATHS": {
       "type": "object",
       "properties": {
-        "scaffold": {
+        "templates": {
           "type": "object"
         },
         "visual": {
@@ -500,7 +509,7 @@
         },
         "source_of_truth": {
           "type": "string",
-          "const": "canon"
+          "const": "contract"
         },
         "generated_from": {
           "type": "string",
@@ -569,48 +578,85 @@
         }
       }
     },
-    "FRIDA_TASK_PROFILES": {
+    "INT_FRIDA_ZONES": {
       "type": "object",
-      "minProperties": 1,
-      "additionalProperties": {
-        "type": "object",
-        "required": [
-          "role",
-          "security"
-        ],
-        "properties": {
-          "role": {
-            "type": "string"
-          },
-          "keywords": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "invariants": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "security": {
-            "type": "object",
-            "properties": {
-              "component_allow": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "component_forbid": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
+      "properties": {
+        "templates": {
+          "$ref": "#/$defs/zoneEntry"
+        },
+        "frida_managed": {
+          "$ref": "#/$defs/zoneEntry"
+        },
+        "non_templates": {
+          "$ref": "#/$defs/zoneEntry"
+        },
+        "zone_resolution": {
+          "type": "object",
+          "properties": {
+            "algorithm": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "step",
+                  "action"
+                ]
+              }
+            },
+            "invariants": {
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             }
           }
+        },
+        "verification_policy": {
+          "type": "object"
+        },
+        "routing": {
+          "type": "object",
+          "properties": {
+            "stage": {
+              "type": "string"
+            },
+            "classes": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "match"
+                ]
+              }
+            },
+            "rules": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "FRIDA_TASK_PROFILES": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
         }
       }
     },
@@ -846,8 +892,55 @@
         "visual_consistency",
         "template_integrity",
         "session_consistency",
-        "scaffold_consistency"
-      ]
+        "bootstrap_seed_consistency"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "contract_consistency": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reporting_consistency": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "visual_consistency": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "template_integrity": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "session_consistency": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bootstrap_seed_consistency": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     },
     "FRIDA_TEMPLATE_INTEGRITY": {
       "type": "object",
@@ -885,6 +978,38 @@
           }
         },
         "enforcement": {
+          "type": "object"
+        }
+      }
+    },
+    "FRIDA_TEMPLATE_HASH_TOOL": {
+      "type": "object",
+      "required": [
+        "repository_scope",
+        "purpose",
+        "invocation",
+        "behavior",
+        "followup_rule"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string",
+          "const": "private"
+        },
+        "repository_scope": {
+          "type": "string",
+          "const": "frida_repo_only"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "invocation": {
+          "type": "object"
+        },
+        "behavior": {
+          "type": "object"
+        },
+        "followup_rule": {
           "type": "object"
         }
       }
@@ -968,6 +1093,32 @@
           "items": {
             "$ref": "#/$defs/principleEntry"
           }
+        }
+      }
+    },
+    "FRIDA_APP_TEMPLATE_MODEL": {
+      "type": "object",
+      "required": [
+        "default_template",
+        "activation_model",
+        "naming",
+        "interface_policy"
+      ],
+      "properties": {
+        "purpose": {
+          "type": "string"
+        },
+        "default_template": {
+          "type": "object"
+        },
+        "activation_model": {
+          "type": "object"
+        },
+        "naming": {
+          "type": "object"
+        },
+        "interface_policy": {
+          "type": "object"
         }
       }
     },
@@ -1159,14 +1310,86 @@
         }
       }
     },
-    "FRIDA_INTERFACE_UPDATE_SPEC": {
+    "FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT": {
       "type": "object",
       "required": [
         "purpose"
       ],
       "properties": {
+        "_visibility": {
+          "type": "string",
+          "const": "private"
+        },
         "purpose": {
           "type": "string"
+        },
+        "repository_scope": {
+          "type": "string",
+          "const": "frida_repo_only"
+        },
+        "mutation_scope": {
+          "type": "string",
+          "const": "frida_contract_only"
+        },
+        "forbidden_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deployment_scope": {
+          "type": "string",
+          "const": "not_deployed_to_target_repo"
+        },
+        "task_output_policy": {
+          "type": "object"
+        },
+        "change_protocol": {
+          "type": "object"
+        },
+        "quality_metrics": {
+          "type": "object"
+        },
+        "consistency_checks": {
+          "type": "object"
+        },
+        "diagnostic_framework": {
+          "type": "object"
+        },
+        "audit_format": {
+          "type": "object"
+        }
+      }
+    },
+    "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC": {
+      "type": "object",
+      "required": [
+        "purpose"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "repository_scope": {
+          "type": "string",
+          "const": "target_app_repo_only"
+        },
+        "mutation_scope": {
+          "type": "string",
+          "const": "target_app_contract_only"
+        },
+        "forbidden_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deployment_scope": {
+          "type": "string",
+          "const": "public"
         },
         "input": {
           "type": "object"
@@ -1185,14 +1408,35 @@
         }
       }
     },
-    "FRIDA_INTERFACE_UPDATE_CODE": {
+    "FRIDA_INTERFACE_UPDATE_APP_BY_CODE": {
       "type": "object",
       "required": [
         "purpose"
       ],
       "properties": {
+        "_visibility": {
+          "type": "string"
+        },
         "purpose": {
           "type": "string"
+        },
+        "repository_scope": {
+          "type": "string",
+          "const": "target_app_repo_only"
+        },
+        "mutation_scope": {
+          "type": "string",
+          "const": "target_app_contract_only"
+        },
+        "forbidden_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deployment_scope": {
+          "type": "string",
+          "const": "public"
         },
         "input": {
           "type": "object"
@@ -1232,6 +1476,9 @@
             "required_fields"
           ]
         },
+        "output_bindings": {
+          "type": "object"
+        },
         "readiness_checklist": {
           "type": "object"
         },
@@ -1240,6 +1487,104 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "FRIDA_AGENT_ENTRY_PROTOCOL": {
+      "type": "object",
+      "required": [
+        "purpose"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "entrypoint": {
+          "type": "object"
+        },
+        "dispatch_chain": {
+          "type": "array"
+        },
+        "execution_rules": {
+          "type": "array"
+        },
+        "completion_rules": {
+          "type": "array"
+        },
+        "development_sequence": {
+          "type": "object"
+        }
+      }
+    },
+    "FRIDA_INTERFACE_ROUTING": {
+      "type": "object",
+      "required": [
+        "purpose"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "default_profile_source": {
+          "type": "object"
+        },
+        "routes": {
+          "type": "array"
+        }
+      }
+    },
+    "FRIDA_INT_AGENT_ROUTING": {
+      "type": "object",
+      "required": [
+        "_visibility",
+        "purpose",
+        "repository_scope"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string",
+          "const": "private"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "repository_scope": {
+          "type": "string",
+          "const": "frida_repo_only"
+        },
+        "routes": {
+          "type": "array"
+        },
+        "non_deploy_rule": {
+          "type": "object"
+        }
+      }
+    },
+    "FRIDA_CLAUSE_INDEX": {
+      "type": "object",
+      "required": [
+        "purpose",
+        "format",
+        "usage_rules"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "format": {
+          "type": "object"
+        },
+        "usage_rules": {
+          "type": "array"
         }
       }
     },
@@ -1453,7 +1798,7 @@
         "sourcesModel": {
           "type": "object"
         },
-        "canon": {
+        "contract": {
           "type": "object"
         },
         "procedures": {
@@ -1489,40 +1834,11 @@
     "BUILDTIME": {
       "type": "object",
       "properties": {
-        "governance": {
+        "contract_governance": {
           "type": "object"
         },
         "app": {
           "type": "object"
-        }
-      }
-    },
-    "extensions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "schemaRef": {
-            "type": "string"
-          },
-          "sourceSelectors": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "generatorBindings": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
         }
       }
     },
@@ -1807,6 +2123,53 @@
           ]
         },
         "schema_blocks": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  "patternProperties": {
+    "^APP_EXTENSION_[A-Z0-9_]+$": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "activation",
+        "contributes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "capability",
+            "implementation"
+          ]
+        },
+        "template_id": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "intent_keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "activation": {
+          "type": "object"
+        },
+        "contributes": {
           "type": "object"
         }
       }

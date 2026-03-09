@@ -1,4 +1,4 @@
-# ─── LAYER 2: ARCHITECTURE ───────────────────────────────────────────────────
+# ─── FRIDA LAYER FL02: ARCHITECTURE ──────────────────────────────────────────
 
 FRIDA_SCHEMA_SUPPORT:
   _visibility: private
@@ -194,6 +194,20 @@ FRIDA_FOUNDATION_PRINCIPLES:
       text: "Build must pass after every contract change."
     - id: contract_is_governance
       text: "Contract is governance data. No runtime state, no mutable data."
+    - id: interfaces_live_in_management
+      text: "Contract interfaces are defined by management-layer blocks; interface meaning MUST NOT be inferred from unrelated layers or prose."
+    - id: interfaces_default_public
+      text: "FRIDA_INTERFACE_* blocks are public unless `_visibility: private` is explicitly declared."
+    - id: private_interfaces_not_deployed
+      text: "Private interfaces are internal to Frida core and MUST NOT be projected into target-repo Frida mirrors."
+    - id: self_contract_management_repo_only
+      text: "FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT is repo-local to `frida` and is the only interface allowed to update the Frida contract itself."
+    - id: app_contract_update_interfaces_repo_only
+      text: "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC and FRIDA_INTERFACE_UPDATE_APP_BY_CODE apply only in target app repos and may mutate only the target app contract."
+    - id: frida_tasks_core_only
+      text: "`frida-tasks/` is a Frida-core-only task surface. `tasks/` is forbidden in the Frida repo, and `frida-tasks/` is forbidden outside the Frida repo."
+    - id: zones_public_external_internal_private
+      text: "`ZONES` names routing entities outside repo `frida`; private Frida-repo routing entities live only in `INT_FRIDA_ZONES` and MUST NOT be projected into target repos."
     - id: interface_declaration_only
       text: >-
         Contract declares interface purpose, role, and reference.

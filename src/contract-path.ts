@@ -50,6 +50,106 @@ function isIndexFile(contractPath: string): boolean {
   return path.basename(contractPath) === 'contract.index.yaml';
 }
 
+function isPlainObject(value: unknown): value is Record<string, any> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function cloneNode<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => cloneNode(item)) as T;
+  }
+  if (isPlainObject(value)) {
+    const out: Record<string, any> = {};
+    for (const [key, item] of Object.entries(value)) {
+      out[key] = cloneNode(item);
+    }
+    return out as T;
+  }
+  return value;
+}
+
+function mergeUniqueArrays(base: unknown[], incoming: unknown[]): unknown[] {
+  const result = base.map((item) => cloneNode(item));
+  const seen = new Set(result.map((item) => JSON.stringify(item)));
+  for (const item of incoming) {
+    const signature = JSON.stringify(item);
+    if (seen.has(signature)) continue;
+    result.push(cloneNode(item));
+    seen.add(signature);
+  }
+  return result;
+}
+
+function mergeExtensionContribution(base: unknown, incoming: unknown, mergePath: string): unknown {
+  if (base === undefined) {
+    return cloneNode(incoming);
+  }
+  if (Array.isArray(base) && Array.isArray(incoming)) {
+    return mergeUniqueArrays(base, incoming);
+  }
+  if (isPlainObject(base) && isPlainObject(incoming)) {
+    const result: Record<string, any> = cloneNode(base);
+    for (const [key, value] of Object.entries(incoming)) {
+      result[key] = mergeExtensionContribution(result[key], value, `${mergePath}.${key}`);
+    }
+    return result;
+  }
+  if (base === incoming) {
+    return base;
+  }
+  throw new Error(`App extension contribution conflict at ${mergePath}`);
+}
+
+function composeAppExtensions(assembled: Record<string, any>): Record<string, any> {
+  const extensionEntries = Object.entries(assembled).filter(
+    ([key, value]) => key.startsWith('APP_EXTENSION_') && isPlainObject(value),
+  );
+
+  if (extensionEntries.length === 0) {
+    return assembled;
+  }
+
+  const activeExtensionIds = new Set<string>();
+  for (const [blockKey, blockValue] of extensionEntries) {
+    const id = blockValue.id;
+    if (typeof id !== 'string' || !id.trim()) {
+      throw new Error(`App extension block ${blockKey} is missing a non-empty id`);
+    }
+    if (activeExtensionIds.has(id)) {
+      throw new Error(`Duplicate active app extension id detected: ${id}`);
+    }
+    activeExtensionIds.add(id);
+  }
+
+  for (const [blockKey, blockValue] of extensionEntries) {
+    const requires = Array.isArray(blockValue.requires) ? blockValue.requires : [];
+    for (const requiredExtensionId of requires) {
+      if (!activeExtensionIds.has(requiredExtensionId)) {
+        throw new Error(
+          `App extension block ${blockKey} requires missing active extension "${requiredExtensionId}". Activate the parent extension layer first.`,
+        );
+      }
+    }
+  }
+
+  const composed: Record<string, any> = cloneNode(assembled);
+  for (const [blockKey, blockValue] of extensionEntries) {
+    const contributes = blockValue.contributes;
+    if (!isPlainObject(contributes)) {
+      continue;
+    }
+    for (const [targetBlock, contribution] of Object.entries(contributes)) {
+      composed[targetBlock] = mergeExtensionContribution(
+        composed[targetBlock],
+        contribution,
+        `${blockKey}.contributes.${targetBlock}`,
+      );
+    }
+  }
+
+  return composed;
+}
+
 function loadModularContract(contractPath: string): Record<string, any> {
   const indexDir = path.dirname(contractPath);
   const repoRoot = path.resolve(indexDir, '..');
@@ -96,7 +196,7 @@ function loadModularContract(contractPath: string): Record<string, any> {
     }
   }
 
-  return assembled;
+  return composeAppExtensions(assembled);
 }
 
 export function loadContractDocument(rootDir: string, requestedPath?: string): LoadedContractDocument {

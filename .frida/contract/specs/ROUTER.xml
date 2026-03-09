@@ -1,0 +1,58 @@
+<frida_router>
+  <protocol>
+    1. CHECK if the task matches audit/readiness/deployment diagnostics.
+      1.1. If yes: route to `FRIDA_INTERFACE_AUDIT`.
+      1.2. If no: proceed to interface routing.
+    2. ANALYZE the user prompt for routing keywords.
+    3. MATCH keywords to an <interface>.
+    4. SELECT a profile only from the repository-scoped profile block allowed for that interface.
+    5. READ the file specified in `context_path`.
+    6. ADOPT the role and constraints.
+    7. EXECUTE task.
+  </protocol>
+
+  <interfaces>
+    <interface id="audit">
+      <interface_ref>FRIDA_INTERFACE_AUDIT</interface_ref>
+      <keywords>audit, deployment, readiness, diagnostics, health-check</keywords>
+      <allowed_profiles>frida_readonly_observer</allowed_profiles>
+      <context_path>.frida/contract/profiles/frida_readonly_observer.xml</context_path>
+    </interface>
+    <interface id="taskset">
+      <interface_ref>FRIDA_INTERFACE_TASKSET</interface_ref>
+      <keywords>task, formulation, spec, task pack</keywords>
+      <allowed_profiles>frida_task_setter</allowed_profiles>
+      <context_path>.frida/contract/profiles/frida_task_setter.xml</context_path>
+    </interface>
+    <interface id="self_contract_management">
+      <interface_ref>FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT</interface_ref>
+      <keywords>governance, contract, frida, self-contract</keywords>
+      <allowed_profiles>frida_governance</allowed_profiles>
+      <context_path>.frida/contract/profiles/frida_governance.xml</context_path>
+    </interface>
+    <interface id="self_contract_task_formulation">
+      <interface_ref>FRIDA_INTERFACE_TASKSET</interface_ref>
+      <keywords>frida-tasks, task, formulation</keywords>
+      <allowed_profiles>frida_task_setter</allowed_profiles>
+      <context_path>.frida/contract/profiles/frida_task_setter.xml</context_path>
+    </interface>
+  </interfaces>
+
+  <profiles>
+    <profile id="frida_governance">
+      <role>ARCHITECT_AGENT</role>
+      <keywords>governance, contract, frida, self-contract</keywords>
+      <context_path>.frida/contract/profiles/frida_governance.xml</context_path>
+    </profile>
+    <profile id="frida_task_setter">
+      <role>TASK_SETTER_AGENT</role>
+      <keywords>task, formulation, spec, frida-tasks</keywords>
+      <context_path>.frida/contract/profiles/frida_task_setter.xml</context_path>
+    </profile>
+    <profile id="frida_readonly_observer">
+      <role>READONLY_AGENT</role>
+      <keywords>observe, review, audit</keywords>
+      <context_path>.frida/contract/profiles/frida_readonly_observer.xml</context_path>
+    </profile>
+  </profiles>
+</frida_router>

@@ -2,21 +2,21 @@
 
 # Repo Audit Task Builder
 
-> Generate self-contained Audit Task Packs for verifying canon implementation in repository.
+> Generate self-contained Audit Task Packs for verifying contract implementation in repository.
 
 ---
 
 ## Principle
 
-`CANON -> ANTITASK -> DEVELOPMENT`
+`CONTRACT -> ANTITASK -> DEVELOPMENT` [FL13:5]
 
-Audit Task Packs are formed from Canon and executed within Antitask constraints without additional interpretation.
+Audit Task Packs are formed from contract and executed within Antitask constraints without additional interpretation.
 
 ---
 
 ## Goal
 
-Build one audit task per profile_id from TASK_PROFILES.
+Build one audit task per profile_id from the repository-scoped profile block.
 
 Each task is self-contained:
 
@@ -31,10 +31,10 @@ Output per task: AUDIT SCORE (0-100), list of discrepancies, list of Undocumente
 
 Use only the priority model from `contract:DOCS.sourcesModel`.
 
-For Canon-tier, extract data as follows:
+For contract-tier, extract data as follows:
 
 1. In deployed repos, use `.frida/inbox/app-contract/contract.index.yaml` as the authoritative app-contract entry point and `.frida/contract/frida/contract.index.yaml` for the mirrored Frida core contract.
-2. If an older repo exposes only `contract/canon.cbmd.yaml` or `contract/contract.cbmd.yaml`, treat it as compatibility-only snapshot.
+2. If an older repo exposes only `contract/contract.cbmd.yaml`, treat it as compatibility-only snapshot.
 3. If snapshot is absent or incomplete, extract contract blocks from zerohuman-* pages.
 4. If snapshot conflicts with wiki blocks, mark `CANON.GAP` and treat wiki contract blocks as normative.
 
@@ -46,11 +46,11 @@ Scan markdown and extract blocks by marker `` ```yaml contract:<BLOCK_NAME> ``.
 
 Build index `blocks[BLOCK_NAME] -> parsed_yaml`.
 
-If `BLOCK_NAME` is duplicated — mark `CANON.GAP` and HALT: duplicate block name makes canon ambiguous; deterministic `canonArtifact` generation must return `FAIL`.
+If `BLOCK_NAME` is duplicated — mark `CONTRACT.GAP` and HALT: duplicate block name makes contract ambiguous; deterministic contract artifact generation must return `FAIL`.
 
 ### Profile list
 
-Source: `contract:TASK_PROFILES`. If block is absent — HALT.
+Source: repository-scoped profile block. If block is absent — HALT.
 
 ---
 
@@ -72,12 +72,12 @@ Formula: `applicable = GUARDS.globalGuardRefs + union(touched_zones.guardRefs)`
 Where `touched_zones` derived from profile allowlists via ZONE_RESOLUTION.
 
 Important: `touched_zones` derivation for repo-audit is NOT execution zone resolution.
-Execution zone resolution is defined only by ZONES for a specific target path (most specific wins).
+Execution zone resolution is defined only by the repository-scoped zone block for a specific target path (most specific wins).
 
 Algorithm:
 
 1. `allowlist = read_allowGlobRefs ∪ edit_allowGlobRefs`.
-2. For each path/pattern from `allowlist`, find intersecting `ZONES[*].pathGlobRef` (after resolving `PATHS.*`).
+2. For each path/pattern from `allowlist`, find intersecting zone path definitions from the repository-scoped zone block (after resolving `PATHS.*`).
 3. Select one zone per path by `ZONE_RESOLUTION.selection.order`:
    - longest normalized literal prefix before wildcard,
    - if equal — fewer wildcard tokens,
@@ -89,7 +89,7 @@ Algorithm:
 
 No heuristics by statement text, keywords, or natural language.
 
-### D. Related canon blocks
+### D. Related contract blocks
 
 Embed only verifiable fragments needed for audit. Follow explicit *Ref links only.
 
@@ -98,7 +98,7 @@ Applicable blocks:
 - `TASK_PROFILES` (current profile)
 - `INVARIANTS` (profile id)
 - `GUARDS` (ids from `applicable`)
-- `ZONES` (only `touched_zones`)
+- repository-scoped zone block (only `touched_zones`)
 - `DOCS` (source rules for conflict resolution)
 - `BUILDTIME` (if profile touches mapper or polygon build zones)
 - `UI_STRUCTURE`, `UI_COMPONENT_CONTRACTS`, `UI_BEHAVIOR` (if profile touches UI/pages)
@@ -144,7 +144,7 @@ Coverage:
 Executor must collect:
 
 - Runtime config / env variables and their validation
-- Hidden data contracts (DTO/types between layers not described in canon)
+- Hidden data contracts (DTO/types between layers not described in contract)
 - Implicit rules (sorts, filters, magic numbers, defaults)
 - External dependencies (services, SDK, versions)
 - Non-determinism sources (time, random, concurrency)
@@ -219,7 +219,7 @@ summary:
 | `COMPLIANCE.FAIL` | Canon requirement not met |
 | `COMPLIANCE.PARTIAL` | Partially met |
 | `UNVERIFIABLE` | Cannot be verified |
-| `CANON.GAP` | Definition missing in canon |
+| `CONTRACT.GAP` | Definition missing in contract |
 | `RISK.NDETERMINISM` | Non-determinism source |
 | `RISK.SCOPE` | Potential boundary violation |
 
@@ -247,4 +247,4 @@ For large numbers of tasks — additionally `TASK-REPO-AUDIT-INDEX.md` with cove
 
 - Cannot get profile list (no TASK_PROFILES).
 - YAML parsing too broken to extract profile keys.
-- Duplicate block name detected (canon ambiguity; `canonArtifact` generation must return `FAIL`).
+- Duplicate block name detected (contract ambiguity; contract artifact generation must return `FAIL`).

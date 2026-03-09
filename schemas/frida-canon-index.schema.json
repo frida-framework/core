@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "frida-canon-index.schema.json",
+    "$id": "frida-contract-index.schema.json",
     "title": "Frida Canon Index",
-    "description": "Schema for canon.index.yaml — modular canon entry point",
+    "description": "Schema for contract.index.yaml — modular contract entry point",
     "type": "object",
     "required": [
         "canon_index"

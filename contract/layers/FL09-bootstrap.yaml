@@ -1,12 +1,12 @@
-# ─── LAYER 7: BOOTSTRAP ─────────────────────────────────────────────────────
+# ─── FRIDA LAYER FL09: BOOTSTRAP ────────────────────────────────────────────
 # Purpose: Bootstrap and reconcile semantics for Frida-managed surfaces.
 # Warm-first repair/redeploy rules live here; buildtime layer keeps generator/mapper only.
 
 FRIDA_CONTRACT_BOOTSTRAP:
   _visibility: public
   id: frida-contract-bootstrap
-  version: 2.0.0
-  purpose: "Warm-first bootstrap/reconcile for Frida-managed surfaces with explicit demo bootstrap mode."
+  version: 2.1.0
+  purpose: "Warm-first bootstrap/reconcile for Frida-managed surfaces with explicit demo mode and deterministic zero-start app-template seeding."
   command: "frida-core bootstrap"
   activation:
     manual_only: true
@@ -61,6 +61,28 @@ FRIDA_CONTRACT_BOOTSTRAP:
       on_existing_frida_or_contract:
         action: HALT
         error_code: DEMO_MODE_ZERO_DEPLOY_REQUIRED
+    zero_start:
+      explicit_only: true
+      entrypoint: "frida-core bootstrap --target <dir> --mode zero-start"
+      purpose: >-
+        First-time zero-state onboarding for a clean application repository. Deploys the cold-engine FRIDA
+        infrastructure from package reference and seeds the neutral `template_app_basic` files: README.md, package.json,
+        .frida/inbox/app-contract/contract.index.yaml, .frida/inbox/app-contract/layers/AL01-shared.yaml,
+        .frida/inbox/app-contract/layers/AL02-agent-framework.yaml, and inactive app-extension layers under
+        .frida/inbox/app-contract/extensions/. Post-generation runs with fixed
+        generatedAt=1970-01-01T00:00:00.000Z so identical clean initial state and identical package input
+        yield identical zero-start output.
+      requires_frida_markers: false
+      requires_app_contract_inbox: false
+      app_contract_writes: allowed_template_seed_only
+      preserve_existing_app_contract: true
+      prune_unknown_in_managed_scopes: true
+      post_actions:
+        run_generation: true
+      on_existing_frida:
+        action: HALT
+        error_code: ZERO_START_ALREADY_DEPLOYED
+        redirect: "Use warm mode (default) for reconcile/repair."
     component_reconcile:
       compat_aliases:
         - component_restore
@@ -114,6 +136,7 @@ FRIDA_CONTRACT_BOOTSTRAP:
   errors:
     - FRIDA_NOT_DEPLOYED
     - FRIDA_ALREADY_DEPLOYED
+    - ZERO_START_ALREADY_DEPLOYED
     - BOOTSTRAP_PACKAGE_MANIFEST_MISSING
     - BOOTSTRAP_PACKAGE_MANIFEST_INVALID
     - BOOTSTRAP_PACKAGE_HASH_MISMATCH
@@ -131,6 +154,52 @@ FRIDA_CONTRACT_BOOTSTRAP:
   note: >-
     Demo bootstrap deliverables remain package-specific. Warm/cold-engine bootstrap
     are engine-surface reconciliation flows and must not mutate app-contract data.
+    Zero-start is defined as cold-engine surface deployment plus `template_app_basic` seeding
+    with deterministic post-generation.
+
+FRIDA_APP_TEMPLATE_MODEL:
+  _visibility: public
+  id: frida-app-template-model
+  version: 1.0.0
+  purpose: "Defines Frida-shipped app templates and the link-driven activation model for optional app extensions."
+  default_template:
+    id: template_app_basic
+    dirRef: "PATHS.templates.appBasicDir"
+    rule: "Zero-start seeds `template_app_basic` by default."
+    neutrality_rule: "Default app template MUST remain vendor-neutral and MUST NOT introduce backend implementation surfaces."
+  activation_model:
+    source_of_truth: "target app contract index links"
+    rule: "An app extension is active only if its AL## layer is present in the target app `contract.index.yaml`."
+    inactive_delivery_rule: "Frida may ship inactive extension files inside the app template package; inactive files alone MUST NOT affect the assembled contract."
+    top_level_activation_blocks_forbidden:
+      - extensions
+      - FRIDA_EXTENSIONS
+  naming:
+    template_ids:
+      rule: "`template_<scope>_<variant>`"
+      examples:
+        - template_app_basic
+    extension_ids:
+      rule: "`extension_<capability>` or `extension_<capability>_<implementation>`"
+      examples:
+        - extension_backend
+        - extension_backend_supabase
+  interface_policy:
+    applies_to:
+      - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+      - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+    known_inactive_extension:
+      action: HALT
+      output_requirements:
+        - required_extension_ids
+        - required_layer_paths
+        - contract_index_link_snippet
+      rule: "If a requested capability exists as a shipped but inactive extension, the interface MUST stop and instruct the user to activate it explicitly."
+    unknown_extension_need:
+      action: HALT
+      error_code: requires_new_frida_extension
+      redirect_interface: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+      rule: "If no shipped extension covers the request, the interface MUST NOT invent a new implementation model."
 
 FRIDA_BOOTSTRAP_SURFACE_POLICY:
   _visibility: public

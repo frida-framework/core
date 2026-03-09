@@ -22,11 +22,18 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import * as yaml from 'yaml';
 import Handlebars from 'handlebars';
 import { loadContractDocument, resolveContractPath } from './contract-path.ts';
 // === CONFIG ===
 let ROOT_DIR = path.resolve(process.cwd());
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ENGINE_PACKAGE_ROOT = path.resolve(MODULE_DIR, '..');
+
+function isEngineSelfRepo(rootDir: string): boolean {
+    return path.resolve(rootDir) === ENGINE_PACKAGE_ROOT;
+}
 
 const AUTO_GENERATED_HEADER = '<!-- AUTO-GENERATED FROM CONTRACT - DO NOT EDIT MANUALLY -->\n\n';
 
@@ -56,8 +63,15 @@ interface Zone {
 
 interface Contract {
     ZONES?: Record<string, any>;
+    INT_FRIDA_ZONES?: Record<string, any>;
     TASK_PROFILES?: Record<string, any>;
     INVARIANTS?: Record<string, any>;
+    FRIDA_TASK_PROFILES?: Record<string, any>;
+    FRIDA_ENFORCEMENT?: {
+        invariants?: Array<Record<string, any>>;
+        policies?: Array<Record<string, any>>;
+        [key: string]: any;
+    };
     FRIDA_GUARDS_BASELINE?: GuardBlock;
     PROJECT_GUARDS?: GuardBlock;
     GUARDS?: GuardBlock;
@@ -96,6 +110,8 @@ interface GuardBlock {
 }
 
 type GuardLayerName = 'FRIDA_GUARDS_BASELINE' | 'PROJECT_GUARDS' | 'GUARDS';
+type ZoneBlockName = 'ZONES' | 'INT_FRIDA_ZONES';
+type ProfileBlockName = 'TASK_PROFILES' | 'FRIDA_TASK_PROFILES';
 
 interface EffectiveGuards {
     guards: any[];
@@ -103,6 +119,64 @@ interface EffectiveGuards {
     guardById: Map<string, any>;
     sourceById: Map<string, GuardLayerName>;
     layersUsed: GuardLayerName[];
+}
+
+function normalizeContractForGenerator(contract: Contract): Contract {
+    const normalized: Contract = { ...contract };
+
+    if (!normalized.INVARIANTS && Array.isArray(normalized.FRIDA_ENFORCEMENT?.invariants)) {
+        normalized.INVARIANTS = Object.fromEntries(
+            normalized.FRIDA_ENFORCEMENT.invariants
+                .filter((entry) => entry && typeof entry === 'object' && typeof entry.id === 'string')
+                .map((entry) => [entry.id, { ...entry, id: undefined }])
+                .map(([id, entry]) => {
+                    const normalizedEntry = { ...(entry as Record<string, any>) };
+                    delete normalizedEntry.id;
+                    return [id, normalizedEntry];
+                })
+        );
+    }
+
+    if (!normalized.GUARDS && Array.isArray(normalized.FRIDA_ENFORCEMENT?.policies)) {
+        normalized.GUARDS = {
+            globalGuardRefs: [],
+            guards: normalized.FRIDA_ENFORCEMENT.policies,
+        };
+    }
+
+    return normalized;
+}
+
+function getZoneBlockName(): ZoneBlockName {
+    return isEngineSelfRepo(ROOT_DIR) ? 'INT_FRIDA_ZONES' : 'ZONES';
+}
+
+function getProfileBlockName(): ProfileBlockName {
+    return isEngineSelfRepo(ROOT_DIR) ? 'FRIDA_TASK_PROFILES' : 'TASK_PROFILES';
+}
+
+function getZoneBlock(contract: Contract): Record<string, any> {
+    const blockName = getZoneBlockName();
+    const block = contract[blockName];
+    if (!block || typeof block !== 'object') {
+        return {};
+    }
+    return block as Record<string, any>;
+}
+
+function getProfileEntries(contract: Contract): Array<[string, any]> {
+    const blockName = getProfileBlockName();
+    const block = contract[blockName];
+    if (!block || typeof block !== 'object') {
+        return [];
+    }
+
+    return Object.entries(block).filter(([key, value]) => {
+        if (['_visibility', 'id', 'version'].includes(key)) {
+            return false;
+        }
+        return Boolean(value) && typeof value === 'object';
+    });
 }
 
 
@@ -671,6 +745,11 @@ function sha256Text(text: string): string {
     return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
+function resolveGeneratedAt(): string {
+    const fixed = process.env.FRIDA_GENERATED_AT?.trim();
+    return fixed && fixed.length > 0 ? fixed : new Date().toISOString();
+}
+
 function toNodeId(kind: IRKind, rawId: string): string {
     return `${kind}:${rawId}`;
 }
@@ -722,6 +801,7 @@ function buildFridaIR(
     }
 
     // Zones (+ zone->guard edges)
+    const zoneBlockName = getZoneBlockName();
     for (const z of zones) {
         nodes.push({
             id: toNodeId('zone', z.id),
@@ -733,7 +813,7 @@ function buildFridaIR(
                 agentsTemplate: z.agentsTemplate,
                 readOnly: z.readOnly,
             },
-            source: { block: 'ZONES', id: z.id },
+            source: { block: zoneBlockName, id: z.id },
         });
 
         for (const gr of z.guardRefs || []) {
@@ -755,7 +835,7 @@ function buildFridaIR(
                 keywords: p.keywords,
                 security: p.security,
             },
-            source: { block: 'TASK_PROFILES', id: p.id },
+            source: { block: profileBlockName, id: p.id },
         });
 
         for (const inv of p.resolvedInvariants || []) {
@@ -831,7 +911,7 @@ function buildFridaIR(
 
     return {
         meta: {
-            generatedAt: new Date().toISOString(),
+            generatedAt: resolveGeneratedAt(),
             contractSha256: sha256Text(contractRaw),
             pathMappingsCount: normalizer.getCount(),
             zoneCount: zones.length,
@@ -993,12 +1073,14 @@ function loadGeneratorContext(): LoadedGeneratorContext {
 }
 
 function validateContract(contract: Contract): EffectiveGuards {
-    const required = ['ZONES', 'TASK_PROFILES', 'INVARIANTS'];
+    const zoneBlockName = getZoneBlockName();
+    const profileBlockName = getProfileBlockName();
+    const required = [zoneBlockName, profileBlockName, 'INVARIANTS'];
     const missing = required.filter(key => !contract[key]);
 
     if (missing.length > 0) {
         console.error(`❌ Error: Missing required blocks in contract: ${missing.join(', ')}`);
-        console.error('   Ensure wiki has zerohuman-contract-project.md with these contract:* blocks.');
+        console.error('   Ensure the repository-scoped contract provides the required top-level blocks.');
         process.exit(1);
     }
 
@@ -1019,14 +1101,14 @@ function validateContract(contract: Contract): EffectiveGuards {
         process.exit(1);
     }
 
-    // D2: Validate redirects format in TASK_PROFILES
-    for (const [profileId, profileData] of Object.entries(contract.TASK_PROFILES || {})) {
+    // D2: Validate redirects format in the repository-scoped profile block
+    for (const [profileId, profileData] of getProfileEntries(contract)) {
         const redirects = (profileData as any).security?.redirects || (profileData as any).redirects;
         if (redirects && Array.isArray(redirects)) {
             for (let i = 0; i < redirects.length; i++) {
                 const r = redirects[i];
                 if (r.pattern || r.redirectTo || r.message) {
-                    console.error(`❌ Error: TASK_PROFILES.${profileId}.redirects[${i}] uses deprecated format (pattern/redirectTo/message). Use from/to/reason or fromGlobRef/toFileRef|toDirRef/reason.`);
+                    console.error(`❌ Error: ${profileBlockName}.${profileId}.redirects[${i}] uses deprecated format (pattern/redirectTo/message). Use from/to/reason or fromGlobRef/toFileRef|toDirRef/reason.`);
                     process.exit(1);
                 }
                 const hasCompatShape = typeof r.from === 'string' && typeof r.to === 'string';
@@ -1034,7 +1116,7 @@ function validateContract(contract: Contract): EffectiveGuards {
                     (typeof r.toFileRef === 'string' || typeof r.toDirRef === 'string');
                 if (!r.reason || (!hasCompatShape && !hasRefShape)) {
                     console.error(
-                        `❌ Error: TASK_PROFILES.${profileId}.redirects[${i}] missing required fields ` +
+                        `❌ Error: ${profileBlockName}.${profileId}.redirects[${i}] missing required fields ` +
                         `(from/to/reason OR fromGlobRef/toFileRef|toDirRef/reason)`
                     );
                     process.exit(1);
@@ -1043,7 +1125,7 @@ function validateContract(contract: Contract): EffectiveGuards {
         }
     }
 
-    // D3: Validate guardRef resolve (VALIDATION_RULES_APP + ZONES)
+    // D3: Validate guardRef resolve (VALIDATION_RULES_APP + repo-scoped zone block)
     const validationRulesApp = contract['VALIDATION_RULES_APP'];
     if (validationRulesApp) {
         const unresolvedGuards: string[] = [];
@@ -1068,20 +1150,20 @@ function validateContract(contract: Contract): EffectiveGuards {
         if (!Array.isArray(refs)) continue;
         for (const ref of refs) {
             if (typeof ref === 'string' && !guardIds.has(ref)) {
-                unresolvedZoneGuardRefs.push(`ZONES.${zoneId}.guardRefs -> ${ref}`);
+                unresolvedZoneGuardRefs.push(`${zoneBlockName}.${zoneId}.guardRefs -> ${ref}`);
             }
         }
     }
     if (unresolvedZoneGuardRefs.length > 0) {
-        console.error('❌ Error: ZONES contain unresolved guardRefs:');
+        console.error(`❌ Error: ${zoneBlockName} contains unresolved guardRefs:`);
         for (const item of unresolvedZoneGuardRefs) {
             console.error(`   ${item}`);
         }
         process.exit(1);
     }
 
-    // D4: Validate invariants resolve in TASK_PROFILES
-    for (const [profileId, profileData] of Object.entries(contract.TASK_PROFILES || {})) {
+    // D4: Validate invariants resolve in the repository-scoped profile block
+    for (const [profileId, profileData] of getProfileEntries(contract)) {
         const invariants = (profileData as any).invariants;
         if (invariants && Array.isArray(invariants)) {
             const missingInvariants: string[] = [];
@@ -1091,14 +1173,14 @@ function validateContract(contract: Contract): EffectiveGuards {
                 }
             }
             if (missingInvariants.length > 0) {
-                console.error(`❌ Error: TASK_PROFILES.${profileId}.invariants contains undefined invariants:`);
+                console.error(`❌ Error: ${profileBlockName}.${profileId}.invariants contains undefined invariants:`);
                 console.error(`   Missing: ${missingInvariants.join(', ')}`);
                 process.exit(1);
             }
         }
     }
 
-    // D5: Validate tasks orchestration policy in TASK_PROFILES
+    // D5: Validate tasks orchestration policy in the repository-scoped profile block
     const tasksPolicyErrors: string[] = [];
     const matchesPath = (candidate: string, expected: string): boolean => {
         return candidate === expected || candidate === `${expected}*`;
@@ -1108,21 +1190,29 @@ function validateContract(contract: Contract): EffectiveGuards {
     const hasAny = (arr: any[], expectedList: string[]): boolean =>
         expectedList.some((expected) => has(arr, expected));
     const accessValidation = (contract.FRIDA_CONFIG as any)?.reporting?.access_validation || {};
-    const policyPaths = (accessValidation && typeof accessValidation === 'object' && accessValidation.policy_paths
+    const repoPolicies = (accessValidation && typeof accessValidation === 'object' && accessValidation.repo_policies
+        && typeof accessValidation.repo_policies === 'object')
+        ? accessValidation.repo_policies as Record<string, unknown>
+        : {};
+    const legacyPolicyPaths = (accessValidation && typeof accessValidation === 'object' && accessValidation.policy_paths
         && typeof accessValidation.policy_paths === 'object')
         ? accessValidation.policy_paths as Record<string, unknown>
         : {};
+    const repoPolicyKey = isEngineSelfRepo(ROOT_DIR) ? 'frida_core' : 'target_app';
+    const policyPaths = (repoPolicies[repoPolicyKey] && typeof repoPolicies[repoPolicyKey] === 'object')
+        ? repoPolicies[repoPolicyKey] as Record<string, unknown>
+        : legacyPolicyPaths;
     const policyList = (key: string, fallback: string[]): string[] => {
         const value = policyPaths[key];
         if (!Array.isArray(value)) {
             return fallback;
         }
-        const normalized = value.filter((item) => typeof item === 'string' && item.trim()) as string[];
-        return normalized.length > 0 ? normalized : fallback;
+        return value.filter((item) => typeof item === 'string' && item.trim()) as string[];
     };
 
     const readAllowRequired = policyList('read_allow_required', ['tasks/**']);
     const readAllowGovernanceRequired = policyList('read_allow_governance_required', []);
+    const readAllowTaskSetterRequired = policyList('read_allow_task_setter_required', []);
     const editAllowArchitectRequired = policyList('edit_allow_architect_required', ['tasks/inbox/**']);
     const editAllowArchitectAllowedOnly = policyList('edit_allow_architect_allowed_only', ['tasks/inbox/**', 'tasks/inbox/README.md']);
     const editAllowNonArchitectRequired = policyList('edit_allow_non_architect_required', ['tasks/README.md', 'tasks/**/README.md']);
@@ -1146,12 +1236,13 @@ function validateContract(contract: Contract): EffectiveGuards {
         // D5 access validation requires FRIDA_CONFIG.reporting.access_validation.enabled=true;
         // silently skip when absent (app-only contracts do not define this block).
     } else {
-        for (const [profileId, profileData] of Object.entries(contract.TASK_PROFILES || {})) {
+        for (const [profileId, profileData] of getProfileEntries(contract)) {
             const sec = (profileData as any).security || {};
             const role = (profileData as any).role;
             const isArchitect = role === 'ARCHITECT_AGENT';
-            const isGovernanceProfile = profileId === 'governance';
-            const resolvedSec = resolveSecurity(contract, sec, `TASK_PROFILES.${profileId}.security`);
+            const isGovernanceProfile = profileId === 'frida_governance' || profileId === 'app_governance';
+            const isTaskSetterProfile = role === 'TASK_SETTER_AGENT';
+            const resolvedSec = resolveSecurity(contract, sec, `${profileBlockName}.${profileId}.security`);
             const readAllow = resolvedSec.read_allow;
             const editAllow = resolvedSec.edit_allow;
             const editForbid = resolvedSec.edit_forbid;
@@ -1160,13 +1251,20 @@ function validateContract(contract: Contract): EffectiveGuards {
             // Check required read_allow
             for (const requiredPath of readAllowRequired) {
                 if (!has(readAllow, requiredPath)) {
-                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.read_allow "${requiredPath}"`);
+                    tasksPolicyErrors.push(`${profileBlockName}.${profileId}: missing security.read_allow "${requiredPath}"`);
                 }
             }
             if (isGovernanceProfile) {
                 for (const requiredPath of readAllowGovernanceRequired) {
                     if (!has(readAllow, requiredPath)) {
-                        tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: governance profile missing security.read_allow "${requiredPath}"`);
+                        tasksPolicyErrors.push(`${profileBlockName}.${profileId}: governance profile missing security.read_allow "${requiredPath}"`);
+                    }
+                }
+            }
+            if (isTaskSetterProfile) {
+                for (const requiredPath of readAllowTaskSetterRequired) {
+                    if (!has(readAllow, requiredPath)) {
+                        tasksPolicyErrors.push(`${profileBlockName}.${profileId}: TASK_SETTER_AGENT missing security.read_allow "${requiredPath}"`);
                     }
                 }
             }
@@ -1175,7 +1273,7 @@ function validateContract(contract: Contract): EffectiveGuards {
             if (isArchitect) {
                 for (const requiredPath of editAllowArchitectRequired) {
                     if (!has(editAllow, requiredPath)) {
-                        tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: ARCHITECT_AGENT must include security.edit_allow "${requiredPath}"`);
+                        tasksPolicyErrors.push(`${profileBlockName}.${profileId}: ARCHITECT_AGENT must include security.edit_allow "${requiredPath}"`);
                     }
                 }
 
@@ -1185,13 +1283,13 @@ function validateContract(contract: Contract): EffectiveGuards {
                 ));
                 if (disallowedArchitectWrites.length > 0) {
                     tasksPolicyErrors.push(
-                        `TASK_PROFILES.${profileId}: ARCHITECT_AGENT edit_allow contains paths outside policy allowlist (found: ${disallowedArchitectWrites.join(', ')})`
+                        `${profileBlockName}.${profileId}: ARCHITECT_AGENT edit_allow contains paths outside policy allowlist (found: ${disallowedArchitectWrites.join(', ')})`
                     );
                 }
             } else {
                 for (const requiredPath of editAllowNonArchitectRequired) {
                     if (!has(editAllow, requiredPath)) {
-                        tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.edit_allow "${requiredPath}"`);
+                        tasksPolicyErrors.push(`${profileBlockName}.${profileId}: missing security.edit_allow "${requiredPath}"`);
                     }
                 }
             }
@@ -1199,21 +1297,21 @@ function validateContract(contract: Contract): EffectiveGuards {
             // Check required edit_forbid
             for (const requiredPath of editForbidRequired) {
                 if (!has(editForbid, requiredPath)) {
-                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.edit_forbid "${requiredPath}"`);
+                    tasksPolicyErrors.push(`${profileBlockName}.${profileId}: missing security.edit_forbid "${requiredPath}"`);
                 }
             }
 
             // Check forbidden patterns in security.forbid
             for (const forbiddenPath of forbidMustNotInclude) {
                 if (has(forbid, forbiddenPath)) {
-                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST NOT include "${forbiddenPath}"`);
+                    tasksPolicyErrors.push(`${profileBlockName}.${profileId}: security.forbid MUST NOT include "${forbiddenPath}"`);
                 }
             }
 
             // Check required .frida/** in forbid
             for (const requiredPath of forbidMustInclude) {
                 if (!has(forbid, requiredPath)) {
-                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: security.forbid MUST include "${requiredPath}"`);
+                    tasksPolicyErrors.push(`${profileBlockName}.${profileId}: security.forbid MUST include "${requiredPath}"`);
                 }
             }
 
@@ -1221,39 +1319,39 @@ function validateContract(contract: Contract): EffectiveGuards {
             const createAllow = resolvedSec.create_allow;
             for (const requiredPath of createAllowRequiredAllProfiles) {
                 if (!has(createAllow, requiredPath)) {
-                    tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: missing security.create_allow "${requiredPath}"`);
+                    tasksPolicyErrors.push(`${profileBlockName}.${profileId}: missing security.create_allow "${requiredPath}"`);
                 }
             }
 
             const hasReportingRead = has(readAllow, reportingReadPath);
             if (isGovernanceProfile && !hasReportingRead) {
-                tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: governance profile must include security.read_allow "${reportingReadPath}"`);
+                tasksPolicyErrors.push(`${profileBlockName}.${profileId}: governance profile must include security.read_allow "${reportingReadPath}"`);
             }
             if (!isGovernanceProfile && hasReportingRead) {
-                tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: only governance profile may include security.read_allow "${reportingReadPath}"`);
+                tasksPolicyErrors.push(`${profileBlockName}.${profileId}: only governance profile may include security.read_allow "${reportingReadPath}"`);
             }
 
             if (createAllow.length > 0) {
                 const isAllowedNonTaskSetterCreatePath = (p: string) => hasAny([p], createAllowNonTaskSetterAllowedOnly);
 
-                if (role !== 'TASK_SETTER_AGENT') {
+                if (!isTaskSetterProfile) {
                     const invalidCreates = createAllow.filter(
                         (p: any) => typeof p === 'string' && !isAllowedNonTaskSetterCreatePath(p)
                     );
                     if (invalidCreates.length > 0) {
                         tasksPolicyErrors.push(
-                            `TASK_PROFILES.${profileId}: non-task-setter create_allow may target only configured policy paths (found: ${invalidCreates.join(', ')})`
+                            `${profileBlockName}.${profileId}: non-task-setter create_allow may target only configured policy paths (found: ${invalidCreates.join(', ')})`
                         );
                     }
                 } else {
                     for (const requiredPath of createAllowTaskSetterRequired) {
                         if (!has(createAllow, requiredPath)) {
-                            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: TASK_SETTER_AGENT create_allow MUST include "${requiredPath}"`);
+                            tasksPolicyErrors.push(`${profileBlockName}.${profileId}: TASK_SETTER_AGENT create_allow MUST include "${requiredPath}"`);
                         }
                     }
                     for (const forbiddenPath of createAllowTaskSetterForbidden) {
                         if (has(createAllow, forbiddenPath)) {
-                            tasksPolicyErrors.push(`TASK_PROFILES.${profileId}: TASK_SETTER_AGENT create_allow MUST NOT include "${forbiddenPath}"`);
+                            tasksPolicyErrors.push(`${profileBlockName}.${profileId}: TASK_SETTER_AGENT create_allow MUST NOT include "${forbiddenPath}"`);
                         }
                     }
                 }
@@ -1261,7 +1359,7 @@ function validateContract(contract: Contract): EffectiveGuards {
         }
 
         if (tasksPolicyErrors.length > 0) {
-            console.error('❌ Error: TASK_PROFILES violate tasks orchestration policy:');
+            console.error(`❌ Error: ${profileBlockName} violate tasks orchestration policy:`);
             for (const err of tasksPolicyErrors) {
                 console.error(`  - ${err}`);
             }
@@ -1333,23 +1431,20 @@ function isZoneDefinition(value: unknown): value is Record<string, any> {
 }
 
 function getZoneEntries(contract: Contract): Array<[string, any]> {
-    if (!contract.ZONES || typeof contract.ZONES !== 'object') {
-        return [];
-    }
-
-    return Object.entries(contract.ZONES).filter(([, value]) => isZoneDefinition(value));
+    return Object.entries(getZoneBlock(contract)).filter(([, value]) => isZoneDefinition(value));
 }
 
 // === DATA EXTRACTORS ===
 function extractZones(contract: Contract): Zone[] {
-    if (!contract.ZONES) return [];
+    const zoneBlockName = getZoneBlockName();
+    if (!contract[zoneBlockName]) return [];
 
     return getZoneEntries(contract).map(([id, data]: [string, any]) => ({
         id,
         name: formatZoneName(id),
         path:
-            resolveRefValue(contract, data.path, `ZONES.${id}.path`) ||
-            resolveRefValue(contract, data.pathGlobRef, `ZONES.${id}.pathGlobRef`) ||
+            resolveRefValue(contract, data.path, `${zoneBlockName}.${id}.path`) ||
+            resolveRefValue(contract, data.pathGlobRef, `${zoneBlockName}.${id}.pathGlobRef`) ||
             '',
         is_component: data.is_component,
         owner: data.owner,
@@ -1357,15 +1452,15 @@ function extractZones(contract: Contract): Zone[] {
         whyReadOnly: data.whyReadOnly,
         consequence: data.consequence,
         redirectPath:
-            resolveRefValue(contract, data.redirectPath, `ZONES.${id}.redirectPath`) ||
-            resolveRefValue(contract, data.redirectPathDirRef, `ZONES.${id}.redirectPathDirRef`) ||
+            resolveRefValue(contract, data.redirectPath, `${zoneBlockName}.${id}.redirectPath`) ||
+            resolveRefValue(contract, data.redirectPathDirRef, `${zoneBlockName}.${id}.redirectPathDirRef`) ||
             undefined,
         howToChange: data.howToChange,
         forbiddenOps: data.forbiddenOps,
         purpose: data.purpose,
         agentsPath:
-            resolveRefValue(contract, data.agentsPath, `ZONES.${id}.agentsPath`) ||
-            resolveRefValue(contract, data.agentsPathDirRef, `ZONES.${id}.agentsPathDirRef`) ||
+            resolveRefValue(contract, data.agentsPath, `${zoneBlockName}.${id}.agentsPath`) ||
+            resolveRefValue(contract, data.agentsPathDirRef, `${zoneBlockName}.${id}.agentsPathDirRef`) ||
             undefined,
         agentsTemplate: data.agentsTemplate,
         constraints: data.constraints,
@@ -1418,7 +1513,8 @@ function processProfile(
     contract: Contract,
     normalizer: PathNormalizer
 ): any {
-    const resolvedSecurity = resolveSecurity(contract, data.security || {}, `TASK_PROFILES.${id}.security`);
+    const profileBlockName = getProfileBlockName();
+    const resolvedSecurity = resolveSecurity(contract, data.security || {}, `${profileBlockName}.${id}.security`);
 
     const normalizePaths = (paths: string[] | undefined): string[] => {
         if (!paths) return [];
@@ -1439,14 +1535,15 @@ function processProfile(
     ];
 
     for (const allowedPath of allAllowedPaths) {
+        const zoneBlockName = getZoneBlockName();
         for (const [zoneId, zoneData] of getZoneEntries(contract)) {
             const resolvedZonePath =
-                resolveRefValue(contract, zoneData.pathGlobRef, `ZONES.${zoneId}.pathGlobRef`) ||
-                resolveRefValue(contract, zoneData.path, `ZONES.${zoneId}.path`) ||
+                resolveRefValue(contract, zoneData.pathGlobRef, `${zoneBlockName}.${zoneId}.pathGlobRef`) ||
+                resolveRefValue(contract, zoneData.path, `${zoneBlockName}.${zoneId}.path`) ||
                 '';
             const resolvedAgentsPath =
-                resolveRefValue(contract, zoneData.agentsPathDirRef, `ZONES.${zoneId}.agentsPathDirRef`) ||
-                resolveRefValue(contract, zoneData.agentsPath, `ZONES.${zoneId}.agentsPath`) ||
+                resolveRefValue(contract, zoneData.agentsPathDirRef, `${zoneBlockName}.${zoneId}.agentsPathDirRef`) ||
+                resolveRefValue(contract, zoneData.agentsPath, `${zoneBlockName}.${zoneId}.agentsPath`) ||
                 '';
 
             if (!resolvedZonePath || !resolvedAgentsPath) continue;
@@ -1478,8 +1575,8 @@ function processProfile(
 
             const fromRaw = r.fromGlobRef ?? r.from;
             const toRaw = r.toFileRef ?? r.toDirRef ?? r.to;
-            const from = resolveRefValue(contract, fromRaw, `TASK_PROFILES.${id}.security.redirects[${i}].from`);
-            const to = resolveRefValue(contract, toRaw, `TASK_PROFILES.${id}.security.redirects[${i}].to`);
+            const from = resolveRefValue(contract, fromRaw, `${profileBlockName}.${id}.security.redirects[${i}].from`);
+            const to = resolveRefValue(contract, toRaw, `${profileBlockName}.${id}.security.redirects[${i}].to`);
             const reason = typeof r.reason === 'string' ? r.reason : '';
 
             if (!from || !to || !reason) {
@@ -1512,7 +1609,7 @@ function processProfile(
             console.warn(`⚠️  Profile ${id}: Unknown invariant '${invId}'`);
             return { id: invId, text: `UNKNOWN: ${invId}` };
         }
-        return { id: inv.id, text: inv.text };
+        return { id: inv.id || invId, text: inv.text };
     });
 
     return {
@@ -1526,7 +1623,12 @@ function processProfile(
 }
 
 // === ZONE AGENTS.MD GENERATOR ===
-function generateZoneAgents(zones: Zone[], effectiveGuards: EffectiveGuards, docsTplRoot: string): void {
+function generateZoneAgents(
+    zones: Zone[],
+    effectiveGuards: EffectiveGuards,
+    docsTplRoot: string,
+    bootloaderFilePath: string
+): void {
     console.log('\n📋 Generating zone-specific AGENTS.md...\n');
 
     const templates: Record<string, HandlebarsTemplateDelegate> = {};
@@ -1557,6 +1659,10 @@ function generateZoneAgents(zones: Zone[], effectiveGuards: EffectiveGuards, doc
         if (!zone.agentsPath) continue;
 
         const outputPath = path.join(ROOT_DIR, zone.agentsPath, 'AGENTS.md');
+        if (path.resolve(outputPath) === path.resolve(bootloaderFilePath)) {
+            console.log(`⏭️  Skipped zone AGENTS overwrite for bootloader path: ${path.relative(ROOT_DIR, outputPath)}`);
+            continue;
+        }
         const templateName = zone.agentsTemplate || (zone.readOnly ? 'readonly-zone' : 'mapper');
         const template = loadZoneTemplate(templateName);
 
@@ -1638,7 +1744,9 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
 
     // Load and validate contract
     console.log('📚 Loading contract...');
-    const { contract, contractRaw, runtimePaths } = loadGeneratorContext();
+    const loaded = loadGeneratorContext();
+    const contract = normalizeContractForGenerator(loaded.contract);
+    const { contractRaw, runtimePaths } = loaded;
     console.log(`📄 Contract artifact: ${path.relative(ROOT_DIR, runtimePaths.contractArtifactPath)}`);
     const effectiveGuards = validateContract(contract);
     checkTemplateDrift(contract);
@@ -1659,7 +1767,7 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
 
     // Process profiles
     console.log('\n📋 Processing profiles...\n');
-    const profiles = Object.entries(contract.TASK_PROFILES!).map(([id, data]) =>
+    const profiles = getProfileEntries(contract).map(([id, data]) =>
         processProfile(id, data, contract, normalizer)
     );
     console.log(`✅ Processed ${profiles.length} profiles`);
@@ -1683,7 +1791,7 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
     console.log('\n📋 Generating core FRIDA files...\n');
     const tplBootloader = loadTemplate(fridaTplRoot, 'bootloader.hbs');
     const bootloaderContent = tplBootloader({
-        generatedAt: new Date().toISOString(),
+        generatedAt: resolveGeneratedAt(),
         profileCount: profiles.length,
         zoneCount: zones.length,
         profiles,
@@ -1692,7 +1800,25 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
 
     // Generate Router
     const tplRouter = loadTemplate(fridaTplRoot, 'router.xml.hbs');
-    write(path.join(runtimePaths.specsRootDir, 'ROUTER.xml'), tplRouter({ profiles }));
+    const routeSets = [
+        ...(Array.isArray(contract.FRIDA_INTERFACE_ROUTING?.routes) ? contract.FRIDA_INTERFACE_ROUTING.routes : []),
+        ...(isEngineSelfRepo(ROOT_DIR) && Array.isArray(contract.FRIDA_INT_AGENT_ROUTING?.routes)
+            ? contract.FRIDA_INT_AGENT_ROUTING.routes
+            : []),
+    ].map((route: any) => {
+        const allowedProfilesRaw = isEngineSelfRepo(ROOT_DIR)
+            ? (Array.isArray(route?.allowed_profiles) ? route.allowed_profiles : route?.allowed_profiles?.frida_repo)
+            : route?.allowed_profiles?.target_app_repo;
+        const allowedProfiles = Array.isArray(allowedProfilesRaw) ? allowedProfilesRaw : [];
+        return {
+            id: route?.id || 'unknown',
+            interface_ref: route?.interface_ref || '',
+            keywords: Array.isArray(route?.selector_keywords) ? route.selector_keywords.join(', ') : '',
+            allowed_profiles: allowedProfiles.join(', '),
+            context_profile: allowedProfiles[0] || profiles[0]?.id || '',
+        };
+    }).filter((route: any) => route.allowed_profiles.length > 0 && route.context_profile);
+    write(path.join(runtimePaths.specsRootDir, 'ROUTER.xml'), tplRouter({ profiles, routes: routeSets }));
 
     // Generate Profiles
     const tplProfile = loadTemplate(fridaTplRoot, 'profile.xml.hbs');
@@ -1701,7 +1827,7 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
     }
 
     // Generate Zone AGENTS.md
-    generateZoneAgents(zones, effectiveGuards, docsTplRoot);
+    generateZoneAgents(zones, effectiveGuards, docsTplRoot, runtimePaths.bootloaderFilePath);
 
     // Generate core policy docs
     console.log('\n📋 Generating policy documentation...\n');
@@ -1825,3 +1951,4 @@ if (isMainModule) {
         process.exit(1);
     });
 }
+    const profileBlockName = getProfileBlockName();

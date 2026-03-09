@@ -1,0 +1,57 @@
+APP_EXTENSION_BACKEND_SUPABASE:
+  id: extension_backend_supabase
+  kind: implementation
+  template_id: template_app_basic
+  summary: "Supabase implementation surfaces for the backend capability."
+  requires:
+    - extension_backend
+  intent_keywords:
+    - supabase
+    - edge function
+    - migration
+    - postgres
+  activation:
+    mode: linked_layer_only
+    rule: "This extension is active only when its AL## layer is linked in contract.index.yaml."
+  contributes:
+    ZONES:
+      backend:
+        owner: Backend
+        path: "supabase/**"
+        readOnly: false
+        purpose: Backend functions and migrations.
+        agentsPath: "supabase"
+        agentsTemplate: service
+        constraints:
+          - Keep backend deploys CI-driven.
+        verification: n/a
+        guardRefs: []
+    TASK_PROFILES:
+      app_core:
+        security:
+          forbid:
+            - supabase/**
+      backend_core:
+        keywords:
+          - supabase
+        security:
+          read_allow:
+            - supabase/**
+          edit_allow:
+            - supabase/**
+      visual_design:
+        security:
+          forbid:
+            - supabase/**
+      app_task_setter:
+        security:
+          edit_forbid:
+            - supabase/**
+      app_architect_inbox:
+        security:
+          forbid:
+            - supabase/**
+      app_governance:
+        security:
+          forbid:
+            - supabase/**

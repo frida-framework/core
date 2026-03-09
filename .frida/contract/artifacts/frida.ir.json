@@ -1,0 +1,1421 @@
+{
+  "meta": {
+    "generatedAt": "2026-03-09T02:12:35.869Z",
+    "contractSha256": "0b4f5775242c90dd34d6204d8afdea2f878e20763ba2c1bdd30e2e414409abcd",
+    "pathMappingsCount": 78,
+    "zoneCount": 3,
+    "profileCount": 3
+  },
+  "nodes": [
+    {
+      "id": "guard:GUARD_CONTRACT_SCHEMA_FIRST",
+      "kind": "guard",
+      "label": "GUARD_CONTRACT_SCHEMA_FIRST",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Contract processing must remain schema-first.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_CONTRACT_SCHEMA_FIRST"
+      }
+    },
+    {
+      "id": "guard:GUARD_CONTRACT_SOURCE_DECLARED",
+      "kind": "guard",
+      "label": "GUARD_CONTRACT_SOURCE_DECLARED",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Contract source is limited to files declared in PATHS and contracticalSourceBlocks.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_CONTRACT_SOURCE_DECLARED"
+      }
+    },
+    {
+      "id": "guard:GUARD_CONTRACT_NOT_RUNTIME",
+      "kind": "guard",
+      "label": "GUARD_CONTRACT_NOT_RUNTIME",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Contract MUST NOT contain runtime state or mutable data.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_CONTRACT_NOT_RUNTIME"
+      }
+    },
+    {
+      "id": "guard:GUARD_ARTIFACT_NO_MANUAL_EDITS",
+      "kind": "guard",
+      "label": "GUARD_ARTIFACT_NO_MANUAL_EDITS",
+      "attrs": {
+        "kind": "nail",
+        "statement": "Generated artifacts (.frida/contract/profiles/, .frida/contract/AGENTS.md, .frida/contract/docs/) must not be manually edited.",
+        "enforcement": "warn"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_ARTIFACT_NO_MANUAL_EDITS"
+      }
+    },
+    {
+      "id": "guard:GUARD_WORKSPACE_TEMP_ONLY",
+      "kind": "guard",
+      "label": "GUARD_WORKSPACE_TEMP_ONLY",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Temporary files must reside in .temp/ directories.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_WORKSPACE_TEMP_ONLY"
+      }
+    },
+    {
+      "id": "guard:GUARD_FRIDA_INTERNAL_NO_AGENT",
+      "kind": "guard",
+      "label": "GUARD_FRIDA_INTERNAL_NO_AGENT",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Agent MUST NOT directly modify .frida/contract/internal/ contents.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_FRIDA_INTERNAL_NO_AGENT"
+      }
+    },
+    {
+      "id": "guard:GUARD_FRIDA_INBOX_NO_AGENT",
+      "kind": "guard",
+      "label": "GUARD_FRIDA_INBOX_NO_AGENT",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Agents MUST NOT directly access `.frida/inbox/**`; inbox is protected inbound/SSOT surface.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_FRIDA_INBOX_NO_AGENT"
+      }
+    },
+    {
+      "id": "guard:GUARD_SESSION_REPORT_REQUIRED",
+      "kind": "guard",
+      "label": "GUARD_SESSION_REPORT_REQUIRED",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Every agent run MUST produce a job report in .frida/reports/.",
+        "enforcement": "warn"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_SESSION_REPORT_REQUIRED"
+      }
+    },
+    {
+      "id": "guard:GUARD_VISUAL_DETERMINISM",
+      "kind": "guard",
+      "label": "GUARD_VISUAL_DETERMINISM",
+      "attrs": {
+        "kind": "drift",
+        "statement": "Visual overlay generation MUST be deterministic.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_VISUAL_DETERMINISM"
+      }
+    },
+    {
+      "id": "guard:GUARD_ZONE_AGENTS_MD",
+      "kind": "guard",
+      "label": "GUARD_ZONE_AGENTS_MD",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Each zone MUST have a contractical AGENTS.md at its agentsPath.",
+        "enforcement": "warn"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_ZONE_AGENTS_MD"
+      }
+    },
+    {
+      "id": "guard:GUARD_TEMPLATE_INTEGRITY",
+      "kind": "guard",
+      "label": "GUARD_TEMPLATE_INTEGRITY",
+      "attrs": {
+        "kind": "nail",
+        "statement": "Template hash manifest must validate; drift returns non-zero.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_TEMPLATE_INTEGRITY"
+      }
+    },
+    {
+      "id": "guard:GUARD_BOOTSTRAP_EXPLICIT_ONLY",
+      "kind": "guard",
+      "label": "GUARD_BOOTSTRAP_EXPLICIT_ONLY",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Bootstrap is manual-only and must not be invoked transitively by other commands.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_BOOTSTRAP_EXPLICIT_ONLY"
+      }
+    },
+    {
+      "id": "guard:GUARD_BOOTSTRAP_ZERO_DEPLOY_ONLY",
+      "kind": "guard",
+      "label": "GUARD_BOOTSTRAP_ZERO_DEPLOY_ONLY",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Demo bootstrap is explicit-only and zero-deploy-only; full bootstrap defaults to warm reconcile.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_BOOTSTRAP_ZERO_DEPLOY_ONLY"
+      }
+    },
+    {
+      "id": "guard:GUARD_BOOTSTRAP_COMPONENT_RESTORE_IDEMPOTENT",
+      "kind": "guard",
+      "label": "GUARD_BOOTSTRAP_COMPONENT_RESTORE_IDEMPOTENT",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Explicit bootstrap component-restore re-run must not duplicate existing components.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_BOOTSTRAP_COMPONENT_RESTORE_IDEMPOTENT"
+      }
+    },
+    {
+      "id": "guard:GUARD_SESSION_EXCLUSIVE",
+      "kind": "guard",
+      "label": "GUARD_SESSION_EXCLUSIVE",
+      "attrs": {
+        "kind": "session",
+        "statement": "Only one active session token per branch.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_SESSION_EXCLUSIVE"
+      }
+    },
+    {
+      "id": "guard:GUARD_ANTITASK_VALIDATE_PHASE",
+      "kind": "guard",
+      "label": "GUARD_ANTITASK_VALIDATE_PHASE",
+      "attrs": {
+        "kind": "chain",
+        "statement": "VALIDATE_ANTITASK phase MUST run before EXECUTE. Run report MUST include verification.antitask per FRIDA_ANTITASK_SPEC.report_proof.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_ANTITASK_VALIDATE_PHASE"
+      }
+    },
+    {
+      "id": "invariant:contract_entity_single_declaration",
+      "kind": "invariant",
+      "label": "contract_entity_single_declaration",
+      "attrs": {
+        "text": "Any contract entity SHOULD be declared exactly once; duplicates emit warning.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "contract_entity_single_declaration"
+      }
+    },
+    {
+      "id": "invariant:visual_overlay_only",
+      "kind": "invariant",
+      "label": "visual_overlay_only",
+      "attrs": {
+        "text": "Visual artifacts are derived overlays and must not become source-of-truth contract state.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "visual_overlay_only"
+      }
+    },
+    {
+      "id": "invariant:visual_on_demand",
+      "kind": "invariant",
+      "label": "visual_on_demand",
+      "attrs": {
+        "text": "Visual artifacts are refreshed only by explicit visual commands.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "visual_on_demand"
+      }
+    },
+    {
+      "id": "invariant:visual_determinism",
+      "kind": "invariant",
+      "label": "visual_determinism",
+      "attrs": {
+        "text": "Same contract input MUST produce identical visual overlay output.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "visual_determinism"
+      }
+    },
+    {
+      "id": "invariant:temp_dot_temp_only",
+      "kind": "invariant",
+      "label": "temp_dot_temp_only",
+      "attrs": {
+        "text": "Temporary files MUST reside in .temp/ directories and never in working tree root.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "temp_dot_temp_only"
+      }
+    },
+    {
+      "id": "invariant:temp_ephemeral_session",
+      "kind": "invariant",
+      "label": "temp_ephemeral_session",
+      "attrs": {
+        "text": "Temporary artifacts are ephemeral to a single session; no cross-session dependency allowed.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "temp_ephemeral_session"
+      }
+    },
+    {
+      "id": "invariant:error_explicit",
+      "kind": "invariant",
+      "label": "error_explicit",
+      "attrs": {
+        "text": "Error conditions MUST be explicit. Silent failures are forbidden.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "error_explicit"
+      }
+    },
+    {
+      "id": "invariant:no_scope_creep",
+      "kind": "invariant",
+      "label": "no_scope_creep",
+      "attrs": {
+        "text": "Agent MUST NOT exceed the scope defined by its profile security permissions.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "no_scope_creep"
+      }
+    },
+    {
+      "id": "invariant:contract_not_runtime",
+      "kind": "invariant",
+      "label": "contract_not_runtime",
+      "attrs": {
+        "text": "Contract is a build-time/design-time artifact. Runtime state MUST NOT be stored in contract.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "contract_not_runtime"
+      }
+    },
+    {
+      "id": "invariant:agent_session_exclusive",
+      "kind": "invariant",
+      "label": "agent_session_exclusive",
+      "attrs": {
+        "text": "Only one agent session token may be active per branch at any time.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "agent_session_exclusive"
+      }
+    },
+    {
+      "id": "invariant:bootstrap_component_restore_idempotent",
+      "kind": "invariant",
+      "label": "bootstrap_component_restore_idempotent",
+      "attrs": {
+        "text": "Explicit bootstrap component-reconcile/component-restore mode is idempotent and restores or normalizes selected components without duplication.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "bootstrap_component_restore_idempotent"
+      }
+    },
+    {
+      "id": "invariant:bootstrap_manual_only",
+      "kind": "invariant",
+      "label": "bootstrap_manual_only",
+      "attrs": {
+        "text": "Contract bootstrap MUST run only via explicit bootstrap CLI invocation and MUST NOT be auto-invoked by other commands.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "bootstrap_manual_only"
+      }
+    },
+    {
+      "id": "invariant:bootstrap_warm_first_default",
+      "kind": "invariant",
+      "label": "bootstrap_warm_first_default",
+      "attrs": {
+        "text": "Default contract bootstrap mode is warm reconcile for an existing Frida deployment; missing Frida markers must HALT with explicit cold/demo redirect.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "bootstrap_warm_first_default"
+      }
+    },
+    {
+      "id": "invariant:bootstrap_demo_zero_deploy_only",
+      "kind": "invariant",
+      "label": "bootstrap_demo_zero_deploy_only",
+      "attrs": {
+        "text": "Demo bootstrap mode is explicit-only and zero-deploy-only.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "bootstrap_demo_zero_deploy_only"
+      }
+    },
+    {
+      "id": "invariant:bootstrap_no_app_contract_writes",
+      "kind": "invariant",
+      "label": "bootstrap_no_app_contract_writes",
+      "attrs": {
+        "text": "Warm and cold-engine bootstrap modes MUST NOT modify app-contract files.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "bootstrap_no_app_contract_writes"
+      }
+    },
+    {
+      "id": "invariant:frida_inbox_no_agent_access",
+      "kind": "invariant",
+      "label": "frida_inbox_no_agent_access",
+      "attrs": {
+        "text": "Agents MUST NOT directly read or modify `.frida/inbox/**`; work must use `.frida/contract/app/**` working copy surfaces.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "frida_inbox_no_agent_access"
+      }
+    },
+    {
+      "id": "invariant:zone_resolution_path_only",
+      "kind": "invariant",
+      "label": "zone_resolution_path_only",
+      "attrs": {
+        "text": "Zone is resolved ONLY by path matching, never by profile keywords or heuristics.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "zone_resolution_path_only"
+      }
+    },
+    {
+      "id": "invariant:guard_chain_structural",
+      "kind": "invariant",
+      "label": "guard_chain_structural",
+      "attrs": {
+        "text": "Guard chain enforcement verifies structural contract conformance, not runtime behavior.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "guard_chain_structural"
+      }
+    },
+    {
+      "id": "invariant:report_on_every_run",
+      "kind": "invariant",
+      "label": "report_on_every_run",
+      "attrs": {
+        "text": "Every agent run MUST produce a job report, regardless of outcome.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "report_on_every_run"
+      }
+    },
+    {
+      "id": "invariant:interfaces_default_public",
+      "kind": "invariant",
+      "label": "interfaces_default_public",
+      "attrs": {
+        "text": "FRIDA_INTERFACE_* blocks are public unless `_visibility: private` is explicitly declared.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "interfaces_default_public"
+      }
+    },
+    {
+      "id": "invariant:private_interfaces_not_deployed",
+      "kind": "invariant",
+      "label": "private_interfaces_not_deployed",
+      "attrs": {
+        "text": "Private interfaces MUST NOT be projected into target-repo Frida contract mirrors.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "private_interfaces_not_deployed"
+      }
+    },
+    {
+      "id": "invariant:frida_tasks_core_repo_only",
+      "kind": "invariant",
+      "label": "frida_tasks_core_repo_only",
+      "attrs": {
+        "text": "`frida-tasks/` is a Frida-core-only task surface. It MUST NOT be created or read outside the Frida repo.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "frida_tasks_core_repo_only"
+      }
+    },
+    {
+      "id": "invariant:tasks_dir_forbidden_in_frida_core",
+      "kind": "invariant",
+      "label": "tasks_dir_forbidden_in_frida_core",
+      "attrs": {
+        "text": "`tasks/` is forbidden as a task surface inside the Frida repo.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "tasks_dir_forbidden_in_frida_core"
+      }
+    },
+    {
+      "id": "invariant:int_frida_zones_private",
+      "kind": "invariant",
+      "label": "int_frida_zones_private",
+      "attrs": {
+        "text": "`INT_FRIDA_ZONES` is a private Frida-core-only routing block. It MUST NOT be projected into target repos.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "int_frida_zones_private"
+      }
+    },
+    {
+      "id": "invariant:layer_file_prefixes_repository_scoped",
+      "kind": "invariant",
+      "label": "layer_file_prefixes_repository_scoped",
+      "attrs": {
+        "text": "Frida core layer files MUST use `FL##-*.yaml`; Frida-managed app layer files MUST use `AL##-*.yaml`.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "layer_file_prefixes_repository_scoped"
+      }
+    },
+    {
+      "id": "invariant:app_template_basic_neutral",
+      "kind": "invariant",
+      "label": "app_template_basic_neutral",
+      "attrs": {
+        "text": "`template_app_basic` MUST remain vendor-neutral and MUST NOT declare backend or implementation-specific app surfaces by default.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_template_basic_neutral"
+      }
+    },
+    {
+      "id": "invariant:app_extensions_link_driven",
+      "kind": "invariant",
+      "label": "app_extensions_link_driven",
+      "attrs": {
+        "text": "App extensions are active only when their AL## layer is linked in the target app contract index. Presence of inactive extension files alone has no effect.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_extensions_link_driven"
+      }
+    },
+    {
+      "id": "invariant:app_update_interfaces_non_inventive",
+      "kind": "invariant",
+      "label": "app_update_interfaces_non_inventive",
+      "attrs": {
+        "text": "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC and FRIDA_INTERFACE_UPDATE_APP_BY_CODE MUST operate only within baseline or already-designed app extensions and MUST NOT invent new backend/vendor structures.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_update_interfaces_non_inventive"
+      }
+    },
+    {
+      "id": "invariant:strict_path_refs",
+      "kind": "invariant",
+      "label": "strict_path_refs",
+      "attrs": {
+        "text": "Literal paths are forbidden outside the PATHS block. Keys MUST end in *Ref.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "strict_path_refs"
+      }
+    },
+    {
+      "id": "invariant:schema_version_fixed",
+      "kind": "invariant",
+      "label": "schema_version_fixed",
+      "attrs": {
+        "text": "All index documents MUST declare schema_version and it MUST equal FRIDA_SCHEMA_SUPPORT.schema_version.supported."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "schema_version_fixed"
+      }
+    },
+    {
+      "id": "invariant:index_format_symmetric",
+      "kind": "invariant",
+      "label": "index_format_symmetric",
+      "attrs": {
+        "text": "FRIDA_INDEX and APP_INDEX MUST use identical index format and the same schema.index/schema.assembled paths."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "index_format_symmetric"
+      }
+    },
+    {
+      "id": "invariant:exports_are_authoritative",
+      "kind": "invariant",
+      "label": "exports_are_authoritative",
+      "attrs": {
+        "text": "Index layers[].exports MUST be the authoritative registry of defined blocks (id+key+path)."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "exports_are_authoritative"
+      }
+    },
+    {
+      "id": "invariant:refs_resolve_via_exports",
+      "kind": "invariant",
+      "label": "refs_resolve_via_exports",
+      "attrs": {
+        "text": "Every Ref/Refs MUST resolve to exactly one exported id in the merged exports registry."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "refs_resolve_via_exports"
+      }
+    },
+    {
+      "id": "invariant:guard_format_uniform",
+      "kind": "invariant",
+      "label": "guard_format_uniform",
+      "attrs": {
+        "text": "Every guards[] entry MUST conform to FRIDA_GUARD_SPEC.guard_format."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "guard_format_uniform"
+      }
+    },
+    {
+      "id": "invariant:invariant_format_uniform",
+      "kind": "invariant",
+      "label": "invariant_format_uniform",
+      "attrs": {
+        "text": "Every invariants[] entry MUST conform to FRIDA_INVARIANT_SPEC.invariant_format."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "invariant_format_uniform"
+      }
+    },
+    {
+      "id": "invariant:ids_neutral",
+      "kind": "invariant",
+      "label": "ids_neutral",
+      "attrs": {
+        "text": "Identifiers MUST be neutral snake_case and MUST NOT contain profanity or jokes."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "ids_neutral"
+      }
+    },
+    {
+      "id": "invariant:no_secondary_id_fields",
+      "kind": "invariant",
+      "label": "no_secondary_id_fields",
+      "attrs": {
+        "text": "Contract blocks MUST NOT contain secondary migration-only id fields; use source_ref if provenance must be preserved."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "no_secondary_id_fields"
+      }
+    },
+    {
+      "id": "invariant:contract_uniformity",
+      "kind": "invariant",
+      "label": "contract_uniformity",
+      "attrs": {
+        "text": "Contract MUST be structured and uniform across blocks."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "contract_uniformity"
+      }
+    },
+    {
+      "id": "invariant:rules_are_prominent",
+      "kind": "invariant",
+      "label": "rules_are_prominent",
+      "attrs": {
+        "text": "Guards and invariants MUST be explicit and easy to extract."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "rules_are_prominent"
+      }
+    },
+    {
+      "id": "invariant:no_interface_spec",
+      "kind": "invariant",
+      "label": "no_interface_spec",
+      "attrs": {
+        "text": "UI/CLI interfaces are out of contract scope and may evolve independently."
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "no_interface_spec"
+      }
+    },
+    {
+      "id": "zone:templates",
+      "kind": "zone",
+      "label": "Templates",
+      "attrs": {
+        "path": "templates/**",
+        "agentsPath": "templates",
+        "readOnly": false
+      },
+      "source": {
+        "block": "INT_FRIDA_ZONES",
+        "id": "templates"
+      }
+    },
+    {
+      "id": "zone:frida_managed",
+      "kind": "zone",
+      "label": "Frida_managed",
+      "attrs": {
+        "path": ".frida/**",
+        "agentsPath": ".frida",
+        "agentsTemplate": "notouch",
+        "readOnly": true
+      },
+      "source": {
+        "block": "INT_FRIDA_ZONES",
+        "id": "frida_managed"
+      }
+    },
+    {
+      "id": "zone:non_templates",
+      "kind": "zone",
+      "label": "Non_templates",
+      "attrs": {
+        "path": "**",
+        "agentsPath": ".",
+        "readOnly": false
+      },
+      "source": {
+        "block": "INT_FRIDA_ZONES",
+        "id": "non_templates"
+      }
+    },
+    {
+      "id": "profile:frida_governance",
+      "kind": "profile",
+      "label": "frida_governance",
+      "attrs": {
+        "keywords": "governance, contract, frida, self-contract",
+        "security": {
+          "read_allow": [
+            "frida-tasks/**",
+            "contract/**",
+            "schemas/**",
+            "src/**",
+            "templates/**",
+            "README.md",
+            "package.json",
+            ".frida/AGENTS.md",
+            ".frida/config.yaml",
+            ".frida/templates/config.template.yaml",
+            ".frida/contract/**",
+            ".frida/reports/*.yaml",
+            "AGENTS.md",
+            "templates/AGENTS.md"
+          ],
+          "edit_allow": [
+            "contract/**",
+            "schemas/**",
+            "src/**",
+            "templates/**",
+            "README.md",
+            "package.json",
+            "frida-tasks/README.md"
+          ],
+          "create_allow": [
+            ".frida/reports/*.yaml"
+          ],
+          "forbid": [
+            ".frida/inbox/**",
+            "tasks/**"
+          ],
+          "edit_forbid": [
+            ".frida/**",
+            "frida-tasks/TASK-*.md",
+            "frida-tasks/**/TASK-*.md",
+            "tasks/**",
+            ".frida/reports/*.yaml"
+          ],
+          "forbiddenAction": "REDIRECT",
+          "redirects": []
+        }
+      },
+      "source": {
+        "block": "FRIDA_TASK_PROFILES",
+        "id": "frida_governance"
+      }
+    },
+    {
+      "id": "profile:frida_task_setter",
+      "kind": "profile",
+      "label": "frida_task_setter",
+      "attrs": {
+        "keywords": "task, formulation, spec, frida-tasks",
+        "security": {
+          "read_allow": [
+            "frida-tasks/**",
+            "contract/**",
+            "schemas/**",
+            "templates/management/**",
+            "AGENTS.md",
+            "templates/AGENTS.md"
+          ],
+          "edit_allow": [],
+          "create_allow": [
+            "frida-tasks/TASK-*.md",
+            ".frida/reports/*.yaml"
+          ],
+          "forbid": [
+            ".frida/inbox/**",
+            "tasks/**"
+          ],
+          "edit_forbid": [
+            "frida-tasks/TASK-*.md",
+            "frida-tasks/**/TASK-*.md",
+            ".frida/reports/*.yaml",
+            "frida-tasks/README.md",
+            "tasks/**"
+          ],
+          "forbiddenAction": "REDIRECT",
+          "redirects": []
+        }
+      },
+      "source": {
+        "block": "FRIDA_TASK_PROFILES",
+        "id": "frida_task_setter"
+      }
+    },
+    {
+      "id": "profile:frida_readonly_observer",
+      "kind": "profile",
+      "label": "frida_readonly_observer",
+      "attrs": {
+        "keywords": "observe, review, audit",
+        "security": {
+          "read_allow": [
+            "**",
+            "templates/AGENTS.md",
+            ".frida/AGENTS.md",
+            "AGENTS.md"
+          ],
+          "edit_allow": [],
+          "create_allow": [
+            ".frida/reports/*.yaml"
+          ],
+          "forbid": [
+            ".frida/inbox/**",
+            "tasks/**"
+          ],
+          "edit_forbid": [
+            "frida-tasks/TASK-*.md",
+            "frida-tasks/**/TASK-*.md",
+            ".frida/reports/*.yaml",
+            "**"
+          ],
+          "forbiddenAction": "REDIRECT",
+          "redirects": []
+        }
+      },
+      "source": {
+        "block": "FRIDA_TASK_PROFILES",
+        "id": "frida_readonly_observer"
+      }
+    },
+    {
+      "id": "path:frida-tasks/**",
+      "kind": "path",
+      "label": "frida-tasks/**",
+      "attrs": {
+        "contractical": "frida-tasks/**"
+      }
+    },
+    {
+      "id": "path:contract/**",
+      "kind": "path",
+      "label": "contract/**",
+      "attrs": {
+        "contractical": "contract/**"
+      }
+    },
+    {
+      "id": "path:schemas/**",
+      "kind": "path",
+      "label": "schemas/**",
+      "attrs": {
+        "contractical": "schemas/**"
+      }
+    },
+    {
+      "id": "path:src/**",
+      "kind": "path",
+      "label": "src/**",
+      "attrs": {
+        "contractical": "src/**"
+      }
+    },
+    {
+      "id": "path:templates/**",
+      "kind": "path",
+      "label": "templates/**",
+      "attrs": {
+        "contractical": "templates/**"
+      }
+    },
+    {
+      "id": "path:README.md",
+      "kind": "path",
+      "label": "README.md",
+      "attrs": {
+        "contractical": "README.md"
+      }
+    },
+    {
+      "id": "path:package.json",
+      "kind": "path",
+      "label": "package.json",
+      "attrs": {
+        "contractical": "package.json"
+      }
+    },
+    {
+      "id": "path:.frida/AGENTS.md",
+      "kind": "path",
+      "label": ".frida/AGENTS.md",
+      "attrs": {
+        "contractical": ".frida/AGENTS.md"
+      }
+    },
+    {
+      "id": "path:.frida/config.yaml",
+      "kind": "path",
+      "label": ".frida/config.yaml",
+      "attrs": {
+        "contractical": ".frida/config.yaml"
+      }
+    },
+    {
+      "id": "path:.frida/templates/config.template.yaml",
+      "kind": "path",
+      "label": ".frida/templates/config.template.yaml",
+      "attrs": {
+        "contractical": ".frida/templates/config.template.yaml"
+      }
+    },
+    {
+      "id": "path:.frida/contract/**",
+      "kind": "path",
+      "label": ".frida/contract/**",
+      "attrs": {
+        "contractical": ".frida/contract/**"
+      }
+    },
+    {
+      "id": "path:.frida/reports/*.yaml",
+      "kind": "path",
+      "label": ".frida/reports/*.yaml",
+      "attrs": {
+        "contractical": ".frida/reports/*.yaml"
+      }
+    },
+    {
+      "id": "path:AGENTS.md",
+      "kind": "path",
+      "label": "AGENTS.md",
+      "attrs": {
+        "contractical": "AGENTS.md"
+      }
+    },
+    {
+      "id": "path:templates/AGENTS.md",
+      "kind": "path",
+      "label": "templates/AGENTS.md",
+      "attrs": {
+        "contractical": "templates/AGENTS.md"
+      }
+    },
+    {
+      "id": "path:frida-tasks/README.md",
+      "kind": "path",
+      "label": "frida-tasks/README.md",
+      "attrs": {
+        "contractical": "frida-tasks/README.md"
+      }
+    },
+    {
+      "id": "path:.frida/inbox/**",
+      "kind": "path",
+      "label": ".frida/inbox/**",
+      "attrs": {
+        "contractical": ".frida/inbox/**"
+      }
+    },
+    {
+      "id": "path:tasks/**",
+      "kind": "path",
+      "label": "tasks/**",
+      "attrs": {
+        "contractical": "tasks/**"
+      }
+    },
+    {
+      "id": "path:.frida/**",
+      "kind": "path",
+      "label": ".frida/**",
+      "attrs": {
+        "contractical": ".frida/**"
+      }
+    },
+    {
+      "id": "path:frida-tasks/TASK-*.md",
+      "kind": "path",
+      "label": "frida-tasks/TASK-*.md",
+      "attrs": {
+        "contractical": "frida-tasks/TASK-*.md"
+      }
+    },
+    {
+      "id": "path:frida-tasks/**/TASK-*.md",
+      "kind": "path",
+      "label": "frida-tasks/**/TASK-*.md",
+      "attrs": {
+        "contractical": "frida-tasks/**/TASK-*.md"
+      }
+    },
+    {
+      "id": "path:templates/management/**",
+      "kind": "path",
+      "label": "templates/management/**",
+      "attrs": {
+        "contractical": "templates/management/**"
+      }
+    },
+    {
+      "id": "path:**",
+      "kind": "path",
+      "label": "**",
+      "attrs": {
+        "contractical": "**"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "profile:frida_task_setter",
+      "to": "invariant:no_scope_creep",
+      "kind": "requires"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "invariant:contract_not_runtime",
+      "kind": "requires"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:frida-tasks/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:contract/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:schemas/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:src/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:templates/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:README.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:package.json",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/config.yaml",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/templates/config.template.yaml",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/contract/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:templates/AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:contract/**",
+      "kind": "may_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:schemas/**",
+      "kind": "may_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:src/**",
+      "kind": "may_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:templates/**",
+      "kind": "may_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:README.md",
+      "kind": "may_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:package.json",
+      "kind": "may_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:frida-tasks/README.md",
+      "kind": "may_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/inbox/**",
+      "kind": "forbidden"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:tasks/**",
+      "kind": "forbidden"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/**",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:frida-tasks/TASK-*.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:frida-tasks/**/TASK-*.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:tasks/**",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "may_create"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:frida-tasks/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:contract/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:schemas/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:templates/management/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:templates/AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:.frida/inbox/**",
+      "kind": "forbidden"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:tasks/**",
+      "kind": "forbidden"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:frida-tasks/TASK-*.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:frida-tasks/**/TASK-*.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:frida-tasks/README.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:tasks/**",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:frida-tasks/TASK-*.md",
+      "kind": "may_create"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "may_create"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:templates/AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:.frida/AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:.frida/inbox/**",
+      "kind": "forbidden"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:tasks/**",
+      "kind": "forbidden"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:frida-tasks/TASK-*.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:frida-tasks/**/TASK-*.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:**",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "may_create"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "zone:templates",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "zone:frida_managed",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "zone:non_templates",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "zone:templates",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "zone:non_templates",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "zone:templates",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "zone:frida_managed",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_readonly_observer",
+      "to": "zone:non_templates",
+      "kind": "may_access_zone"
+    }
+  ]
+}

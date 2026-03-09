@@ -25,10 +25,13 @@ function parseArgs(args: string[]): BuildArgs {
     return result;
 }
 
-function getBlockVisibility(block: unknown): BlockVisibility | undefined {
+function getBlockVisibility(key: string, block: unknown): BlockVisibility | undefined {
     if (block && typeof block === 'object' && '_visibility' in block) {
         const v = (block as Record<string, unknown>)._visibility;
         if (v === 'public' || v === 'private') return v;
+    }
+    if (key.startsWith('FRIDA_INTERFACE_')) {
+        return 'public';
     }
     return undefined;
 }
@@ -58,7 +61,7 @@ function filterPublicBlocks(contract: Record<string, any>): Record<string, any> 
             continue;
         }
 
-        const visibility = getBlockVisibility(value);
+        const visibility = getBlockVisibility(key, value);
         if (visibility === 'public') {
             const cleaned = { ...value };
             delete cleaned._visibility;

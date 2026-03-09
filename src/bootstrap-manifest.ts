@@ -6,10 +6,10 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { fileURLToPath } from 'url';
 
-export type BootstrapPackageMode = 'warm' | 'cold-engine' | 'demo';
+export type BootstrapPackageMode = 'warm' | 'cold-engine' | 'demo' | 'zero-start';
 export type BootstrapOwnershipClass = 'engine_static' | 'engine_generated' | 'user_owned' | 'user_data' | 'demo_only';
 export type BootstrapEntryKind = 'file' | 'dir' | 'tree';
-export type BootstrapEntryApplyMode = 'copy' | 'ensure_dir' | 'generated';
+export type BootstrapEntryApplyMode = 'copy' | 'ensure_dir' | 'generated' | 'seed_if_absent';
 
 export interface BootstrapPackageManifestEntry {
   id: string;
@@ -102,24 +102,24 @@ function ensureManifestSchemaValid(manifest: unknown, schemaPath: string): void 
   }
 }
 
-function ensureCopyEntrySourceAndHash(
+function ensureStaticEntrySourceAndHash(
   packageRoot: string,
   manifest: BootstrapPackageManifest,
   entry: BootstrapPackageManifestEntry
 ): void {
-  if (entry.apply_mode !== 'copy') return;
+  if (entry.apply_mode !== 'copy' && entry.apply_mode !== 'seed_if_absent') return;
 
   if (entry.kind !== 'file') {
     throw new BootstrapManifestLoadError(
       'BOOTSTRAP_PACKAGE_MANIFEST_INVALID',
-      `unsupported copy entry kind for ${entry.id}: ${entry.kind} (only kind=file is supported)`
+      `unsupported ${entry.apply_mode} entry kind for ${entry.id}: ${entry.kind} (only kind=file is supported)`
     );
   }
 
   if (!entry.source || entry.source.trim().length === 0) {
     throw new BootstrapManifestLoadError(
       'BOOTSTRAP_PACKAGE_MANIFEST_INVALID',
-      `copy entry ${entry.id} is missing source`
+      `${entry.apply_mode} entry ${entry.id} is missing source`
     );
   }
 
@@ -129,7 +129,7 @@ function ensureCopyEntrySourceAndHash(
   if (!entry.sha256) {
     throw new BootstrapManifestLoadError(
       'BOOTSTRAP_PACKAGE_MANIFEST_INVALID',
-      `copy entry ${entry.id} is missing sha256`
+      `${entry.apply_mode} entry ${entry.id} is missing sha256`
     );
   }
 
@@ -143,7 +143,16 @@ function ensureCopyEntrySourceAndHash(
 }
 
 export function entryAppliesToMode(entry: BootstrapPackageManifestEntry, mode: BootstrapPackageMode): boolean {
-  return !entry.modes || entry.modes.length === 0 || entry.modes.includes(mode);
+  if (!entry.modes || entry.modes.length === 0) {
+    return true;
+  }
+
+  if (entry.modes.includes(mode)) {
+    return true;
+  }
+
+  // Zero-start is defined as cold-engine surface deployment plus template_app_basic-only seeds.
+  return mode === 'zero-start' && entry.modes.includes('cold-engine');
 }
 
 export function loadBootstrapPackageManifest(packageRoot: string = DEFAULT_PACKAGE_ROOT): LoadedBootstrapPackageManifest {
@@ -175,7 +184,7 @@ export function loadBootstrapPackageManifest(packageRoot: string = DEFAULT_PACKA
   const manifest = parsed as BootstrapPackageManifest;
 
   for (const entry of manifest.entries) {
-    ensureCopyEntrySourceAndHash(packageRoot, manifest, entry);
+    ensureStaticEntrySourceAndHash(packageRoot, manifest, entry);
   }
 
   return {

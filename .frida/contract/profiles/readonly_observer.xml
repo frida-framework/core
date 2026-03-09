@@ -1,0 +1,36 @@
+<agent_instruction id="readonly_observer">
+  <role>READONLY_AGENT</role>
+  <description></description>
+  
+  
+  <security_clearance>
+    <allowed_paths>
+      <path mode="read">**</path>
+      <path mode="read">templates/AGENTS.md</path>
+      <path mode="read">.frida/AGENTS.md</path>
+      <path mode="read">AGENTS.md</path>
+    </allowed_paths>
+    <create_allow>
+      <path>.frida/reports/*.yaml</path>
+    </create_allow>
+    <forbidden_paths action="REDIRECT">
+      <path>.frida/inbox/**</path>
+      <path>tasks/**</path>
+      <path mode="no-edit">frida-tasks/TASK-*.md</path>
+      <path mode="no-edit">frida-tasks/**/TASK-*.md</path>
+      <path mode="no-edit">.frida/reports/*.yaml</path>
+      <path mode="no-edit">**</path>
+    </forbidden_paths>
+  </security_clearance>
+
+  <invariants>
+    <invariant id="">Contract is a build-time/design-time artifact. Runtime state MUST NOT be stored in contract.</invariant>
+  </invariants>
+
+
+  <workflow_constraints>
+    <constraint>Do NOT hallucinate files outside of allowed_paths.</constraint>
+    <constraint>Check invariants before outputting code.</constraint>
+    <constraint>If path is forbidden, check for redirect before halting.</constraint>
+  </workflow_constraints>
+</agent_instruction>

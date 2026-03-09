@@ -1,0 +1,12 @@
+# FRIDA runtime config template (engine-managed reference)
+# Compare this file with .frida/config.yaml when upgrading the engine.
+# Copy missing keys into the runtime config file manually; FRIDA does not overwrite user-owned runtime config values.
+
+version: "1.1"
+APP_CONTRACT_SSOT: REPO.LOCAL
+reporting:
+  collect_in_repo: true
+  repo_path: .frida/reports
+  file_ext: .yaml
+  filename_pattern: <unixtime_ms>_<profile_id>_<task_or_run>.yaml
+  exists_check: false

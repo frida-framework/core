@@ -1,4 +1,4 @@
-# ─── LAYER 8: MANAGEMENT ───────────────────────────────────────────────────
+# ─── FRIDA LAYER FL11: MANAGEMENT ──────────────────────────────────────────
 # Purpose: Interfaces for interacting with the contract — how to read, verify,
 #          and change it. Specs, guards, antitasks, update/verify/taskset protocols.
 #          Also defines version policy for package, contract, and schema.
@@ -188,8 +188,7 @@ FRIDA_INTERFACE_VERIFY:
       description: "Check visual overlay freshness."
       protocol: "frida-core visual check"
     quality_check:
-      description: "Compute quality metrics from CONTRACT_MANAGEMENT_INTERFACE."
-      metrics_ref: CONTRACT_MANAGEMENT_INTERFACE.quality_metrics
+      description: "Compute contract quality metrics per internal self-contract management policy."
 
 FRIDA_INTERFACE_AUDIT:
   _visibility: public
@@ -197,7 +196,12 @@ FRIDA_INTERFACE_AUDIT:
   version: 1.0.0
   purpose: "Deployment readiness audit: validate contract structure, routing, and Frida surface integrity."
   playbook_ref: "templates/management/AGENT-repo-audit.md"
-  requires_profile: readonly_observer
+  requires_profile_source: repository_scoped_profile_block
+  requires_profiles:
+    frida_repo:
+      - frida_readonly_observer
+    target_app_repo:
+      - app_readonly_observer
   operations:
     deployment_check:
       description: "Verify Frida deployment structure (.frida/ layout, markers, config)."
@@ -217,7 +221,7 @@ FRIDA_INTERFACE_AUDIT:
         - "Verify root AGENTS.md exists and references correct paths"
         - "Verify ROUTER.xml exists at .frida/contract/specs/"
         - "Verify profile XMLs exist at .frida/contract/profiles/"
-        - "Verify zone AGENTS.md files match contract ZONES"
+        - "Verify zone AGENTS.md files match the repository-scoped zone block (`ZONES` in target repos, private internal-zone block in repo `frida`)."
     cli_diagnostics:
       description: "Run automated CLI diagnostics."
       commands:
@@ -239,29 +243,46 @@ FRIDA_INTERFACE_AUDIT:
     - diagnostics
     - health-check
 
-CONTRACT_MANAGEMENT_INTERFACE:
-  _visibility: public
-  id: contract-management-interface
+FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
+  _visibility: private
+  id: frida-interface-self-contract-management
   version: 1.0.0
   purpose: >-
-    Engine-level contract management: change protocol language,
+    Repo-local Frida self-contract management: change protocol language,
     quality metrics, consistency checks, diagnostic framework,
-    contract fixer role, and audit format.
+    contract fixer role, audit format, and self-task output policy.
     Implementation details in engine playbooks (templates/management/).
+  repository_scope: frida_repo_only
+  mutation_scope: frida_contract_only
+  forbidden_targets:
+    - target_app_contract
+    - target_app_repo_code
+  deployment_scope: not_deployed_to_target_repo
+  task_output_policy:
+    output_dir: "frida-tasks"
+    file_pattern: "frida-tasks/TASK-*.md"
+    rule: "This is the only interface allowed to produce task files inside the Frida repo."
 
-  canon_composition:
-    purpose: "Canon consists of two groups that must stay synchronized."
+  contract_composition:
+    purpose: "Contract consists of two groups that must stay synchronized."
     groups:
       - id: contracts
         description: "Normative data (contract blocks)."
       - id: protocols
-        description: "Rules for working with canon: routing, governance, playbooks."
+        description: "Rules for working with contract: routing, interfaces, playbooks."
     rule: "When contracts change, check if protocols need updating, and vice versa."
 
   change_protocol:
     purpose: "Normative language for structural contract changes."
     operations: [ADD, UPDATE, MOVE, DEPRECATE, REFCHECK, GUARDCHECK, PROFILECHECK, FENCECHECK, DUPCHECK, RESERVED_CHECK, CONTRACT-DIFF]
     playbook_ref: "templates/management/AGENT-contract-update.md"
+    maintenance_steps:
+      - id: manifest_hash_sync
+        tool_ref: "FRIDA_TEMPLATE_HASH_TOOL"
+        rule: "If a self-contract patch changes any manifest-declared static asset, run the hash tool before final verification."
+      - id: manual_hash_update
+        tool_ref: "FRIDA_TEMPLATE_HASH_TOOL"
+        rule: "The hash tool is verify-only. If it reports drift, update sha256 entries manually in the affected manifest(s) within the same patch."
 
   quality_metrics:
     purpose: "Definitions of contract quality measurements."
@@ -318,39 +339,67 @@ CONTRACT_MANAGEMENT_INTERFACE:
         description: "References to shared blocks (GLOSSARY, DATABASE_SCHEMA, RESOURCES) — refs only, not copies."
     constraint: "Total file size MUST fit in agent context window for task formulation."
 
-FRIDA_INTERFACE_UPDATE_SPEC:
+FRIDA_INTERFACE_UPDATE_APP_BY_SPEC:
   _visibility: public
-  id: frida-interface-update-spec
+  id: frida-interface-update-app-by-spec
   version: 1.0.0
-  purpose: "Extend or modify contract based on specification / task description."
+  purpose: "Extend or modify the target application contract based on specification / task description, using only baseline template semantics and already-designed app extensions."
+  repository_scope: target_app_repo_only
+  mutation_scope: target_app_contract_only
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - frida_tasks_directory
+  deployment_scope: public
   input:
     format: natural_language
     context:
-      - current_contract
+      - current_app_contract
       - target_block
       - schema_ref
   output:
     format: yaml
     requires_approval: true
+  extension_resolution:
+    source_of_truth: "target app contract index links plus Frida-shipped extension layers"
+    known_inactive_extension:
+      action: HALT
+      rule: "If the requested capability is covered by a shipped but inactive extension, do not invent its structure. Return the exact extension ids and layer links required for activation."
+    unknown_extension_need:
+      action: HALT
+      error_code: requires_new_frida_extension
+      rule: "If no shipped extension covers the requested capability or implementation, stop instead of synthesizing new backend/vendor structures."
+    invention_forbidden:
+      - vendor_specific_zones
+      - vendor_specific_profiles
+      - backend_path_models
+      - implementation_specific_tooling_bindings
   version_impact:
     evaluate: always
     rule: "After applying changes, determine affected version domains (contract, schema, package) and bump per FRIDA_VERSION_POLICY."
     ref: FRIDA_VERSION_POLICY
   protocols:
     update:
-      description: "Apply changes to contract via structured patch."
+      description: "Apply changes to the target app contract via structured patch."
       playbook_ref: "templates/management/AGENT-contract-update.md"
       requires_role: ARCHITECT_AGENT
     repair:
-      description: "Fix contract inconsistencies (broken refs, missing blocks)."
+      description: "Fix target app contract inconsistencies (broken refs, missing blocks)."
       playbook_ref: "templates/management/AGENT-contract-repair.md"
       requires_role: ARCHITECT_AGENT
 
-FRIDA_INTERFACE_UPDATE_CODE:
+FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
   _visibility: public
-  id: frida-interface-update-code
+  id: frida-interface-update-app-by-code
   version: 1.0.0
-  purpose: "Extract and extend contract specification from existing codebase."
+  purpose: "Extend or repair the target application contract from implemented target application code when code outpaces contract, using only baseline template semantics and already-designed app extensions."
+  repository_scope: target_app_repo_only
+  mutation_scope: target_app_contract_only
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - frida_tasks_directory
+  deployment_scope: public
   input:
     format: source_code
     supported_languages:
@@ -361,13 +410,27 @@ FRIDA_INTERFACE_UPDATE_CODE:
   output:
     format: yaml
     requires_approval: true
+  extension_resolution:
+    source_of_truth: "target app contract index links plus Frida-shipped extension layers"
+    known_inactive_extension:
+      action: HALT
+      rule: "If code implies a shipped but inactive extension, stop and require explicit extension activation instead of inventing a parallel contract structure."
+    unknown_extension_need:
+      action: HALT
+      error_code: requires_new_frida_extension
+      rule: "If code implies a capability with no shipped extension, stop and escalate to Frida self-contract management."
+    invention_forbidden:
+      - vendor_specific_zones
+      - vendor_specific_profiles
+      - backend_path_models
+      - implementation_specific_tooling_bindings
   version_impact:
     evaluate: always
-    rule: "After extracting contract from code, compare with declared contract. If new blocks/fields added, bump contract version per FRIDA_VERSION_POLICY."
+    rule: "After extracting app contract from code, compare with declared app contract. If new blocks/fields added, bump contract version per FRIDA_VERSION_POLICY."
     ref: FRIDA_VERSION_POLICY
   use_cases:
     - "Onboard existing project to Frida."
-    - "Background consistency loop: re-extract contract from code, diff against declared contract."
+    - "Background consistency loop: re-extract app contract from code, diff against declared app contract."
 
 FRIDA_INTERFACE_TASKSET:
   _visibility: public
@@ -384,20 +447,33 @@ FRIDA_INTERFACE_TASKSET:
     required_fields:
       - action: "What to do — concrete, unambiguous."
       - files: "Paths or zones affected."
-      - profile_id: "Id from FRIDA_TASK_PROFILES."
+      - interface_ref: "Source interface that authorizes the task output."
+      - profile_id: "Id from the repository-scoped profile block."
       - contract_requirements: "Guards/invariants/terms embedded explicitly."
       - verification_command: "Usually 'npm run verify', may differ by zone."
     optional_fields:
       - specific_invariants: "Task-specific invariant checks."
     forbidden: "Referencing wiki or contract by link instead of embedding requirements."
+  output_bindings:
+    frida_core:
+      interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+      repository_scope: frida_repo_only
+      file_pattern: "frida-tasks/TASK-*.md"
+      rule: "This is the only allowed task output surface inside the Frida repo."
+    target_app:
+      interface_refs:
+        - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+        - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      repository_scope: target_app_repo_only
+      frida_repo_output: forbidden
   readiness_checklist:
     contract_ready:
       - "Feature described in the appropriate contract:* block."
       - "All terms used in the task defined in contract:GLOSSARY."
     frida_ready:
-      - "Zone for target files exists in ZONES."
+      - "Zone for target files exists in the repository-scoped zone block (`ZONES` in target repos, private internal-zone block in repo `frida`)."
       - "Antitask generated after last contract update."
-      - "Profile covers target paths via edit_allowGlobRefs."
+      - "Repository-scoped profile covers target paths via edit_allow/edit_allowGlobRefs."
       - "Profile invariants are current for the task."
     version_check:
       - "Contract version matches CONTRACT_META.version (FRIDA_VERSION_POLICY.invariants.version.contract_meta_sync)."
@@ -405,8 +481,9 @@ FRIDA_INTERFACE_TASKSET:
     scope_check:
       - "Task does not add functionality beyond what is described in contract."
       - "If new functionality needed — update contract first."
+      - "If task semantics require a shipped but inactive app extension, task formulation MUST HALT and require explicit extension activation."
+      - "Task output path matches the repository scope of interface_ref."
   audit_task_format:
-    scoring_ref: CONTRACT_MANAGEMENT_INTERFACE.audit_format
     playbook_ref: "templates/management/AGENT-repo-audit.md"
     determinism:
       - "Profiles sorted by name."

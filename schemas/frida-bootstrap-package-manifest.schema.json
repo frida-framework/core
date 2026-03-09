@@ -4,7 +4,12 @@
   "title": "FRIDA Bootstrap Package Manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "manifest_id", "assets_root", "entries"],
+  "required": [
+    "version",
+    "manifest_id",
+    "assets_root",
+    "entries"
+  ],
   "properties": {
     "version": {
       "type": "string",
@@ -24,7 +29,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "target", "kind", "ownership_class", "apply_mode"],
+        "required": [
+          "id",
+          "target",
+          "kind",
+          "ownership_class",
+          "apply_mode"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -40,15 +51,30 @@
           },
           "kind": {
             "type": "string",
-            "enum": ["file", "dir", "tree"]
+            "enum": [
+              "file",
+              "dir",
+              "tree"
+            ]
           },
           "ownership_class": {
             "type": "string",
-            "enum": ["engine_static", "engine_generated", "user_owned", "user_data", "demo_only"]
+            "enum": [
+              "engine_static",
+              "engine_generated",
+              "user_owned",
+              "user_data",
+              "demo_only"
+            ]
           },
           "apply_mode": {
             "type": "string",
-            "enum": ["copy", "ensure_dir", "generated"]
+            "enum": [
+              "copy",
+              "ensure_dir",
+              "generated",
+              "seed_if_absent"
+            ]
           },
           "sha256": {
             "type": "string",
@@ -58,7 +84,12 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["warm", "cold-engine", "demo"]
+              "enum": [
+                "warm",
+                "cold-engine",
+                "demo",
+                "zero-start"
+              ]
             },
             "uniqueItems": true
           },

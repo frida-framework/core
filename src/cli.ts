@@ -16,9 +16,9 @@ Usage:
   frida-core gen
   frida-core migration-report
   frida-core init [--contract <path>] [--dry-run]
-  frida-core bootstrap --target <dir> [--mode warm|cold-engine|demo] [--dry-run]
+  frida-core bootstrap --target <dir> [--mode warm|cold-engine|demo|zero-start] [--dry-run]
   frida-core bootstrap --component <name> [--target <dir>]
-  frida-core visualize [--check] [args...]
+  frida-core visual [--check] [args...]
   frida-core report [check|path|write] [args...]
   frida-core check contract-set [--include-frida-internal]
   frida-core check [zone args...]
@@ -51,6 +51,7 @@ async function run(): Promise<number> {
       return runFridaInitCli(args);
     case 'bootstrap':
       return runFridaBootstrapCli(args);
+    case 'visual':
     case 'visualize':
       return runFridaVisualCli(args);
     case 'report':
