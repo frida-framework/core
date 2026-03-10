@@ -1,5 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import {
+  getManifestEntryTargetOrThrow,
+  loadBootstrapPackageManifest,
+} from './bootstrap-manifest.ts';
+import { GENERATED_SURFACE_MARKERS } from './frida-surface-policy.ts';
+
+const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export interface FridaDeploymentMarkers {
   runtimeConfigTemplate: boolean;
@@ -21,6 +29,19 @@ export interface FridaDeploymentDetection {
   markers: FridaDeploymentMarkers;
 }
 
+interface DeploymentMarkerPaths {
+  runtimeConfigTemplateFile: string;
+  contractSpecsRouterFile: string;
+  retiredFridaSpecsRouterFile: string;
+  retiredSpecsRouterFile: string;
+  contractProfilesDir: string;
+  retiredFridaProfilesDir: string;
+  retiredSpecsProfilesDir: string;
+  bootloaderAgentsFile: string;
+  fridaContractBootloaderAgentsFile: string;
+  fridaManagedZoneAgentsFile: string;
+}
+
 function isNonEmptyDir(dirPath: string): boolean {
   if (!fs.existsSync(dirPath)) return false;
   if (!fs.statSync(dirPath).isDirectory()) return false;
@@ -35,28 +56,40 @@ function fileContainsAll(filePath: string, requiredSnippets: string[]): boolean 
   return requiredSnippets.every((snippet) => content.includes(snippet));
 }
 
+function loadDeploymentMarkerPaths(): DeploymentMarkerPaths {
+  const { manifest } = loadBootstrapPackageManifest(PACKAGE_ROOT);
+  const contractSpecsRoot = getManifestEntryTargetOrThrow(manifest, 'frida_contract_specs_root');
+  const retiredFridaSpecsRoot = getManifestEntryTargetOrThrow(manifest, 'cleanup_frida_specs_root');
+  const retiredSpecsRoot = getManifestEntryTargetOrThrow(manifest, 'cleanup_specs_root');
+
+  return {
+    runtimeConfigTemplateFile: getManifestEntryTargetOrThrow(manifest, 'frida_runtime_config_template'),
+    contractSpecsRouterFile: path.posix.join(contractSpecsRoot, 'ROUTER.xml'),
+    retiredFridaSpecsRouterFile: path.posix.join(retiredFridaSpecsRoot, 'ROUTER.xml'),
+    retiredSpecsRouterFile: path.posix.join(retiredSpecsRoot, 'ROUTER.xml'),
+    contractProfilesDir: getManifestEntryTargetOrThrow(manifest, 'frida_contract_profiles_root'),
+    retiredFridaProfilesDir: getManifestEntryTargetOrThrow(manifest, 'cleanup_frida_profiles_root'),
+    retiredSpecsProfilesDir: path.posix.join(retiredSpecsRoot, 'profiles'),
+    bootloaderAgentsFile: getManifestEntryTargetOrThrow(manifest, 'frida_bootloader_agents'),
+    fridaContractBootloaderAgentsFile: getManifestEntryTargetOrThrow(manifest, 'frida_bootloader_agents_internal'),
+    fridaManagedZoneAgentsFile: getManifestEntryTargetOrThrow(manifest, 'frida_managed_zone_agents'),
+  };
+}
+
 export function detectFridaDeployment(targetDir: string): FridaDeploymentDetection {
   const absoluteTargetDir = path.resolve(targetDir);
+  const markerPaths = loadDeploymentMarkerPaths();
   const markers: FridaDeploymentMarkers = {
-    runtimeConfigTemplate: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'templates', 'config.template.yaml')),
-    contractSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'contract', 'specs', 'ROUTER.xml')),
-    retiredFridaSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.frida', 'specs', 'ROUTER.xml')),
-    retiredSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, '.specs', 'ROUTER.xml')),
-    contractProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, '.frida', 'contract', 'profiles')),
-    retiredFridaProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, '.frida', 'profiles')),
-    retiredSpecsProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, '.specs', 'profiles')),
-    bootloaderAgents: fileContainsAll(path.join(absoluteTargetDir, 'AGENTS.md'), [
-      'AUTO-GENERATED FROM CONTRACT',
-      'FRIDA',
-    ]),
-    fridaContractBootloaderAgents: fileContainsAll(path.join(absoluteTargetDir, '.frida', 'contract', 'AGENTS.md'), [
-      'AUTO-GENERATED FROM CONTRACT',
-      'FRIDA',
-    ]),
-    fridaManagedZoneAgents: fileContainsAll(path.join(absoluteTargetDir, '.frida', 'AGENTS.md'), [
-      'AUTO-GENERATED FROM CONTRACT',
-      'FRIDA',
-    ]),
+    runtimeConfigTemplate: fs.existsSync(path.join(absoluteTargetDir, markerPaths.runtimeConfigTemplateFile)),
+    contractSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, markerPaths.contractSpecsRouterFile)),
+    retiredFridaSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, markerPaths.retiredFridaSpecsRouterFile)),
+    retiredSpecsRouter: fs.existsSync(path.join(absoluteTargetDir, markerPaths.retiredSpecsRouterFile)),
+    contractProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, markerPaths.contractProfilesDir)),
+    retiredFridaProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, markerPaths.retiredFridaProfilesDir)),
+    retiredSpecsProfilesDir: isNonEmptyDir(path.join(absoluteTargetDir, markerPaths.retiredSpecsProfilesDir)),
+    bootloaderAgents: fileContainsAll(path.join(absoluteTargetDir, markerPaths.bootloaderAgentsFile), [...GENERATED_SURFACE_MARKERS]),
+    fridaContractBootloaderAgents: fileContainsAll(path.join(absoluteTargetDir, markerPaths.fridaContractBootloaderAgentsFile), [...GENERATED_SURFACE_MARKERS]),
+    fridaManagedZoneAgents: fileContainsAll(path.join(absoluteTargetDir, markerPaths.fridaManagedZoneAgentsFile), [...GENERATED_SURFACE_MARKERS]),
   };
 
   const markerCount = Object.values(markers).filter(Boolean).length;

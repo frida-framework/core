@@ -53,8 +53,17 @@
             "interface_term": {
               "type": "string"
             },
+            "playbook_term": {
+              "type": "string"
+            },
+            "surface_term": {
+              "type": "string"
+            },
             "interface_visibility_default": {
               "type": "string"
+            },
+            "instruction_surface_classes": {
+              "type": "object"
             },
             "interface_boundaries": {
               "type": "object"
@@ -164,10 +173,6 @@
         },
         "pathRefs": {
           "type": "object",
-          "required": [
-            "templatesFrida",
-            "templatesDocs"
-          ],
           "properties": {
             "canonArtifact": {
               "type": "string"
@@ -446,9 +451,7 @@
             "profiles_rootRef",
             "docs_policyDirRef",
             "docs_referenceDirRef",
-            "frida_internalRef",
-            "templates_fridaRef",
-            "templates_docsRef"
+            "frida_internalRef"
           ]
         },
         "reporting": {
@@ -1341,6 +1344,9 @@
           "type": "string",
           "const": "not_deployed_to_target_repo"
         },
+        "instruction_contract": {
+          "type": "object"
+        },
         "task_output_policy": {
           "type": "object"
         },
@@ -1391,6 +1397,9 @@
           "type": "string",
           "const": "public"
         },
+        "instruction_contract": {
+          "type": "object"
+        },
         "input": {
           "type": "object"
         },
@@ -1437,6 +1446,9 @@
         "deployment_scope": {
           "type": "string",
           "const": "public"
+        },
+        "instruction_contract": {
+          "type": "object"
         },
         "input": {
           "type": "object"

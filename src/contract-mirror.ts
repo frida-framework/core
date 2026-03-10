@@ -1,6 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
+import {
+  DEPLOYED_MANAGEMENT_PLAYBOOK_PREFIX,
+  PROJECTED_INTERNAL_ONLY_KEYS,
+  PROJECTED_SOURCE_ONLY_PREFIXES,
+  PROJECTED_STRING_REPLACEMENTS,
+  SOURCE_MANAGEMENT_PLAYBOOK_PREFIX,
+} from './frida-surface-policy.ts';
 
 export const APP_CONTRACT_SOURCE_DIR_REL_PATH = '.frida/inbox/app-contract';
 export const APP_CONTRACT_SOURCE_INDEX_REL_PATH = `${APP_CONTRACT_SOURCE_DIR_REL_PATH}/contract.index.yaml`;
@@ -9,7 +16,8 @@ export const APP_CONTRACT_INBOX_DIR_REL_PATH = APP_CONTRACT_SOURCE_DIR_REL_PATH;
 export const APP_CONTRACT_INBOX_INDEX_REL_PATH = APP_CONTRACT_SOURCE_INDEX_REL_PATH;
 export const FRIDA_CONTRACT_APP_MIRROR_DIR_REL_PATH = '.frida/contract/app';
 export const FRIDA_CONTRACT_ENGINE_MIRROR_DIR_REL_PATH = '.frida/contract/frida';
-export const FRIDA_TEMPLATES_DIR_REL_PATH = '.frida/templates';
+
+const PROJECTED_INTERNAL_ONLY_KEY_SET = new Set(PROJECTED_INTERNAL_ONLY_KEYS);
 
 export class ContractMirrorError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -93,14 +101,39 @@ function isNonDeployableBlockRef(value: string, nonDeployableBlocks: Set<string>
   return false;
 }
 
-function sanitizeProjectedNode(node: unknown, nonDeployableBlocks: Set<string>): unknown {
+function rewriteProjectedString(key: string | null, value: string, nonDeployableBlocks: Set<string>): string | undefined {
+  if (isNonDeployableBlockRef(value, nonDeployableBlocks)) {
+    return undefined;
+  }
+
+  if (key === 'source_playbook_ref') {
+    return undefined;
+  }
+
+  if ((key === 'playbook_ref' || key === 'deployed_playbook_ref') && value.startsWith(SOURCE_MANAGEMENT_PLAYBOOK_PREFIX)) {
+    return `${DEPLOYED_MANAGEMENT_PLAYBOOK_PREFIX}${value.slice(SOURCE_MANAGEMENT_PLAYBOOK_PREFIX.length)}`;
+  }
+
+  if (PROJECTED_SOURCE_ONLY_PREFIXES.some((prefix) => value.startsWith(prefix))) {
+    return undefined;
+  }
+
+  let rewritten = value;
+  for (const [from, to] of PROJECTED_STRING_REPLACEMENTS) {
+    rewritten = rewritten.replaceAll(from, to);
+  }
+
+  return rewritten;
+}
+
+function sanitizeProjectedNode(node: unknown, nonDeployableBlocks: Set<string>, key: string | null = null): unknown {
   if (typeof node === 'string') {
-    return isNonDeployableBlockRef(node, nonDeployableBlocks) ? undefined : node;
+    return rewriteProjectedString(key, node, nonDeployableBlocks);
   }
 
   if (Array.isArray(node)) {
     return node
-      .map((item) => sanitizeProjectedNode(item, nonDeployableBlocks))
+      .map((item) => sanitizeProjectedNode(item, nonDeployableBlocks, key))
       .filter((item) => item !== undefined);
   }
 
@@ -119,10 +152,13 @@ function sanitizeProjectedNode(node: unknown, nonDeployableBlocks: Set<string>):
 
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(node)) {
+    if (PROJECTED_INTERNAL_ONLY_KEY_SET.has(key as (typeof PROJECTED_INTERNAL_ONLY_KEYS)[number])) {
+      continue;
+    }
     if (nonDeployableBlocks.has(key)) {
       continue;
     }
-    const sanitized = sanitizeProjectedNode(value, nonDeployableBlocks);
+    const sanitized = sanitizeProjectedNode(value, nonDeployableBlocks, key);
     if (sanitized !== undefined) {
       result[key] = sanitized;
     }
@@ -160,6 +196,29 @@ function sanitizeProjectedContractMirror(targetDir: string, nonDeployableBlocks:
   }
 }
 
+function rewriteProjectedMirrorIndexPaths(targetDir: string): void {
+  const indexPath = path.join(targetDir, 'contract.index.yaml');
+  if (!fs.existsSync(indexPath) || !fs.statSync(indexPath).isFile()) {
+    return;
+  }
+
+  const parsed = yaml.parse(fs.readFileSync(indexPath, 'utf-8'));
+  if (!isPlainObject(parsed) || !Array.isArray(parsed.layers)) {
+    return;
+  }
+
+  for (const layer of parsed.layers) {
+    if (!isPlainObject(layer) || typeof layer.path !== 'string') {
+      continue;
+    }
+    if (layer.path.startsWith('contract/')) {
+      layer.path = layer.path.slice('contract/'.length);
+    }
+  }
+
+  fs.writeFileSync(indexPath, yaml.stringify(parsed, { lineWidth: 120 }), 'utf-8');
+}
+
 function resolvePathNode(contract: Record<string, any>, ref: string): any | null {
   if (typeof ref !== 'string' || !ref.startsWith('PATHS.')) {
     return null;
@@ -189,19 +248,14 @@ function resolvePathRef(contract: Record<string, any>, ref: string): string | nu
 }
 
 function resolveProjectedContractSetVerifierPath(contract: Record<string, any>): string {
-  const candidates = [
-    'PATHS.tooling.verify.checkAgentsContractSetScript',
-    'PATHS.tooling.verify.checkAgentsContractSet',
-  ];
-
-  for (const candidate of candidates) {
-    const resolved = resolvePathRef(contract, candidate);
-    if (resolved) {
-      return resolved;
-    }
+  const resolved = resolvePathRef(contract, 'PATHS.tooling.verify.checkAgentsContractSetScript');
+  if (resolved) {
+    return resolved;
   }
-
-  return 'scripts/verify/check-agents-contract-set.mjs';
+  throw new ContractMirrorError(
+    'APP_CONTRACT_INVALID',
+    'target app contract is missing PATHS.tooling.verify.checkAgentsContractSetScript'
+  );
 }
 
 function buildContractSetVerifierWrapper(): string {
@@ -294,18 +348,8 @@ export function emitFridaContractSourceMirror(targetRootDir: string, packageRoot
   const targetDir = path.resolve(absoluteTargetRoot, FRIDA_CONTRACT_ENGINE_MIRROR_DIR_REL_PATH);
   const nonDeployableBlocks = collectNonDeployableBlocks(sourceDir);
   replaceDirectoryTree(sourceDir, targetDir);
+  rewriteProjectedMirrorIndexPaths(targetDir);
   sanitizeProjectedContractMirror(targetDir, nonDeployableBlocks);
-  return targetDir;
-}
-
-export function emitTemplatesMirror(targetRootDir: string, packageRootDir: string): string {
-  const absoluteTargetRoot = path.resolve(targetRootDir);
-  const absolutePackageRoot = path.resolve(packageRootDir);
-  const sourceDir = path.resolve(absolutePackageRoot, 'templates');
-  ensureDirExists(sourceDir, 'FRIDA_TEMPLATES_SOURCE_MISSING', 'frida package templates directory');
-
-  const targetDir = path.resolve(absoluteTargetRoot, FRIDA_TEMPLATES_DIR_REL_PATH);
-  replaceDirectoryTree(sourceDir, targetDir);
   return targetDir;
 }
 

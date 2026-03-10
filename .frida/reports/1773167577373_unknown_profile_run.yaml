@@ -1,0 +1,24 @@
+frida_report: 1
+status: SUCCESS
+profile_id: unknown_profile
+model: null
+task_ref: run
+created_at: 2026-03-10T18:32:57.373Z
+inputs:
+  prompt_summary: test
+  canon_files_read: []
+  constraints_adopted: []
+changes:
+  modified: []
+  created: []
+  deleted: []
+verification:
+  commands: []
+  result: SKIPPED
+  notes: auto-generated job report
+summary:
+  what_done:
+    - Job report file created by frida-core report write
+  risks_or_debt: []
+  followups: []
+

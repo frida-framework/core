@@ -2,28 +2,28 @@ version: "1.0"
 templates:
   - id: FRIDA_TPL_BOOTLOADER
     file: templates/frida/bootloader.hbs
-    sha256: sha256:31c7c84cb6b51355f69c93cd4d87e061e3204b729cb55da777ce46cae4122a5b
+    sha256: sha256:d117ca22a7586f923090fb83354256b90dd125b2812dd9107b53628c7e381b3b
   - id: FRIDA_TPL_ROUTER
     file: templates/frida/router.xml.hbs
-    sha256: sha256:f699bdd9bbe48961c913f364b1cdc6b8623f246d3e418c8ad0721e82e7095e66
+    sha256: sha256:77c7108e78753bdc8e312f70a6d3a8d569800ce01109874740d31494b4c73bb6
   - id: FRIDA_TPL_PROFILE
     file: templates/frida/profile.xml.hbs
-    sha256: sha256:bf95cc1701760e22e19f503775895d31297f109911e863015467e476d4e28170
+    sha256: sha256:aa7d6c855d0c57512dd9b029c84dc9c776de1a458f21bc652438e8abc98ce11b
   - id: FRIDA_TPL_PROFILE_V2
     file: templates/frida/profile-v2.xml.hbs
-    sha256: sha256:2d84516c29d567a7649b21ba2c2f2035335b72e93d9e171f94460b0017d75c6b
+    sha256: sha256:cac30b8ce955c4774b2879e7cbdc417832924ddc9ba064dcaaefa4558f9d0391
   - id: FRIDA_TPL_AGENTS_READONLY
     file: templates/docs-gen/agents-readonly.hbs
-    sha256: sha256:b518450303d743510c5f1082cd5f0e3e6593b52212fd615cf5b51e096f4bc764
+    sha256: sha256:f2092dcc11722af6a2a2ec9c18281d6eb294b40c3179656d94c89480bd110a08
   - id: FRIDA_TPL_AGENTS_MAPPER
     file: templates/docs-gen/agents-mapper.hbs
-    sha256: sha256:d0f326a7c974f644bc41b6d077754b926cb32d244d68dd22d9f8afc917a805da
+    sha256: sha256:1a594bc7b2f935e1fc1dbf2db6421c5a54f1964835c0135aa4e4f9d80a221b49
   - id: FRIDA_TPL_AGENTS_NOTOUCH
     file: templates/docs-gen/agents-notouch.hbs
-    sha256: sha256:0101187f0a43b0497248694b52d785bff801f5536a0a7a67017e5d423a1eca98
+    sha256: sha256:9b68b24b740de63a257c73d69e84fb50610d8fe30e6c5dd908faf25b38b87f18
   - id: FRIDA_TPL_AGENTS_SERVICE
     file: templates/docs-gen/agents-service.hbs
-    sha256: sha256:829152b503b681ae304b8153f14ab08ca155856fd394bdb07f968d29f2251ea8
+    sha256: sha256:d7e90aadcf9ff899fe503e6bd7b1fb1f9d355b0b683faceaf7a8628d71833d93
   - id: FRIDA_TPL_IMMUTABILITY
     file: templates/docs-gen/immutability.hbs
-    sha256: sha256:9062afeb40d8812a45786b4ce35e4ee8222de77e135e73d5438ac5a1bdec7734
+    sha256: sha256:e4a4acb7ef7d406f671cb16b54650453af8a11c51ae9c841108d07ac83021de4

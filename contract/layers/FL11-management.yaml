@@ -229,17 +229,27 @@ FRIDA_INTERFACE_AUDIT:
   version: 1.0.0
   purpose: "Deployment readiness audit: validate contract structure, routing, and Frida surface integrity."
   playbook_ref: "templates/management/AGENT-repo-audit.md"
+  source_playbook_ref: "templates/management/AGENT-repo-audit.md"
+  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
   requires_profile_source: repository_scoped_profile_block
   requires_profiles:
     frida_repo:
       - frida_readonly_observer
     target_app_repo:
       - app_readonly_observer
+  repository_scoped_surfaces:
+    frida_repo:
+      playbook_ref: "templates/management/AGENT-repo-audit.md"
+      core_contract_ref: "PATHS.contract.coreCanonFile"
+    target_app_repo:
+      playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
+      core_contract_ref: "PATHS.fridaContract.fridaMirrorIndexFile"
+      app_contract_ref: "PATHS.fridaInbox.contractIndexFile"
   operations:
     deployment_check:
       description: "Verify Frida deployment structure (.frida/ layout, markers, config)."
       steps:
-        - "Read app contract index from .frida/inbox/app-contract/contract.index.yaml and mirrored core contract index from .frida/contract/frida/contract.index.yaml"
+        - "Resolve repository scope first: `frida_repo` uses contract/contract.index.yaml; `target_app_repo` uses .frida/inbox/app-contract/contract.index.yaml plus .frida/contract/frida/contract.index.yaml"
         - "Validate index against FRIDA_SCHEMA_SUPPORT.schema_version"
         - "Verify AGENTS.md contract-set completeness"
     contract_consistency:
@@ -255,6 +265,7 @@ FRIDA_INTERFACE_AUDIT:
         - "Verify ROUTER.xml exists at .frida/contract/specs/"
         - "Verify profile XMLs exist at .frida/contract/profiles/"
         - "Verify zone AGENTS.md files match the repository-scoped zone block (`ZONES` in target repos, private internal-zone block in repo `frida`)."
+        - "In target repos, verify the audit playbook is deployed under `.frida/contract/playbooks/` and no routing surface references undeployed management template paths."
     cli_diagnostics:
       description: "Run automated CLI diagnostics."
       commands:
@@ -284,13 +295,50 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
     Repo-local Frida self-contract management: change protocol language,
     quality metrics, consistency checks, diagnostic framework,
     contract fixer role, audit format, and self-task output policy.
-    Implementation details in engine playbooks (templates/management/).
+    Source authoring playbooks live in `templates/management/` and remain internal to repo `frida`.
   repository_scope: frida_repo_only
   mutation_scope: frida_contract_only
   forbidden_targets:
     - target_app_contract
     - target_app_repo_code
   deployment_scope: not_deployed_to_target_repo
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+    repository_scope: frida_repo_only
+    mutation_scope: frida_contract_only
+    ownership_model: engine_source_only
+    form_policy:
+      exact_markdown_shape: engine_authored
+      normative_authority: interface_semantics_authoritative
+    required_concepts:
+      - frida_contract_only
+      - frida_repo_only
+      - CONTRACT -> ANTITASK -> DEVELOPMENT
+      - contract blocks
+      - PR
+    required_rules_refs:
+      - FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+      - FRIDA_VERSION_POLICY
+      - FRIDA_TEMPLATE_HASH_TOOL
+    required_invariants:
+      - engine_instruction_surfaces_strict
+      - target_delivery_no_internal_authoring_surfaces
+    required_guard_refs: []
+    required_verification:
+      - npm run build
+      - node dist/cli.js check contract-set
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+    forbidden_claims:
+      - "This instruction authorizes mutation of target app contract."
+      - "This instruction authorizes mutation of target app repo code."
+    instruction_surfaces:
+      update:
+        source_playbook_ref: "templates/management/AGENT-frida-internal-contract-update.md"
+      repair:
+        source_playbook_ref: "templates/management/AGENT-frida-internal-contract-repair.md"
   task_output_policy:
     output_dir: "frida-tasks"
     file_pattern: "frida-tasks/TASK-*.md"
@@ -308,7 +356,8 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
   change_protocol:
     purpose: "Normative language for structural contract changes."
     operations: [ADD, UPDATE, MOVE, DEPRECATE, REFCHECK, GUARDCHECK, PROFILECHECK, FENCECHECK, DUPCHECK, RESERVED_CHECK, CONTRACT-DIFF]
-    playbook_ref: "templates/management/AGENT-contract-update.md"
+    playbook_ref: "templates/management/AGENT-frida-internal-contract-update.md"
+    source_playbook_ref: "templates/management/AGENT-frida-internal-contract-update.md"
     maintenance_steps:
       - id: manifest_hash_sync
         tool_ref: "FRIDA_TEMPLATE_HASH_TOOL"
@@ -376,13 +425,15 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
         rule: "When a host_root boundary is present, viewer/runtime depth is measured from that anchor and MUST NOT become negative."
       - id: overlay_determinism_strict
         rule: "Visual overlay output MUST be byte-stable after normalization of explicitly declared volatile fields only."
-    playbook_ref: "templates/management/AGENT-contract-update.md"
+    playbook_ref: "templates/management/AGENT-frida-internal-contract-update.md"
+    source_playbook_ref: "templates/management/AGENT-frida-internal-contract-update.md"
 
   diagnostic_framework:
     purpose: "Pattern for contract issue diagnosis and repair."
     pattern: "symptom -> cause -> algorithm"
     categories: [missing_artifacts, metadata_mismatch, contract_drift, routing_error, guard_violation, generator_failure]
-    playbook_ref: "templates/management/AGENT-contract-repair.md"
+    playbook_ref: "templates/management/AGENT-frida-internal-contract-repair.md"
+    source_playbook_ref: "templates/management/AGENT-frida-internal-contract-repair.md"
 
   contract_fixer_role:
     purpose: "Only role with write access to contract blocks."
@@ -402,6 +453,8 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
       rule: "Any COMPLIANCE.FAIL -> FAIL regardless of score."
     finding_tags: [COMPLIANCE.FAIL, COMPLIANCE.PARTIAL, UNVERIFIABLE, CONTRACT.GAP, RISK.NDETERMINISM, RISK.SCOPE]
     playbook_ref: "templates/management/AGENT-repo-audit.md"
+    source_playbook_ref: "templates/management/AGENT-repo-audit.md"
+    deployed_playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
 
   component_contract_spec:
     purpose: "Normative structure for component-level contract files that define component boundary semantics."
@@ -603,6 +656,52 @@ FRIDA_INTERFACE_UPDATE_APP_BY_SPEC:
     - frida_core_repo_sources
     - frida_tasks_directory
   deployment_scope: public
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+    repository_scope: target_app_repo_only
+    mutation_scope: target_app_contract_only
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - target_app_contract_only
+      - shipped but inactive extension
+      - requires_new_frida_extension
+      - FRIDA_VERSION_POLICY
+      - frida-core check contract-set
+    required_rules_refs:
+      - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+      - FRIDA_VERSION_POLICY
+    required_invariants:
+      - app_update_interfaces_non_inventive
+      - interface_instruction_surfaces_seed_then_user_owned
+      - target_delivery_no_internal_authoring_surfaces
+    required_guard_refs: []
+    required_verification:
+      - frida-core check contract-set
+      - frida-core check zone --path .
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - "This instruction authorizes mutation of the Frida core contract."
+      - "This instruction authorizes changes under templates/management."
+    baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    instruction_surfaces:
+      update:
+        source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-update.md"
+      repair:
+        source_playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
   input:
     format: natural_language
     context:
@@ -633,11 +732,15 @@ FRIDA_INTERFACE_UPDATE_APP_BY_SPEC:
   protocols:
     update:
       description: "Apply changes to the target app contract via structured patch."
-      playbook_ref: "templates/management/AGENT-contract-update.md"
+      playbook_ref: "templates/management/AGENT-app-contract-update.md"
+      source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
+      deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-update.md"
       requires_role: ARCHITECT_AGENT
     repair:
       description: "Fix target app contract inconsistencies (broken refs, missing blocks)."
-      playbook_ref: "templates/management/AGENT-contract-repair.md"
+      playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+      source_playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+      deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
       requires_role: ARCHITECT_AGENT
 
 FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
@@ -652,6 +755,52 @@ FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
     - frida_core_repo_sources
     - frida_tasks_directory
   deployment_scope: public
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+    repository_scope: target_app_repo_only
+    mutation_scope: target_app_contract_only
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - target_app_contract_only
+      - shipped but inactive extension
+      - requires_new_frida_extension
+      - FRIDA_VERSION_POLICY
+      - frida-core check contract-set
+    required_rules_refs:
+      - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      - FRIDA_VERSION_POLICY
+    required_invariants:
+      - app_update_interfaces_non_inventive
+      - interface_instruction_surfaces_seed_then_user_owned
+      - target_delivery_no_internal_authoring_surfaces
+    required_guard_refs: []
+    required_verification:
+      - frida-core check contract-set
+      - frida-core check zone --path .
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - "This instruction authorizes mutation of the Frida core contract."
+      - "This instruction authorizes changes under templates/management."
+    baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    instruction_surfaces:
+      update:
+        source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-update.md"
+      repair:
+        source_playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
   input:
     format: source_code
     supported_languages:
@@ -683,6 +832,19 @@ FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
   use_cases:
     - "Onboard existing project to Frida."
     - "Background consistency loop: re-extract app contract from code, diff against declared app contract."
+  protocols:
+    update:
+      description: "Bring the target app contract in sync with implemented code while staying inside shipped Frida semantics."
+      playbook_ref: "templates/management/AGENT-app-contract-update.md"
+      source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
+      deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-update.md"
+      requires_role: ARCHITECT_AGENT
+    repair:
+      description: "Fix target app contract inconsistencies found during code-to-contract extraction."
+      playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+      source_playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+      deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+      requires_role: ARCHITECT_AGENT
 
 FRIDA_INTERFACE_TASKSET:
   _visibility: public
@@ -690,6 +852,8 @@ FRIDA_INTERFACE_TASKSET:
   version: 1.0.0
   purpose: "Prepare self-contained task packs from contract for agent execution."
   playbook_ref: "templates/management/AGENT-task-formulation.md"
+  source_playbook_ref: "templates/management/AGENT-task-formulation.md"
+  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-formulation.md"
   task_pack_definition:
     term: >-
       A Task Pack is a self-contained instruction set for an agent-developer.
@@ -737,6 +901,8 @@ FRIDA_INTERFACE_TASKSET:
       - "Task output path matches the repository scope of interface_ref."
   audit_task_format:
     playbook_ref: "templates/management/AGENT-repo-audit.md"
+    source_playbook_ref: "templates/management/AGENT-repo-audit.md"
+    deployed_playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
     determinism:
       - "Profiles sorted by name."
       - "Invariants within task sorted by id."

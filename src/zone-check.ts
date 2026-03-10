@@ -383,12 +383,6 @@ function parseArgs(args: string[]): CliArgs {
             }
         } else if (arg === '--trace') {
             result.trace = true;
-        } else if (!arg.startsWith('--') && !result.path) {
-            // Positional compatibility:
-            // npm run may pass "zone <path> <format>" instead of named flags.
-            result.path = arg;
-        } else if (!arg.startsWith('--') && (arg === 'yaml' || arg === 'json' || arg === 'text')) {
-            result.format = arg;
         }
     }
 

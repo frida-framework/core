@@ -66,7 +66,7 @@ FRIDA_CONTRACT_BOOTSTRAP:
       entrypoint: "frida-core bootstrap --target <dir> --mode zero-start"
       purpose: >-
         First-time zero-state onboarding for a clean application repository. Deploys the cold-engine FRIDA
-        infrastructure from package reference and seeds the neutral `template_app_basic` files: README.md, package.json,
+        infrastructure from package reference and seeds the derivative neutral `template_app_basic` files: README.md, package.json,
         .frida/inbox/app-contract/contract.index.yaml, .frida/inbox/app-contract/layers/AL01-shared.yaml,
         .frida/inbox/app-contract/layers/AL02-agent-framework.yaml, .frida/inbox/app-contract/layers/AL03-host-root.yaml,
         and inactive app-extension layers under
@@ -95,9 +95,19 @@ FRIDA_CONTRACT_BOOTSTRAP:
       supported_components:
         - all
         - playbooks
+        - interface-instructions-reset
         - generated
         - bootloader
         - runtime-config-template
+      reset_behavior:
+        interface_instructions_reset:
+          entrypoint: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+          purpose: "Restore the shipped baseline for public app-facing interface instruction surfaces without touching engine-invariant AGENTS or generated routing artifacts."
+          overwrite_policy: "Force-copy manifest-declared app interface instruction playbooks over user-customized target files."
+          scope:
+            - ".frida/contract/playbooks/AGENT-app-contract-update.md"
+            - ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+          generation_after_reset: false
   target_detection:
     model: strong_marker_any
     frida_present_when_any:
@@ -162,12 +172,22 @@ FRIDA_APP_TEMPLATE_MODEL:
   _visibility: public
   id: frida-app-template-model
   version: 1.0.0
-  purpose: "Defines Frida-shipped app templates and the link-driven activation model for optional app extensions."
+  purpose: "Defines Frida-shipped derivative app templates and the link-driven activation model for optional app extensions."
+  truth_boundary:
+    source_of_truth:
+      - core contract blocks
+      - bootstrap policy
+      - generator/runtime logic
+    derivative_artifacts:
+      - template_app_basic
+    reverse_dependency_forbidden: true
+    rule: "Frida semantics flow into shipped templates; templates MUST NOT be used as normative inputs for Frida semantics."
   default_template:
     id: template_app_basic
     dirRef: "PATHS.templates.appBasicDir"
     rule: "Zero-start seeds `template_app_basic` by default."
     neutrality_rule: "Default app template MUST remain vendor-neutral and MUST NOT introduce backend implementation surfaces."
+    derivative_rule: "`template_app_basic` is a public baseline example and shipped promise of quality, not a source of truth."
   activation_model:
     source_of_truth: "target app contract index links"
     rule: "An app extension is active only if its AL## layer is present in the target app `contract.index.yaml`."
@@ -223,7 +243,7 @@ FRIDA_BOOTSTRAP_SURFACE_POLICY:
       overwrite_policy: regenerate
       prune_eligible: true
     user_owned:
-      meaning: "User-maintained runtime config file."
+      meaning: "User-maintained files preserved by bootstrap after initial seed; includes runtime config and public interface-instruction surfaces seeded into target repos."
       overwrite_policy: preserve
       prune_eligible: false
     user_data:

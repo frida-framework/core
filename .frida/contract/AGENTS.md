@@ -10,10 +10,10 @@ You MUST follow the contract entry sequence below before executing ANY task. [FL
 If your task is a **deployment audit**, **readiness check**, or **diagnostics** (keywords: audit, deployment, readiness, diagnostics, health-check): [FL13:2.1]
 
 1. **SKIP** standard interface routing only after routing to `FRIDA_INTERFACE_AUDIT`. [FL13:2.1]
-2. **READ** the audit playbook: `.frida/templates/management/AGENT-repo-audit.md`. [FL13:6.2]
+2. **READ** the audit playbook: `templates/management/AGENT-repo-audit.md`. [FL13:6.2]
 3. **READ** the contract interfaces:
-   - Core contract: `.frida/contract/frida/contract.index.yaml`
-   - App contract: `.frida/inbox/app-contract/contract.index.yaml`
+   - Core contract: `contract/contract.index.yaml`
+   - Repository scope: `frida_repo`
    - Key core layers: `FL03-infrastructure.yaml`, `FL05-agent-framework.yaml`, `FL09-bootstrap.yaml`, `FL13-agent-entry.yaml`. [FL13:2.3] [FL13:3.1]
 4. **RUN** CLI diagnostics:
    - `frida-core migration-report`

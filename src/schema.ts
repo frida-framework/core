@@ -47,6 +47,16 @@ const REMOVED_PATH_ALIAS_FIELDS: Array<{ field: string; ref: string }> = [
   { field: 'templates_docs', ref: 'templates_docsRef' },
 ];
 
+function hasLegacyPolicyPaths(contract: Record<string, any>): boolean {
+  const accessValidation = contract?.FRIDA_CONFIG?.reporting?.access_validation;
+  return Boolean(
+    accessValidation &&
+    typeof accessValidation === 'object' &&
+    accessValidation.policy_paths &&
+    typeof accessValidation.policy_paths === 'object'
+  );
+}
+
 export function normalizeContractModel(contract: Record<string, any>): ContractNormalizationResult {
   const warnings: string[] = [];
   const deprecatedFields: string[] = [];
@@ -63,6 +73,13 @@ export function normalizeContractModel(contract: Record<string, any>): ContractN
       deprecatedFields.push(`FRIDA_CONFIG.paths.${removedAlias.field}`);
       warnings.push(`Deprecated key FRIDA_CONFIG.paths.${removedAlias.field} used. Prefer ${removedAlias.ref}.`);
     }
+  }
+
+  if (hasLegacyPolicyPaths(contract)) {
+    deprecatedFields.push('FRIDA_CONFIG.reporting.access_validation.policy_paths');
+    warnings.push(
+      'Deprecated key FRIDA_CONFIG.reporting.access_validation.policy_paths used. Prefer FRIDA_CONFIG.reporting.access_validation.repo_policies.<repo_scope>.',
+    );
   }
 
   if (Array.isArray(contract.FRIDA_EXTENSIONS)) {
@@ -105,6 +122,15 @@ export function collectMigrationIssues(contract: Record<string, any>, strict = f
         message: `Deprecated path key is still used: FRIDA_CONFIG.paths.${item.field}`,
       });
     }
+  }
+
+  if (hasLegacyPolicyPaths(contract)) {
+    issues.push({
+      field: 'FRIDA_CONFIG.reporting.access_validation.policy_paths',
+      replacement: 'FRIDA_CONFIG.reporting.access_validation.repo_policies.<repo_scope>',
+      severity: strict ? 'error' : 'warning',
+      message: 'Deprecated access-validation policy_paths block is still used.',
+    });
   }
 
   if (!contract.meta || !contract.core) {

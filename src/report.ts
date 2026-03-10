@@ -132,7 +132,7 @@ function buildJobReportPayload(
     created_at: new Date().toISOString(),
     inputs: {
       prompt_summary: summaryText,
-      contract_files_read: [],
+      canon_files_read: [],
       constraints_adopted: [],
     },
     changes: {

@@ -15,7 +15,6 @@ entries:
     kind: dir
     ownership_class: engine_generated
     apply_mode: generated
-    prune_scope: true
     modes:
       - warm
       - cold-engine
@@ -105,7 +104,8 @@ entries:
     kind: dir
     ownership_class: engine_static
     apply_mode: ensure_dir
-    prune_scope: true
+    components:
+      - playbooks
     modes:
       - warm
       - cold-engine
@@ -187,6 +187,8 @@ entries:
     apply_mode: generated
     prune_scope: true
     cleanup_only: true
+    components:
+      - playbooks
     modes:
       - warm
       - cold-engine
@@ -223,6 +225,9 @@ entries:
     kind: file
     ownership_class: engine_generated
     apply_mode: generated
+    components:
+      - runtime-config-template
+      - config-template
     modes:
       - warm
       - cold-engine
@@ -279,6 +284,9 @@ entries:
     kind: file
     ownership_class: engine_generated
     apply_mode: generated
+    components:
+      - bootloader
+      - agents
     modes:
       - warm
       - cold-engine
@@ -308,14 +316,6 @@ entries:
       - cold-engine
   - id: frida_generated_graph
     target: .frida/contract/artifacts/frida.graph.mmd
-    kind: file
-    ownership_class: engine_generated
-    apply_mode: generated
-    modes:
-      - warm
-      - cold-engine
-  - id: frida_generated_adapter_index
-    target: .frida/contract/artifacts/frida.adapter.generated.json
     kind: file
     ownership_class: engine_generated
     apply_mode: generated
@@ -380,24 +380,98 @@ entries:
     modes:
       - warm
       - cold-engine
-  - id: playbook_contract_update
-    source: templates/management/AGENT-contract-update.md
+  - id: cleanup_frida_templates_frida_root
+    target: .frida/templates/frida
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+  - id: cleanup_frida_templates_docs_gen_root
+    target: .frida/templates/docs-gen
+    kind: dir
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    modes:
+      - warm
+      - cold-engine
+  - id: cleanup_legacy_playbook_contract_update
     target: .frida/contract/playbooks/AGENT-contract-update.md
     kind: file
-    ownership_class: engine_static
-    apply_mode: copy
-    sha256: sha256:4f2a2e1226bd7c193cb9c725ba0952d705e5ee2b8470e9a114d9f77828ffaa43
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    components:
+      - playbooks
+    modes:
+      - warm
+      - cold-engine
+  - id: cleanup_legacy_playbook_contract_repair
+    target: .frida/contract/playbooks/AGENT-contract-repair.md
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    components:
+      - playbooks
+    modes:
+      - warm
+      - cold-engine
+  - id: cleanup_legacy_playbook_frida_internal_update
+    target: .frida/contract/playbooks/AGENT-frida-internal-contract-update.md
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    components:
+      - playbooks
+    modes:
+      - warm
+      - cold-engine
+  - id: cleanup_legacy_playbook_frida_internal_repair
+    target: .frida/contract/playbooks/AGENT-frida-internal-contract-repair.md
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    components:
+      - playbooks
+    modes:
+      - warm
+      - cold-engine
+  - id: playbook_app_contract_update
+    source: templates/management/AGENT-app-contract-update.md
+    target: .frida/contract/playbooks/AGENT-app-contract-update.md
+    kind: file
+    ownership_class: user_owned
+    apply_mode: seed_if_absent
+    sha256: sha256:817b0235b7f66254185fac176852b14776d4b1455e519100f5092cc23abad5dc
+    components:
+      - playbooks
+      - interface-instructions-reset
     modes:
       - warm
       - cold-engine
       - demo
-  - id: playbook_contract_repair
-    source: templates/management/AGENT-contract-repair.md
-    target: .frida/contract/playbooks/AGENT-contract-repair.md
+  - id: playbook_app_contract_repair
+    source: templates/management/AGENT-app-contract-repair.md
+    target: .frida/contract/playbooks/AGENT-app-contract-repair.md
     kind: file
-    ownership_class: engine_static
-    apply_mode: copy
-    sha256: sha256:2a4b02750ce36d1454f372005cb6cc457d97dbcd3dcd8c4c4958f13415debd20
+    ownership_class: user_owned
+    apply_mode: seed_if_absent
+    sha256: sha256:65938de2dc92c4008d6de7f8e6eb25196b091446d21b12ce5828f264b10a2204
+    components:
+      - playbooks
+      - interface-instructions-reset
     modes:
       - warm
       - cold-engine
@@ -408,7 +482,9 @@ entries:
     kind: file
     ownership_class: engine_static
     apply_mode: copy
-    sha256: sha256:fccdc8b11ff5541a702eb6b434ced7c0c0f555ea836e1cd4944c6007c2a8656a
+    sha256: sha256:a625c6e3f3f709ea3f2b455f660a40bba5a4b2061859cb4aa6bcf0a70b93f1b9
+    components:
+      - playbooks
     modes:
       - warm
       - cold-engine
@@ -420,17 +496,27 @@ entries:
     ownership_class: engine_static
     apply_mode: copy
     sha256: sha256:e831c0ed0380725640be386da21188967f233c3f471a8d991f7f2ed6a2f21b21
+    components:
+      - playbooks
     modes:
       - warm
       - cold-engine
       - demo
+  - id: frida_verify_check_agents_contract_set_script
+    target: scripts/verify/check-agents-contract-set.mjs
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    modes:
+      - warm
+      - cold-engine
   - id: zero_start_template_app_basic_contract_index_seed
     source: templates/template_app_basic/app-contract/contract.index.yaml
     target: .frida/inbox/app-contract/contract.index.yaml
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:ba7c08b782eadd16074e57fe89a20af70bcf81af0999c2575cbdde55afbcf43f
+    sha256: sha256:9a9a2a6283487f8469d59597d4f7c1dd98a2927c0f2ea0b69dab023f50c3d571
     modes:
       - zero-start
   - id: zero_start_template_app_basic_shared_layer_seed
@@ -439,7 +525,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:1c2550c50df5882019a9a620d97a1c7974fe53ba4b96b7dce9cb23da2921fd98
+    sha256: sha256:b5d233ee8437c3d3be9913d761789460f00f1cc78a66e4db1dc14d629502b4c0
     modes:
       - zero-start
   - id: zero_start_template_app_basic_agent_framework_layer_seed
@@ -484,7 +570,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:d777d0adf269f7438e8a45371994c4a2ff773809fe306c5f778aa8ca89632a94
+    sha256: sha256:b7a7b068660eb00d448c528bdae277db1ada9cb879d846589f83191d260b6a98
     modes:
       - zero-start
   - id: zero_start_template_app_basic_package_json_seed
@@ -493,6 +579,6 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:f6be0a935ee1e2e651e813974d3c46baaa1b0b23f44d74b761e57db8b0fae08f
+    sha256: sha256:b45075f5c193af1cdc93b8114d8dc9436c191763be6a45d29a96d27260ce878f
     modes:
       - zero-start

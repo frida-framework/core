@@ -23,6 +23,7 @@ export interface BootstrapPackageManifestEntry {
   prune_scope?: boolean;
   cleanup_only?: boolean;
   preserve_globs?: string[];
+  components?: string[];
 }
 
 export interface BootstrapPackageManifest {
@@ -153,6 +154,45 @@ export function entryAppliesToMode(entry: BootstrapPackageManifestEntry, mode: B
 
   // Zero-start is defined as cold-engine surface deployment plus template_app_basic-only seeds.
   return mode === 'zero-start' && entry.modes.includes('cold-engine');
+}
+
+export function getManifestEntryById(
+  manifest: BootstrapPackageManifest,
+  entryId: string
+): BootstrapPackageManifestEntry | undefined {
+  return manifest.entries.find((entry) => entry.id === entryId);
+}
+
+export function getManifestEntryTargetOrThrow(
+  manifest: BootstrapPackageManifest,
+  entryId: string
+): string {
+  const entry = getManifestEntryById(manifest, entryId);
+  if (!entry) {
+    throw new BootstrapManifestLoadError(
+      'BOOTSTRAP_PACKAGE_MANIFEST_INVALID',
+      `bootstrap package manifest is missing required entry: ${entryId}`
+    );
+  }
+  return entry.target;
+}
+
+export function collectManifestTargetsForMode(
+  manifest: BootstrapPackageManifest,
+  mode: BootstrapPackageMode,
+  options: {
+    includeCleanupOnly?: boolean;
+    kind?: BootstrapEntryKind;
+  } = {}
+): string[] {
+  const includeCleanupOnly = options.includeCleanupOnly ?? false;
+  const kind = options.kind;
+
+  return manifest.entries
+    .filter((entry) => entryAppliesToMode(entry, mode))
+    .filter((entry) => includeCleanupOnly || !entry.cleanup_only)
+    .filter((entry) => (kind ? entry.kind === kind : true))
+    .map((entry) => entry.target);
 }
 
 export function loadBootstrapPackageManifest(packageRoot: string = DEFAULT_PACKAGE_ROOT): LoadedBootstrapPackageManifest {

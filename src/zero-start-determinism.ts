@@ -4,42 +4,37 @@ import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import * as yaml from 'yaml';
 import { runFridaBootstrapCli } from './bootstrap.ts';
+import {
+  collectManifestTargetsForMode,
+  loadBootstrapPackageManifest,
+} from './bootstrap-manifest.ts';
+import {
+  BOOTLOADER_FORBIDDEN_REFERENCE_TOKENS,
+  FORBIDDEN_LOCAL_CORE_PACKAGE_REFERENCE,
+  PROJECTED_CORE_FORBIDDEN_TOKENS,
+} from './frida-surface-policy.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(MODULE_DIR, '..');
 
-const REQUIRED_OUTPUTS = [
-  'README.md',
-  'package.json',
-  'AGENTS.md',
-  '.frida/AGENTS.md',
-  '.frida/config.yaml',
-  '.frida/contract/AGENTS.md',
-  '.frida/contract/app/contract.index.yaml',
-  '.frida/contract/app/layers/AL01-shared.yaml',
-  '.frida/contract/app/layers/AL02-agent-framework.yaml',
-  '.frida/contract/app/layers/AL03-host-root.yaml',
-  '.frida/contract/app/extensions/AL11-extension_backend.yaml',
-  '.frida/contract/app/extensions/AL12-extension_backend_supabase.yaml',
-  '.frida/contract/artifacts/frida.ir.json',
-  '.frida/contract/artifacts/frida.permissions.json',
-  '.frida/contract/artifacts/frida.graph.mmd',
-  '.frida/contract/docs/policy/BOUNDARIES.md',
-  '.frida/contract/docs/policy/IMMUTABILITY.md',
-  '.frida/contract/frida/contract.index.yaml',
-  '.frida/contract/specs/ROUTER.xml',
-  '.frida/contract/profiles/app_governance.xml',
-  '.frida/inbox/app-contract/contract.index.yaml',
-  '.frida/inbox/app-contract/layers/AL01-shared.yaml',
-  '.frida/inbox/app-contract/layers/AL02-agent-framework.yaml',
-  '.frida/inbox/app-contract/layers/AL03-host-root.yaml',
-  '.frida/inbox/app-contract/extensions/AL11-extension_backend.yaml',
-  '.frida/inbox/app-contract/extensions/AL12-extension_backend_supabase.yaml',
-  '.frida/templates/frida/bootloader.hbs',
-  '.frida/templates/docs-gen/agents-mapper.hbs',
-  'scripts/verify/check-agents-contract-set.mjs',
-];
+function getRequiredOutputs(): string[] {
+  const { manifest } = loadBootstrapPackageManifest(PACKAGE_ROOT);
+  return collectManifestTargetsForMode(manifest, 'zero-start', { kind: 'file' }).sort();
+}
+
+function getForbiddenOutputs(): string[] {
+  const { manifest } = loadBootstrapPackageManifest(PACKAGE_ROOT);
+  return collectManifestTargetsForMode(manifest, 'zero-start', {
+    includeCleanupOnly: true,
+  })
+    .filter((target) => {
+      const entry = manifest.entries.find((candidate) => candidate.target === target);
+      return Boolean(entry?.cleanup_only);
+    })
+    .sort();
+}
 
 function listFiles(rootDir: string): string[] {
   const out: string[] = [];
@@ -80,9 +75,72 @@ function buildSnapshot(rootDir: string): Map<string, string> {
 }
 
 function assertRequiredOutputs(rootDir: string): void {
-  const missing = REQUIRED_OUTPUTS.filter((relativePath) => !fs.existsSync(path.join(rootDir, relativePath)));
+  const requiredOutputs = getRequiredOutputs();
+  const missing = requiredOutputs.filter((relativePath) => !fs.existsSync(path.join(rootDir, relativePath)));
   if (missing.length > 0) {
     throw new Error(`zero-start is missing required outputs: ${missing.join(', ')}`);
+  }
+}
+
+function assertForbiddenOutputsAbsent(rootDir: string): void {
+  const forbiddenOutputs = getForbiddenOutputs();
+  const present = forbiddenOutputs.filter((relativePath) => fs.existsSync(path.join(rootDir, relativePath)));
+  if (present.length > 0) {
+    throw new Error(`zero-start produced forbidden internal outputs: ${present.join(', ')}`);
+  }
+}
+
+function assertBootloaderIsolation(rootDir: string): void {
+  const bootloaderPath = path.join(rootDir, 'AGENTS.md');
+  const raw = fs.readFileSync(bootloaderPath, 'utf-8');
+  const violations = BOOTLOADER_FORBIDDEN_REFERENCE_TOKENS.filter((token) => raw.includes(token));
+  if (violations.length > 0) {
+    throw new Error(`zero-start bootloader leaked forbidden references: ${violations.join(', ')}`);
+  }
+}
+
+function assertProjectedCoreMirrorSanitized(rootDir: string): void {
+  const projectedRoot = path.join(rootDir, '.frida', 'contract', 'frida');
+  const violations: string[] = [];
+
+  for (const relativePath of listFiles(projectedRoot)) {
+    const absolutePath = path.join(projectedRoot, relativePath);
+    const raw = fs.readFileSync(absolutePath, 'utf-8');
+    for (const token of PROJECTED_CORE_FORBIDDEN_TOKENS) {
+      if (raw.includes(token)) {
+        violations.push(`.frida/contract/frida/${relativePath} -> ${token}`);
+      }
+    }
+  }
+
+  const packageJsonRaw = fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8');
+  if (packageJsonRaw.includes(FORBIDDEN_LOCAL_CORE_PACKAGE_REFERENCE)) {
+    violations.push(`package.json -> ${FORBIDDEN_LOCAL_CORE_PACKAGE_REFERENCE}`);
+  }
+
+  if (violations.length > 0) {
+    throw new Error(`zero-start leaked forbidden internal references:\n${violations.join('\n')}`);
+  }
+}
+
+function assertProjectedCoreMirrorSelfContained(rootDir: string): void {
+  const projectedRoot = path.join(rootDir, '.frida', 'contract', 'frida');
+  const indexPath = path.join(projectedRoot, 'contract.index.yaml');
+  const raw = fs.readFileSync(indexPath, 'utf-8');
+  const parsed = yaml.parse(raw) as { layers?: Array<{ id?: string; path?: string }> };
+  const layers = Array.isArray(parsed?.layers) ? parsed.layers : [];
+  const missing: string[] = [];
+
+  for (const layer of layers) {
+    if (!layer?.path) continue;
+    const absoluteLayerPath = path.resolve(projectedRoot, layer.path);
+    if (!fs.existsSync(absoluteLayerPath)) {
+      missing.push(`${layer.id || '<unknown>'}:${layer.path}`);
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`projected core mirror is not self-contained; unresolved layer paths:\n${missing.join('\n')}`);
   }
 }
 
@@ -122,6 +180,23 @@ function runCliCheck(rootDir: string, args: string[]): void {
   }
 }
 
+function runInterfaceInstructionCheck(rootDir: string): void {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(PACKAGE_ROOT, 'templates', 'tooling', 'verify', 'check-interface-instruction-surfaces.mjs'), '--root', rootDir, '--mode', 'deployed'],
+    {
+      cwd: PACKAGE_ROOT,
+      encoding: 'utf-8',
+    }
+  );
+
+  if (result.status !== 0) {
+    throw new Error(
+      `interface-instruction validation failed: ${result.stderr || result.stdout || `exit=${result.status}`}`
+    );
+  }
+}
+
 function runGit(rootDir: string, args: string[]): void {
   const result = spawnSync('git', args, {
     cwd: rootDir,
@@ -147,6 +222,57 @@ async function assertZeroStartRedeployRejected(targetDir: string): Promise<void>
   }
 }
 
+async function assertWarmPreservesUserOwnedInstructions(targetDir: string): Promise<void> {
+  const updatePath = path.join(targetDir, '.frida', 'contract', 'playbooks', 'AGENT-app-contract-update.md');
+  const legacyUpdatePath = path.join(targetDir, '.frida', 'contract', 'playbooks', 'AGENT-contract-update.md');
+  const legacyRepairPath = path.join(targetDir, '.frida', 'contract', 'playbooks', 'AGENT-contract-repair.md');
+  const sentinel = '\n<!-- USER CUSTOMIZATION SENTINEL -->\n';
+
+  fs.appendFileSync(updatePath, sentinel, 'utf-8');
+  fs.writeFileSync(legacyUpdatePath, '# legacy update\n', 'utf-8');
+  fs.writeFileSync(legacyRepairPath, '# legacy repair\n', 'utf-8');
+
+  const exitCode = await runFridaBootstrapCli(['--target', targetDir, '--mode', 'warm']);
+  if (exitCode !== 0) {
+    throw new Error(`warm bootstrap exited with code ${exitCode} for ${targetDir}`);
+  }
+
+  const updatedRaw = fs.readFileSync(updatePath, 'utf-8');
+  if (!updatedRaw.includes(sentinel.trim())) {
+    throw new Error('warm bootstrap overwrote a user-owned interface instruction surface');
+  }
+  if (fs.existsSync(legacyUpdatePath) || fs.existsSync(legacyRepairPath)) {
+    throw new Error('warm bootstrap did not remove legacy deployed AGENT-contract-* playbooks');
+  }
+}
+
+async function assertInterfaceInstructionResetRestoresBaseline(targetDir: string): Promise<void> {
+  const files = [
+    'AGENT-app-contract-update.md',
+    'AGENT-app-contract-repair.md',
+  ];
+
+  for (const fileName of files) {
+    const targetPath = path.join(targetDir, '.frida', 'contract', 'playbooks', fileName);
+    fs.appendFileSync(targetPath, '\n<!-- CUSTOMIZED -->\n', 'utf-8');
+  }
+
+  const exitCode = await runFridaBootstrapCli(['--target', targetDir, '--component', 'interface-instructions-reset']);
+  if (exitCode !== 0) {
+    throw new Error(`interface-instructions-reset exited with code ${exitCode} for ${targetDir}`);
+  }
+
+  for (const fileName of files) {
+    const targetPath = path.join(targetDir, '.frida', 'contract', 'playbooks', fileName);
+    const sourcePath = path.join(PACKAGE_ROOT, 'templates', 'management', fileName);
+    const targetRaw = fs.readFileSync(targetPath, 'utf-8');
+    const sourceRaw = fs.readFileSync(sourcePath, 'utf-8');
+    if (targetRaw !== sourceRaw) {
+      throw new Error(`interface-instructions-reset did not restore packaged baseline for ${fileName}`);
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frida-zero-start-'));
   const firstDir = path.join(tempRoot, 'case-a');
@@ -167,6 +293,16 @@ async function main(): Promise<void> {
 
     assertRequiredOutputs(firstDir);
     assertRequiredOutputs(secondDir);
+    assertForbiddenOutputsAbsent(firstDir);
+    assertForbiddenOutputsAbsent(secondDir);
+    assertBootloaderIsolation(firstDir);
+    assertBootloaderIsolation(secondDir);
+    assertProjectedCoreMirrorSanitized(firstDir);
+    assertProjectedCoreMirrorSanitized(secondDir);
+    assertProjectedCoreMirrorSelfContained(firstDir);
+    assertProjectedCoreMirrorSelfContained(secondDir);
+    runInterfaceInstructionCheck(firstDir);
+    runInterfaceInstructionCheck(secondDir);
 
     runCliCheck(firstDir, ['check', 'zone', '--path', '.']);
     runCliCheck(firstDir, ['check', 'contract-set']);
@@ -179,6 +315,10 @@ async function main(): Promise<void> {
       .createHash('sha256')
       .update(JSON.stringify([...firstSnapshot.entries()]))
       .digest('hex');
+
+    await assertWarmPreservesUserOwnedInstructions(firstDir);
+    await assertInterfaceInstructionResetRestoresBaseline(firstDir);
+    runInterfaceInstructionCheck(firstDir);
 
     console.log(
       `zero-start determinism OK (${firstSnapshot.size} files, digest=${digest}, temp_root=${tempRoot.replace(/\\/g, '/')})`

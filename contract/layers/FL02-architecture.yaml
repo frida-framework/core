@@ -138,7 +138,9 @@ FRIDA_ARCHITECTURE_DECISIONS:
         - "Intent-to-contract interface converts user specifications to contract YAML."
         - "Code-to-contract interface extracts contract from existing code."
         - "Both produce draft contract requiring human or architect approval."
-        - "Contract declares interface purpose and role. Implementation lives in engine .md playbooks deployed to app repos."
+        - "Interface semantics are authoritative: required concepts, rules, invariants, guards, verification, and reporting expectations live in the interface block."
+        - "Playbooks operationalize interfaces as derived instructions and may be adapted in form when they are public target-repo interface-instruction surfaces."
+        - "AGENTS.md and other engine entry/routing surfaces remain strict engine invariants and are not user-adaptable forms."
       evidence:
         - "Future: src/contract-interfaces.ts"
 
@@ -219,9 +221,17 @@ FRIDA_FOUNDATION_PRINCIPLES:
       text: "`ZONES` names routing entities outside repo `frida`; private Frida-repo routing entities live only in `INT_FRIDA_ZONES` and MUST NOT be projected into target repos."
     - id: interface_declaration_only
       text: >-
-        Contract declares interface purpose, role, and reference.
-        Implementation details (procedures, algorithms, checklists) belong in
-        engine .md playbooks deployed to app repos, not in contract YAML.
+        Contract interfaces are authoritative for semantics and instruction
+        requirements. Derived playbooks operationalize those semantics, but
+        playbook wording and structure remain adaptable for public
+        interface-instruction surfaces unless the surface is explicitly marked
+        as engine-invariant.
+    - id: playbooks_derived_not_authoritative
+      text: "Playbooks and other interface-instruction documents are derived operational surfaces. They MUST cite their backing interface and MUST NOT become independent sources of normative meaning."
+    - id: interface_instruction_form_adaptable
+      text: "Public interface-instruction surfaces may vary in wording, order, and layout so long as the interface-mandated normative elements remain present."
+    - id: engine_instruction_surfaces_strict
+      text: "Engine entry/routing instruction surfaces such as AGENTS.md, ROUTER.xml, profile XMLs, and contractual zone AGENTS.md remain exact engine invariants and may be regenerated or overwritten by Frida."
     - id: component_context_fit
       text: >-
         Every component contract file MUST fit entirely in the agent context window.

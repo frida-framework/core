@@ -27,7 +27,7 @@ FRIDA_AGENT_ENTRY_PROTOCOL:
   execution_rules:
     - id: repository_scoped_zone_block
       clause_ref: FL13:3.1
-      rule: "Repo `frida` resolves zones only from `INT_FRIDA_ZONES`; target app repos resolve zones only from `ZONES`."
+      rule: "Repo `frida` resolves zones only from its private internal zone block; target app repos resolve zones only from `ZONES`."
     - id: repository_scoped_profile_block
       clause_ref: FL13:3.2
       rule: "Repo `frida` resolves profiles only from `FRIDA_TASK_PROFILES`; target app repos resolve profiles only from `TASK_PROFILES`."
@@ -154,7 +154,10 @@ FRIDA_CLAUSE_INDEX:
   usage_rules:
     - id: cited_normative_lines_only
       clause_ref: FL13:8.2
-      rule: "Every normative instruction line in AGENTS surfaces and management playbooks MUST cite at least one clause_ref."
+      rule: "Every normative instruction line in engine-invariant instruction surfaces (AGENTS surfaces, router, profiles, generated contractual zone instructions) MUST cite at least one clause_ref."
+    - id: interface_instruction_surface_linking
+      clause_ref: FL13:8.2
+      rule: "User-owned interface-instruction surfaces MUST declare their backing FRIDA_INTERFACE_* authority explicitly via interface_ref or interface_refs, but their prose shape and line-by-line clause citation remain adaptable."
     - id: legalization_before_citation
       clause_ref: FL13:8.3
       rule: "If a normative instruction has no backing clause, create or clarify the clause in contract before citing it."

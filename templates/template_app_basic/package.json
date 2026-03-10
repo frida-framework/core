@@ -2,7 +2,7 @@
   "name": "replace-me-app",
   "version": "0.1.0",
   "private": true,
-  "description": "Application repository managed by FRIDA zero-start bootstrap.",
+  "description": "Baseline application repository prepared for Frida-managed contract workflows.",
   "scripts": {
     "frida:gen": "frida-core gen",
     "frida:bootstrap": "frida-core bootstrap --target .",
@@ -14,6 +14,6 @@
     "frida:visual": "frida-core visual"
   },
   "devDependencies": {
-    "@frida-framework/core": "file:../frida"
+    "@frida-framework/core": "^0.0.0"
   }
 }

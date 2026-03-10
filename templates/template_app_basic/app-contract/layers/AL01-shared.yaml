@@ -13,6 +13,7 @@ PATHS:
     visualOverlayFile: .frida/contract/visual/canon-overlay.json
   fridaContract:
     rootDir: .frida/contract
+    fridaMirrorIndexFile: .frida/contract/frida/contract.index.yaml
     specsDir: .frida/contract/specs
     profilesDir: .frida/contract/profiles
     docsPolicyDir: .frida/contract/docs/policy
@@ -24,11 +25,6 @@ PATHS:
     appContractDir: .frida/inbox/app-contract
     contractIndexFile: .frida/inbox/app-contract/contract.index.yaml
   tooling:
-    templates:
-      frida:
-        root: .frida/templates/frida
-      docsGen:
-        root: .frida/templates/docs-gen
     verify:
       checkAgentsContractSetScript: scripts/verify/check-agents-contract-set.mjs
     schemas:
@@ -52,8 +48,6 @@ FRIDA_CONFIG:
     docs_policyDirRef: PATHS.fridaContract.docsPolicyDir
     docs_referenceDirRef: PATHS.fridaContract.docsReferenceDir
     frida_internalRef: PATHS.frida.root
-    templates_fridaRef: PATHS.tooling.templates.frida.root
-    templates_docsRef: PATHS.tooling.templates.docsGen.root
   reporting:
     collect_in_repo: true
     repo_path: ".frida/reports"
@@ -85,8 +79,6 @@ core:
     - generate_artifacts
   pathRefs:
     contractArtifact: PATHS.fridaInbox.contractIndexFile
-    templatesFrida: PATHS.tooling.templates.frida.root
-    templatesDocs: PATHS.tooling.templates.docsGen.root
   outputContracts:
     - PATHS.agents.bootloaderFile
     - PATHS.fridaContract.specsDir

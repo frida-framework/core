@@ -4,7 +4,11 @@ import { fileURLToPath } from 'url';
 import { runFridaGeneration } from './runtime.ts';
 import { applyBootstrapPlan, renderBootstrapPlan } from './bootstrap-apply.ts';
 import { detectFridaDeployment } from './bootstrap-detect.ts';
-import { loadBootstrapPackageManifest, BootstrapManifestLoadError } from './bootstrap-manifest.ts';
+import {
+  BootstrapManifestLoadError,
+  getManifestEntryTargetOrThrow,
+  loadBootstrapPackageManifest,
+} from './bootstrap-manifest.ts';
 import { buildBootstrapPlan, BootstrapPlanBuildError } from './bootstrap-plan.ts';
 import { APP_CONTRACT_INBOX_INDEX_REL_PATH, assertAppContractInboxSource, ContractMirrorError } from './contract-mirror.ts';
 import { validateFridaRootLayout } from './frida-layout.ts';
@@ -23,6 +27,11 @@ interface BootstrapArgs {
   dryRun: boolean;
   requestedMode: string | null;
   error?: string;
+}
+
+interface PackageDescriptor {
+  name: string;
+  version: string;
 }
 
 function parseArgs(args: string[]): BootstrapArgs {
@@ -104,6 +113,7 @@ Usage:
   frida-core bootstrap --target <dir> --mode demo
   frida-core bootstrap --target <dir> --mode zero-start
   frida-core bootstrap --component <name> [--target <dir>]
+  frida-core bootstrap --component interface-instructions-reset --target <dir>
   frida-core bootstrap --dry-run --target <dir> [--mode warm|cold-engine|demo|zero-start]
   frida-core bootstrap --help
 
@@ -123,6 +133,7 @@ Rules:
   - retired path markers are detected only for one-way cleanup; bootstrap never regenerates retired surfaces.
   - demo mode is explicit-only and zero-deploy-only.
   - user-owned runtime config (.frida/config.yaml) and reports (.frida/reports/**) are preserved.
+  - component=interface-instructions-reset force-restores the packaged baseline for .frida/contract/playbooks/AGENT-app-contract-*.md only.
 `);
 }
 
@@ -228,6 +239,38 @@ function ensureAppTemplateAssetsOrFail(): { ok: true } | { ok: false; code: numb
       'Zero-start app-template assets are not present in this package build.',
     ]),
   };
+}
+
+function readCurrentCorePackageDescriptor(): PackageDescriptor {
+  const packageJsonPath = path.join(REPO_ROOT, 'package.json');
+  const parsed = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as Partial<PackageDescriptor>;
+  if (!parsed.name || !parsed.version) {
+    throw new Error(`invalid core package metadata: ${packageJsonPath}`);
+  }
+  return {
+    name: parsed.name,
+    version: parsed.version,
+  };
+}
+
+function rewriteZeroStartSeedPackageReference(targetDir: string): void {
+  const packageJsonPath = path.join(targetDir, 'package.json');
+  if (!fs.existsSync(packageJsonPath) || !fs.statSync(packageJsonPath).isFile()) {
+    return;
+  }
+
+  const packageDescriptor = readCurrentCorePackageDescriptor();
+  const parsed = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as Record<string, any>;
+  const devDependencies = parsed.devDependencies && typeof parsed.devDependencies === 'object'
+    ? parsed.devDependencies
+    : {};
+
+  devDependencies[packageDescriptor.name] = `^${packageDescriptor.version}`;
+  parsed.devDependencies = Object.fromEntries(
+    Object.entries(devDependencies).sort(([left], [right]) => left.localeCompare(right))
+  );
+
+  fs.writeFileSync(packageJsonPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf-8');
 }
 
 async function runPostGeneration(targetDir: string, generatedAtOverride?: string): Promise<number> {
@@ -358,21 +401,6 @@ async function runReconcileMode(
 async function runZeroStartMode(targetDir: string, dryRun: boolean): Promise<number> {
   const absoluteTarget = path.resolve(process.cwd(), targetDir);
 
-  const detection = detectFridaDeployment(absoluteTarget);
-  const appContractDir = path.join(absoluteTarget, '.frida', 'inbox', 'app-contract');
-
-  if (detection.present || fs.existsSync(appContractDir)) {
-    const details: string[] = [`target=${absoluteTarget}`];
-    if (detection.present) {
-      details.push(`frida_markers=${detection.markerCount}`);
-    } else {
-      details.push('zero-start marker: .frida/inbox/app-contract already exists');
-    }
-    details.push('Frida is already deployed in this repository. Use warm mode (default) for reconcile/repair.');
-    return printBootstrapFailure('ZERO_START_ALREADY_DEPLOYED', details);
-  }
-
-
   let loadedManifest;
   try {
     loadedManifest = loadBootstrapPackageManifest(REPO_ROOT);
@@ -383,6 +411,23 @@ async function runZeroStartMode(targetDir: string, dryRun: boolean): Promise<num
     return printBootstrapFailure('BOOTSTRAP_PACKAGE_MANIFEST_INVALID', [
       error instanceof Error ? error.message : String(error),
     ]);
+  }
+
+  const detection = detectFridaDeployment(absoluteTarget);
+  const appContractDir = path.join(
+    absoluteTarget,
+    getManifestEntryTargetOrThrow(loadedManifest.manifest, 'frida_inbox_app_contract')
+  );
+
+  if (detection.present || fs.existsSync(appContractDir)) {
+    const details: string[] = [`target=${absoluteTarget}`];
+    if (detection.present) {
+      details.push(`frida_markers=${detection.markerCount}`);
+    } else {
+      details.push('zero-start marker: .frida/inbox/app-contract already exists');
+    }
+    details.push('Frida is already deployed in this repository. Use warm mode (default) for reconcile/repair.');
+    return printBootstrapFailure('ZERO_START_ALREADY_DEPLOYED', details);
   }
 
   let plan;
@@ -410,6 +455,7 @@ async function runZeroStartMode(targetDir: string, dryRun: boolean): Promise<num
   );
 
   if (!dryRun) {
+    rewriteZeroStartSeedPackageReference(absoluteTarget);
     const postGenCode = await runPostGeneration(absoluteTarget, ZERO_START_GENERATED_AT);
     if (postGenCode !== 0) {
       return postGenCode;
@@ -419,14 +465,14 @@ async function runZeroStartMode(targetDir: string, dryRun: boolean): Promise<num
 Bootstrap zero-start complete.
 
 FRIDA infrastructure has been deployed to ${absoluteTarget}.
-Seeded template_app_basic: README.md, package.json, .frida/inbox/app-contract/contract.index.yaml, .frida/inbox/app-contract/layers/*, .frida/inbox/app-contract/extensions/*
+Seeded derivative baseline from template_app_basic: README.md, package.json, .frida/inbox/app-contract/contract.index.yaml, .frida/inbox/app-contract/layers/*, .frida/inbox/app-contract/extensions/*
 
 Next steps:
   1. Install FRIDA package in the new repository:
        cd ${absoluteTarget} && npm install
   2. Verify the seeded repository:
        cd ${absoluteTarget} && npm run frida:check
-  3. Review README.md and .frida/inbox/app-contract/ for the seeded template_app_basic contract surface.
+  3. Review README.md and .frida/inbox/app-contract/ for the seeded baseline app-contract surface.
   4. Edit the seeded app-contract files — keep AL03-host-root as the baseline anchor, replace placeholder values, and expand layers as the repo grows.
   5. For subsequent reconcile/repair:
        npm run frida:bootstrap

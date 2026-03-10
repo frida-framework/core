@@ -12,12 +12,33 @@ CONTRACT_META:
     purpose: >-
       Schema-driven generation engine, zone enforcement, visual overlay extraction,
       agent session control, and warm-first Frida bootstrap/reconcile with explicit demo seeding mode.
-    interface_term: "In Frida, 'interface' means a management-layer contract block that defines an allowed contract-management operation and its repository boundary."
+    interface_term: "In Frida, 'interface' means a management-layer normative contract block that defines an allowed operation class, repository scope, mutation scope, required concepts, rules, invariants, guards, and verification/reporting expectations for agent-facing execution."
+    playbook_term: "In Frida, 'playbook' means a derived instruction document that operationalizes one or more interfaces. A playbook is not a normative source of truth."
+    surface_term: "In Frida, 'surface' means only an ownership, deployment, and access contour. A surface does not become authoritative merely by existing at a path."
     interface_visibility_default: "FRIDA_INTERFACE_* blocks are public unless `_visibility: private` is explicitly set."
     layer_prefix_rule: "Frida core contract layers use FL##-*.yaml; Frida-managed app contract layers use AL##-*.yaml."
     layer_number_format: "Two digits exactly (`FL01`, `AL02`)."
-    app_template_term: "A template is a named Frida-shipped app-contract seed; `template_app_basic` is the neutral zero-start baseline."
+    app_template_term: "A template is a named Frida-shipped derivative app-contract seed; `template_app_basic` materializes Frida bootstrap and contract rules as the neutral zero-start baseline and is not a source of truth."
     app_extension_term: "An app extension is a named optional app-contract layer activated only by linking its AL## file in the target app contract index."
+    instruction_surface_classes:
+      engine_invariant_instruction_surfaces:
+        meaning: "Engine-generated or engine-static instruction surfaces whose exact paths and content are strict Frida invariants."
+        examples:
+          - "AGENTS.md"
+          - ".frida/contract/AGENTS.md"
+          - "zone AGENTS.md"
+          - ".frida/contract/specs/ROUTER.xml"
+          - ".frida/contract/profiles/*.xml"
+      interface_instruction_surfaces:
+        meaning: "Seeded baseline instruction documents that implement public interfaces in target repos and remain user-owned in form after initial deployment."
+        ownership_model: seed_then_user_owned
+        examples:
+          - ".frida/contract/playbooks/AGENT-app-contract-update.md"
+          - ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+      derived_templates:
+        meaning: "Shipped baseline materials derived from Frida rules and bootstrap policy, never normative sources."
+        examples:
+          - "templates/template_app_basic/**"
     interface_boundaries:
       self_contract_management:
         block: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
@@ -112,7 +133,6 @@ core:
     - "normalize"
     - "resolve-selectors"
     - "run-artifact-generator"
-    - "run-adapter-generators"
     - "emit-manifest"
   pathRefs:
     contractArtifact: "contract/contract.index.yaml"
@@ -132,4 +152,3 @@ core:
     - ".frida/contract/artifacts/frida.ir.json"
     - ".frida/contract/artifacts/frida.permissions.json"
     - ".frida/contract/artifacts/frida.graph.mmd"
-    - ".frida/contract/artifacts/frida.adapter.generated.json"

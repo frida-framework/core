@@ -1,8 +1,8 @@
 {
   "meta": {
-    "generatedAt": "2026-03-09T02:12:35.869Z",
-    "contractSha256": "0b4f5775242c90dd34d6204d8afdea2f878e20763ba2c1bdd30e2e414409abcd",
-    "pathMappingsCount": 78,
+    "generatedAt": "2026-03-10T18:16:25.538Z",
+    "contractSha256": "17cb6b34d394cc203f21a13626cc086812b020dcc31d464e3fe30ce12c58e537",
+    "pathMappingsCount": 81,
     "zoneCount": 3,
     "profileCount": 3
   },
@@ -229,6 +229,202 @@
       "source": {
         "block": "GUARDS",
         "id": "GUARD_ANTITASK_VALIDATE_PHASE"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_BOUNDARY_SECTIONS_COMPLETE",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_BOUNDARY_SECTIONS_COMPLETE",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Component-level contracts MUST declare all canonical component_* boundary sections.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_BOUNDARY_SECTIONS_COMPLETE"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_BOUNDARY_REFS_RESOLVE",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_BOUNDARY_REFS_RESOLVE",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Mounted child boundary refs and continuation/return targets MUST resolve when declared.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_BOUNDARY_REFS_RESOLVE"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_ROOT_PARENT_RULE",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_ROOT_PARENT_RULE",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Root boundaries MAY omit parent_boundaryRef; non-root boundaries MUST resolve a valid parent boundary when required by the model.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_ROOT_PARENT_RULE"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_HOST_ROOT_ANCHOR",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_HOST_ROOT_ANCHOR",
+      "attrs": {
+        "kind": "chain",
+        "statement": "If local_role=host_root is present, it MUST be unique, MUST omit parent_boundaryRef, and MUST act as the single depth=0 anchor for the host baseline.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_HOST_ROOT_ANCHOR"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_MOUNTED_CHILD_UNIQUE_NON_SELF",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_MOUNTED_CHILD_UNIQUE_NON_SELF",
+      "attrs": {
+        "kind": "ban",
+        "statement": "mounted_child_boundaryRefs MUST be unique, MUST NOT self-target, and MUST NOT create ambiguous child drill-in declarations.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_MOUNTED_CHILD_UNIQUE_NON_SELF"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_EXIT_SEMANTICS_COMPLETE",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_EXIT_SEMANTICS_COMPLETE",
+      "attrs": {
+        "kind": "chain",
+        "statement": "component_output_interface exit entries MUST include required outcome semantics.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_EXIT_SEMANTICS_COMPLETE"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_EXIT_TARGET_MATRIX",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_EXIT_TARGET_MATRIX",
+      "attrs": {
+        "kind": "chain",
+        "statement": "continue requires target_boundaryRef, return requires return_target_boundaryRef, and exit forbids both.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_EXIT_TARGET_MATRIX"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Parent specification view MUST NOT inline mounted child internals; child expansion requires explicit drill-in.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_DOMAIN_BLOCK_SELECTOR_DRIVEN",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_DOMAIN_BLOCK_SELECTOR_DRIVEN",
+      "attrs": {
+        "kind": "drift",
+        "statement": "component_domain_blocks projection MUST remain selector-driven on explicit projection_domains declarations and MUST NOT use heuristics.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_DOMAIN_BLOCK_SELECTOR_DRIVEN"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_SHARED_REFS_DEPENDENCY_ONLY",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_SHARED_REFS_DEPENDENCY_ONLY",
+      "attrs": {
+        "kind": "ban",
+        "statement": "component_shared_refs MUST remain dependency-only and MUST NOT carry ownership, hierarchy, entry, or exit semantics.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_SHARED_REFS_DEPENDENCY_ONLY"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_AUTHORITATIVE_EXAMPLE_RUNTIME_FREE",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_AUTHORITATIVE_EXAMPLE_RUNTIME_FREE",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Authoritative component-contract examples MUST remain runtime-free; viewer/session demo state is allowed only in explicit fixture-only reference surfaces.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_AUTHORITATIVE_EXAMPLE_RUNTIME_FREE"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Legacy component-boundary section names are forbidden in active contract definitions.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Mixed legacy/new component-boundary namespace usage is forbidden in active component contract definitions.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN"
+      }
+    },
+    {
+      "id": "guard:GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST",
+      "kind": "guard",
+      "label": "GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST",
+      "attrs": {
+        "kind": "drift",
+        "statement": "Visualization semantics MUST remain boundary-first, with YAML depth secondary and exits sourced from component_output_interface.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST"
       }
     },
     {
@@ -570,6 +766,58 @@
       }
     },
     {
+      "id": "invariant:app_template_basic_derivative_only",
+      "kind": "invariant",
+      "label": "app_template_basic_derivative_only",
+      "attrs": {
+        "text": "`template_app_basic` is a shipped derivative baseline and MUST NOT define unique normative Frida semantics absent from core contract or bootstrap policy.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_template_basic_derivative_only"
+      }
+    },
+    {
+      "id": "invariant:target_delivery_no_internal_authoring_surfaces",
+      "kind": "invariant",
+      "label": "target_delivery_no_internal_authoring_surfaces",
+      "attrs": {
+        "text": "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml`.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "target_delivery_no_internal_authoring_surfaces"
+      }
+    },
+    {
+      "id": "invariant:interface_instruction_surfaces_seed_then_user_owned",
+      "kind": "invariant",
+      "label": "interface_instruction_surfaces_seed_then_user_owned",
+      "attrs": {
+        "text": "Public interface-instruction surfaces in target repos are seeded by Frida once and then remain user-owned in form; Frida validates only normative completeness against the backing interface.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "interface_instruction_surfaces_seed_then_user_owned"
+      }
+    },
+    {
+      "id": "invariant:engine_instruction_surfaces_strict",
+      "kind": "invariant",
+      "label": "engine_instruction_surfaces_strict",
+      "attrs": {
+        "text": "AGENTS.md, generated router/profile surfaces, and contractual zone AGENTS.md are engine-managed invariant instruction surfaces and remain overwriteable/regenerable by Frida.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "engine_instruction_surfaces_strict"
+      }
+    },
+    {
       "id": "invariant:app_extensions_link_driven",
       "kind": "invariant",
       "label": "app_extensions_link_driven",
@@ -738,6 +986,175 @@
       "source": {
         "block": "INVARIANTS",
         "id": "no_interface_spec"
+      }
+    },
+    {
+      "id": "invariant:component_boundary_sections_complete",
+      "kind": "invariant",
+      "label": "component_boundary_sections_complete",
+      "attrs": {
+        "text": "Component-level contracts MUST declare the full canonical component_* boundary surface.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_boundary_sections_complete"
+      }
+    },
+    {
+      "id": "invariant:component_boundary_refs_resolve",
+      "kind": "invariant",
+      "label": "component_boundary_refs_resolve",
+      "attrs": {
+        "text": "Mounted child boundary refs and continuation/return targets MUST resolve when declared.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_boundary_refs_resolve"
+      }
+    },
+    {
+      "id": "invariant:component_root_parent_rule",
+      "kind": "invariant",
+      "label": "component_root_parent_rule",
+      "attrs": {
+        "text": "Root boundaries MAY omit parent_boundaryRef; non-root boundaries MUST resolve a valid parent boundary when required by the model.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_root_parent_rule"
+      }
+    },
+    {
+      "id": "invariant:component_host_root_anchor",
+      "kind": "invariant",
+      "label": "component_host_root_anchor",
+      "attrs": {
+        "text": "If a boundary declares local_role=host_root, it MUST be the unique null-parent depth=0 anchor and all other boundaries in that app baseline MUST resolve upward to it.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_host_root_anchor"
+      }
+    },
+    {
+      "id": "invariant:component_mounted_child_unique_non_self",
+      "kind": "invariant",
+      "label": "component_mounted_child_unique_non_self",
+      "attrs": {
+        "text": "mounted_child_boundaryRefs MUST be unique per boundary, MUST NOT target the current boundary, and MUST NOT create ambiguous drill-in declarations.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_mounted_child_unique_non_self"
+      }
+    },
+    {
+      "id": "invariant:component_output_exit_semantics_canonical",
+      "kind": "invariant",
+      "label": "component_output_exit_semantics_canonical",
+      "attrs": {
+        "text": "component_output_interface exit entries MUST declare outcomes and remain the canonical source for exit semantics.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_output_exit_semantics_canonical"
+      }
+    },
+    {
+      "id": "invariant:component_output_exit_target_matrix",
+      "kind": "invariant",
+      "label": "component_output_exit_target_matrix",
+      "attrs": {
+        "text": "continue requires target_boundaryRef, return requires return_target_boundaryRef, and exit forbids both.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_output_exit_target_matrix"
+      }
+    },
+    {
+      "id": "invariant:component_child_non_auto_expand",
+      "kind": "invariant",
+      "label": "component_child_non_auto_expand",
+      "attrs": {
+        "text": "Mounted child internals MUST remain collapsed in the parent specification view until explicit drill-in.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_child_non_auto_expand"
+      }
+    },
+    {
+      "id": "invariant:component_domain_blocks_selector_driven",
+      "kind": "invariant",
+      "label": "component_domain_blocks_selector_driven",
+      "attrs": {
+        "text": "component_domain_blocks MUST project only through explicit projection_domains selectors on top-level child blocks; heuristics are forbidden.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_domain_blocks_selector_driven"
+      }
+    },
+    {
+      "id": "invariant:component_shared_refs_dependency_only",
+      "kind": "invariant",
+      "label": "component_shared_refs_dependency_only",
+      "attrs": {
+        "text": "component_shared_refs MUST remain dependency-only and MUST NOT redefine ownership or boundary semantics.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_shared_refs_dependency_only"
+      }
+    },
+    {
+      "id": "invariant:component_authoritative_examples_runtime_free",
+      "kind": "invariant",
+      "label": "component_authoritative_examples_runtime_free",
+      "attrs": {
+        "text": "Authoritative component-contract examples MUST remain runtime-free; viewer/session demo state is allowed only in explicit fixture-only surfaces.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_authoritative_examples_runtime_free"
+      }
+    },
+    {
+      "id": "invariant:component_legacy_namespace_forbidden",
+      "kind": "invariant",
+      "label": "component_legacy_namespace_forbidden",
+      "attrs": {
+        "text": "Legacy component-boundary section names are forbidden in active contract definitions unless explicitly historical/deprecated.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_legacy_namespace_forbidden"
+      }
+    },
+    {
+      "id": "invariant:component_boundary_visual_primary",
+      "kind": "invariant",
+      "label": "component_boundary_visual_primary",
+      "attrs": {
+        "text": "Component boundary semantics are the primary visual interpretation unit; YAML depth is secondary.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "component_boundary_visual_primary"
       }
     },
     {

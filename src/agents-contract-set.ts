@@ -152,9 +152,6 @@ function resolveBootloaderPath(contract: Record<string, any>): string {
   const fromRef = resolvePathLike(contract, fridaPaths.agents_bootloaderFileRef);
   if (fromRef) return fromRef;
 
-  const fromLegacy = resolvePathLike(contract, fridaPaths.agents_bootloader);
-  if (fromLegacy) return fromLegacy;
-
   const fromPaths = contract.PATHS?.agents?.bootloaderFile;
   if (typeof fromPaths === 'string' && fromPaths.trim()) return fromPaths;
 

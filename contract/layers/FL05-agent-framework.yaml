@@ -179,6 +179,18 @@ FRIDA_ENFORCEMENT:
     - id: app_template_basic_neutral
       text: "`template_app_basic` MUST remain vendor-neutral and MUST NOT declare backend or implementation-specific app surfaces by default."
       scope: kernel
+    - id: app_template_basic_derivative_only
+      text: "`template_app_basic` is a shipped derivative baseline and MUST NOT define unique normative Frida semantics absent from core contract or bootstrap policy."
+      scope: kernel
+    - id: target_delivery_no_internal_authoring_surfaces
+      text: "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml`."
+      scope: kernel
+    - id: interface_instruction_surfaces_seed_then_user_owned
+      text: "Public interface-instruction surfaces in target repos are seeded by Frida once and then remain user-owned in form; Frida validates only normative completeness against the backing interface."
+      scope: kernel
+    - id: engine_instruction_surfaces_strict
+      text: "AGENTS.md, generated router/profile surfaces, and contractual zone AGENTS.md are engine-managed invariant instruction surfaces and remain overwriteable/regenerable by Frida."
+      scope: kernel
     - id: app_extensions_link_driven
       text: "App extensions are active only when their AL## layer is linked in the target app contract index. Presence of inactive extension files alone has no effect."
       scope: kernel

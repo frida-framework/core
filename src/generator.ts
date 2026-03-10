@@ -94,6 +94,10 @@ interface GeneratorRuntimePaths {
     fridaInternalDir: string;
     templatesFridaDir: string;
     templatesDocsDir: string;
+    auditPlaybookPath: string;
+    auditCoreContractPath: string;
+    auditAppContractPath?: string;
+    repoScope: 'frida_repo' | 'target_app_repo';
 }
 
 interface LoadedGeneratorContext {
@@ -552,6 +556,58 @@ function resolveFridaConfigPath(
     }
 
     failWithError(`missing required ${expectedKind} path configuration FRIDA_CONFIG.paths.${refField}.`);
+}
+
+function resolveRepoScopedInterfacePathOrFail(
+    contract: Contract,
+    interfaceKey: string,
+    repoScope: 'frida_repo' | 'target_app_repo',
+    field: string
+): string {
+    const iface = (contract as Record<string, any>)[interfaceKey];
+    if (!iface || typeof iface !== 'object') {
+        failWithError(`missing required contract interface block: ${interfaceKey}.`);
+    }
+
+    const scopedSurfaces = (iface as Record<string, any>).repository_scoped_surfaces;
+    if (!scopedSurfaces || typeof scopedSurfaces !== 'object') {
+        failWithError(`${interfaceKey}.repository_scoped_surfaces is missing.`);
+    }
+
+    const scoped = (scopedSurfaces as Record<string, any>)[repoScope];
+    if (!scoped || typeof scoped !== 'object') {
+        failWithError(`${interfaceKey}.repository_scoped_surfaces.${repoScope} is missing.`);
+    }
+
+    const rawValue = (scoped as Record<string, any>)[field];
+    if (typeof rawValue !== 'string' || !rawValue.trim()) {
+        failWithError(`${interfaceKey}.repository_scoped_surfaces.${repoScope}.${field} is missing or empty.`);
+    }
+
+    if (rawValue.startsWith('PATHS.')) {
+        return resolvePathRefOrFail(
+            contract,
+            rawValue,
+            `${interfaceKey}.repository_scoped_surfaces.${repoScope}.${field}`,
+            'file'
+        );
+    }
+
+    return rawValue;
+}
+
+function loadAuditInterfaceContract(repoScope: 'frida_repo' | 'target_app_repo', currentContract: Contract): Contract {
+    if (repoScope === 'frida_repo' && (currentContract as Record<string, any>).FRIDA_INTERFACE_AUDIT) {
+        return currentContract;
+    }
+
+    if ((currentContract as Record<string, any>).FRIDA_INTERFACE_AUDIT) {
+        return currentContract;
+    }
+
+    const engineContractPath = path.join(ENGINE_PACKAGE_ROOT, 'contract', 'contract.index.yaml');
+    const loaded = loadContractDocument(ENGINE_PACKAGE_ROOT, engineContractPath);
+    return loaded.parsed as Contract;
 }
 
 function resolvePathValue(contract: Contract, value: string, context: string): string[] {
@@ -1029,6 +1085,8 @@ function loadGeneratorContext(): LoadedGeneratorContext {
 
     const cfgPaths = getFridaConfigPathsOrFail(loaded.contract);
     assertNoRemovedPathAliases(cfgPaths);
+    const repoScope = isEngineSelfRepo(ROOT_DIR) ? 'frida_repo' : 'target_app_repo';
+    const auditInterfaceContract = loadAuditInterfaceContract(repoScope, loaded.contract);
     const runtimePaths: GeneratorRuntimePaths = {
         contractArtifactPath: contractPath,
         bootloaderFilePath: resolveFridaConfigPath(loaded.contract, cfgPaths, {
@@ -1055,14 +1113,39 @@ function loadGeneratorContext(): LoadedGeneratorContext {
             refField: 'frida_internalRef',
             expectedKind: 'dir',
         }),
-        templatesFridaDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
-            refField: 'templates_fridaRef',
-            expectedKind: 'dir',
-        }),
-        templatesDocsDir: resolveFridaConfigPath(loaded.contract, cfgPaths, {
-            refField: 'templates_docsRef',
-            expectedKind: 'dir',
-        }),
+        templatesFridaDir: repoScope === 'frida_repo'
+            ? resolveFridaConfigPath(loaded.contract, cfgPaths, {
+                refField: 'templates_fridaRef',
+                expectedKind: 'dir',
+            })
+            : path.resolve(ENGINE_PACKAGE_ROOT, 'templates', 'frida'),
+        templatesDocsDir: repoScope === 'frida_repo'
+            ? resolveFridaConfigPath(loaded.contract, cfgPaths, {
+                refField: 'templates_docsRef',
+                expectedKind: 'dir',
+            })
+            : path.resolve(ENGINE_PACKAGE_ROOT, 'templates', 'docs-gen'),
+        auditPlaybookPath: resolveRepoScopedInterfacePathOrFail(
+            auditInterfaceContract,
+            'FRIDA_INTERFACE_AUDIT',
+            repoScope,
+            'playbook_ref'
+        ),
+        auditCoreContractPath: resolveRepoScopedInterfacePathOrFail(
+            auditInterfaceContract,
+            'FRIDA_INTERFACE_AUDIT',
+            repoScope,
+            'core_contract_ref'
+        ),
+        auditAppContractPath: repoScope === 'frida_repo'
+            ? undefined
+            : resolveRepoScopedInterfacePathOrFail(
+                auditInterfaceContract,
+                'FRIDA_INTERFACE_AUDIT',
+                repoScope,
+                'app_contract_ref'
+            ),
+        repoScope,
     };
 
     return {
@@ -1194,14 +1277,10 @@ function validateContract(contract: Contract): EffectiveGuards {
         && typeof accessValidation.repo_policies === 'object')
         ? accessValidation.repo_policies as Record<string, unknown>
         : {};
-    const legacyPolicyPaths = (accessValidation && typeof accessValidation === 'object' && accessValidation.policy_paths
-        && typeof accessValidation.policy_paths === 'object')
-        ? accessValidation.policy_paths as Record<string, unknown>
-        : {};
     const repoPolicyKey = isEngineSelfRepo(ROOT_DIR) ? 'frida_core' : 'target_app';
     const policyPaths = (repoPolicies[repoPolicyKey] && typeof repoPolicies[repoPolicyKey] === 'object')
         ? repoPolicies[repoPolicyKey] as Record<string, unknown>
-        : legacyPolicyPaths;
+        : {};
     const policyList = (key: string, fallback: string[]): string[] => {
         const value = policyPaths[key];
         if (!Array.isArray(value)) {
@@ -1636,12 +1715,7 @@ function generateZoneAgents(
     const loadZoneTemplate = (name: string): HandlebarsTemplateDelegate => {
         if (!templates[name]) {
             const templateFile = `agents-${name}.hbs`;
-            try {
-                templates[name] = loadTemplate(docsTplRoot, templateFile);
-            } catch {
-                console.warn(`⚠️  Template not found: ${templateFile}, using fallback`);
-                templates[name] = templates['readonly-zone'] || loadTemplate(docsTplRoot, 'agents-readonly.hbs');
-            }
+            templates[name] = loadTemplate(docsTplRoot, templateFile);
         }
         return templates[name];
     };
@@ -1795,6 +1869,11 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
         profileCount: profiles.length,
         zoneCount: zones.length,
         profiles,
+        repoScope: runtimePaths.repoScope,
+        isFridaSelfRepo: runtimePaths.repoScope === 'frida_repo',
+        auditPlaybookPath: runtimePaths.auditPlaybookPath,
+        auditCoreContractPath: runtimePaths.auditCoreContractPath,
+        auditAppContractPath: runtimePaths.auditAppContractPath,
     });
     write(runtimePaths.bootloaderFilePath, bootloaderContent);
 

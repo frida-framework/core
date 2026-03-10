@@ -1,8 +1,8 @@
 <!-- AUTO-GENERATED FROM CONTRACT - DO NOT EDIT MANUALLY -->
 
-# Repo Audit Task Builder
+# Repo Audit Protocol
 
-> Generate self-contained Audit Task Packs for verifying contract implementation in repository.
+> Repository-scoped audit protocol for Frida self-repo and deployed target application repos.
 
 ---
 
@@ -10,159 +10,108 @@
 
 `CONTRACT -> ANTITASK -> DEVELOPMENT` [FL13:5]
 
-Audit Task Packs are formed from contract and executed within Antitask constraints without additional interpretation.
+Audit executes against canonical contract entrypoints and must not rely on hidden engine-source surfaces.
 
 ---
 
 ## Goal
 
-Build one audit task per profile_id from the repository-scoped profile block.
+Determine whether the current repository is:
 
-Each task is self-contained:
+- `frida_repo`: the Frida core self-repo
+- `target_app_repo`: a deployed application repo managed by Frida
 
-- Contains applicable requirements and definitions.
-- Does not send the executor to wiki for re-interpretation.
-
-Output per task: AUDIT SCORE (0-100), list of discrepancies, list of Undocumented details.
+Then validate contract structure, routing chain, deployed surface integrity, and CLI health for that repository scope.
 
 ---
 
-## Sources
+## Repository Scope Resolution
 
-Use only the priority model from `contract:DOCS.sourcesModel`.
+Resolve repository scope before loading any audit canon:
 
-For contract-tier, extract data as follows:
+1. If `contract/contract.index.yaml` exists and the repository is the Frida core checkout, scope is `frida_repo`.
+2. Otherwise, if `.frida/inbox/app-contract/contract.index.yaml` exists, scope is `target_app_repo`.
+3. If neither condition is satisfied, HALT with `CONTRACT.GAP`.
 
-1. In deployed repos, use `.frida/inbox/app-contract/contract.index.yaml` as the authoritative app-contract entry point and `.frida/contract/frida/contract.index.yaml` for the mirrored Frida core contract.
-2. If an older repo exposes only `contract/contract.cbmd.yaml`, treat it as compatibility-only snapshot.
-3. If snapshot is absent or incomplete, extract contract blocks from zerohuman-* pages.
-4. If snapshot conflicts with wiki blocks, mark `CANON.GAP` and treat wiki contract blocks as normative.
-
----
-
-## Block Extraction
-
-Scan markdown and extract blocks by marker `` ```yaml contract:<BLOCK_NAME> ``.
-
-Build index `blocks[BLOCK_NAME] -> parsed_yaml`.
-
-If `BLOCK_NAME` is duplicated — mark `CONTRACT.GAP` and HALT: duplicate block name makes contract ambiguous; deterministic contract artifact generation must return `FAIL`.
-
-### Profile list
-
-Source: repository-scoped profile block. If block is absent — HALT.
+No audit step may depend on `.frida/templates/**`, `templates/frida/**`, `templates/docs-gen/**`, or other framework authoring surfaces inside a target repo.
 
 ---
 
-## What to include in a profile task
+## Canon Sources
 
-### A. Profile definition
+### `frida_repo`
 
-Full TASK_PROFILES[profile_id] record.
+- Core contract entry: `contract/contract.index.yaml`
+- Key layers: `contract/layers/FL03-infrastructure.yaml`, `contract/layers/FL05-agent-framework.yaml`, `contract/layers/FL09-bootstrap.yaml`, `contract/layers/FL11-management.yaml`, `contract/layers/FL13-agent-entry.yaml`
+- Repository-scoped profile block: `FRIDA_TASK_PROFILES`
+- Repository-scoped zone block: `INT_FRIDA_ZONES`
+- Invariants and guards:
+  - use `FRIDA_ENFORCEMENT.invariants`
+  - use `FRIDA_ENFORCEMENT.policies` and normalize them into the audit guard view
+  - if the assembled contract also exposes normalized `INVARIANTS` or `GUARDS`, they may be used as equivalent derived surfaces
+- Audit interface: `FRIDA_INTERFACE_AUDIT`
 
-### B. Profile invariants
+### `target_app_repo`
 
-For each invariant_id from profile.invariants — embed text from INVARIANTS.
-Missing invariant → CANON.GAP.
+- App contract entry: `.frida/inbox/app-contract/contract.index.yaml`
+- Mirrored core contract entry: `.frida/contract/frida/contract.index.yaml`
+- Repository-scoped profile block: `TASK_PROFILES`
+- Repository-scoped zone block: `ZONES`
+- Invariants block: `INVARIANTS`
+- Guards block: `GUARDS`
+- Audit interface: mirrored `FRIDA_INTERFACE_AUDIT`
 
-### C. Applicable guards (deterministic)
+### Contract loading rules
 
-Formula: `applicable = GUARDS.globalGuardRefs + union(touched_zones.guardRefs)`
-
-Where `touched_zones` derived from profile allowlists via ZONE_RESOLUTION.
-
-Important: `touched_zones` derivation for repo-audit is NOT execution zone resolution.
-Execution zone resolution is defined only by the repository-scoped zone block for a specific target path (most specific wins).
-
-Algorithm:
-
-1. `allowlist = read_allowGlobRefs ∪ edit_allowGlobRefs`.
-2. For each path/pattern from `allowlist`, find intersecting zone path definitions from the repository-scoped zone block (after resolving `PATHS.*`).
-3. Select one zone per path by `ZONE_RESOLUTION.selection.order`:
-   - longest normalized literal prefix before wildcard,
-   - if equal — fewer wildcard tokens,
-   - if equal — lexicographic by zone name.
-4. `touched_zones = union(selected zones)`.
-5. Compute `applicable` using the single formula above.
-6. Remove duplicates preserving first-occurrence order.
-7. Each `guardRef` must exist in `GUARDS.guards[*].id`; otherwise `CANON.GAP`.
-
-No heuristics by statement text, keywords, or natural language.
-
-### D. Related contract blocks
-
-Embed only verifiable fragments needed for audit. Follow explicit *Ref links only.
-
-Applicable blocks:
-
-- `TASK_PROFILES` (current profile)
-- `INVARIANTS` (profile id)
-- `GUARDS` (ids from `applicable`)
-- repository-scoped zone block (only `touched_zones`)
-- `DOCS` (source rules for conflict resolution)
-- `BUILDTIME` (if profile touches mapper or polygon build zones)
-- `UI_STRUCTURE`, `UI_COMPONENT_CONTRACTS`, `UI_BEHAVIOR` (if profile touches UI/pages)
-- Additional blocks only by explicit refs (*Ref, id fields), not by token heuristics.
-
-### E. Terms
-
-If requirements use GLOSSARY terms, embed definitions. Missing term → CANON.GAP.
+Load YAML contract artifacts directly from the canonical files above. Do not require markdown-fence extraction. Do not require `DOCS.sourcesModel`. Do not require `read_allowGlobRefs` or `edit_allowGlobRefs` specifically; audit the repository-scoped security surface as actually declared.
 
 ---
 
-## Task Format
+## Audit Checklist
 
-Each `TASK-REPO-AUDIT-<profile_id>.md` contains:
+### 1. Deployment surface
 
-### 1. Scope
+- Verify repository-scoped bootloader paths exist and point only to valid surfaces for the current scope.
+- In `target_app_repo`, verify deployed playbooks exist under `.frida/contract/playbooks/*`.
+- In `target_app_repo`, verify `.frida/templates/config.template.yaml` may exist, but `.frida/templates/frida/**` and `.frida/templates/docs-gen/**` do not exist and are not referenced.
+- Verify `.frida` root layout matches the Frida root layout policy.
 
-- profile_id, audit target
-- Readable paths (from read_allowGlobRefs)
-- Forbidden paths (from forbidGlobRefs + edit_forbidGlobRefs)
+### 2. Contract integrity
 
-### 2. Embedded Canon Snapshot
+- Verify the repository-scoped profile block exists.
+- Verify the repository-scoped zone block exists.
+- Verify invariant sources resolve for the current scope.
+- Verify guard sources resolve for the current scope.
+- Verify path refs used by audit and routing surfaces resolve.
+- In `frida_repo`, treat `FRIDA_ENFORCEMENT -> INVARIANTS/GUARDS` normalization as canonical behavior.
 
-- Full profile record
-- Invariant texts
-- Applicable guards
-- Related block fragments
-- Term definitions
+### 3. Routing chain
 
-### 3. Audit Checklist
+- Verify root `AGENTS.md` exists and matches repository scope.
+- Verify `ROUTER.xml` exists at `.frida/contract/specs/ROUTER.xml`.
+- Verify profile XML files exist at `.frida/contract/profiles/`.
+- Verify zone `AGENTS.md` files exist at the contractual `agentsPath` locations for the repository-scoped zone block.
 
-Each item: what to verify + what evidence to attach.
+### 4. Internal/public contour separation
 
-Coverage:
+- In `target_app_repo`, projected Frida surfaces must not reference:
+  - `templates/management/*`
+  - `templates/frida/*`
+  - `templates/docs-gen/*`
+  - `templates/template_app_basic/*`
+  - `frida-tasks/*`
+  - `INT_FRIDA_ZONES`
+  - `FRIDA_INT_AGENT_ROUTING`
+  - `FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT`
+- In `frida_repo`, self-contract management and authoring paths may exist only in source surfaces, not as deployed target-repo requirements.
 
-- Profile surface (allow/forbid paths exist, no conflicts; `security.redirects[].fromGlobRef/(toFileRef|toDirRef)/reason` consistent; all `PATHS.*` refs resolve)
-- Each invariant
-- Each guard
-- Each embedded entity
-- Component-boundary contracts, when present: canonical component_* sections complete, mounted child refs resolve, exit outcomes explicit, parent view does not inline child internals, and shared refs stay dependency-only
+### 5. CLI diagnostics
 
-### 4. Undocumented details
+Run:
 
-Executor must collect:
-
-- Runtime config / env variables and their validation
-- Hidden data contracts (DTO/types between layers not described in contract)
-- Implicit rules (sorts, filters, magic numbers, defaults)
-- External dependencies (services, SDK, versions)
-- Non-determinism sources (time, random, concurrency)
-
-### 5. Scoring (0-100)
-
-| Block | Weight | What is evaluated |
-|-------|--------|-------------------|
-| Surface | 25 | Paths exist, forbids not violated, redirects consistent, all PATHS.* refs resolve |
-| Invariants | 30 | Each invariant verified with evidence |
-| Guards | 25 | Each guard verified with evidence |
-| Undocumented | 10 | Real details collected with code references |
-| Reproducibility | 10 | Verification commands listed, limitations stated |
-
-Threshold: **≥ 70 = PASS**, **< 70 = FAIL**.
-Any `COMPLIANCE.FAIL` → status FAIL regardless of score.
-If verification impossible — score reduced, item marked `UNVERIFIABLE`.
+- `frida-core migration-report`
+- `frida-core check zone --path .`
+- `frida-core check contract-set`
 
 ### 6. FRIDA Audit Run Report
 
@@ -183,10 +132,10 @@ inputs:
       role: "<role>"
       keywords: []
       security:
-        read_allowGlobRefs: []
-        edit_allowGlobRefs: []
-        forbidGlobRefs: []
-        edit_forbidGlobRefs: []
+        read_allow: []
+        edit_allow: []
+        forbid: []
+        edit_forbid: []
       invariants: []
     invariants_text: []
     guards: []
@@ -228,24 +177,18 @@ summary:
 
 ## Determinism
 
-- Profiles sorted by name.
-- Invariants within task sorted by id.
-- Guards within task sorted by id.
-- Zones within task sorted by zone name.
-- No "at discretion" alternatives.
-
----
-
-## Output Artifacts
-
-Generator creates `TASK-REPO-AUDIT-<profile_id>.md` files and delivers them to human for placement in repository.
-
-For large numbers of tasks — additionally `TASK-REPO-AUDIT-INDEX.md` with coverage map.
+- Profiles sorted by id.
+- Invariants sorted by id.
+- Guards sorted by id.
+- Zones sorted by id.
+- Repository scope must be explicit.
 
 ---
 
 ## HALT Conditions
 
-- Cannot get profile list (no TASK_PROFILES).
-- YAML parsing too broken to extract profile keys.
-- Duplicate block name detected (contract ambiguity; contract artifact generation must return `FAIL`).
+- Cannot determine repository scope.
+- Repository-scoped profile block missing.
+- Repository-scoped zone block missing.
+- Canonical contract entrypoints are missing.
+- CLI diagnostics cannot be executed and no equivalent local invocation path is available.

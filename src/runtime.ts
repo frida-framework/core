@@ -11,7 +11,6 @@ import {
   emitAppContractSourceMirror,
   emitCoreToolingEntrypoints,
   emitFridaContractSourceMirror,
-  emitTemplatesMirror,
   ContractMirrorError,
 } from './contract-mirror.ts';
 import { validateFridaRootLayout } from './frida-layout.ts';
@@ -117,11 +116,6 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
     console.warn(warning);
   }
 
-  // Fresh app-side bootstrap needs local template mirrors before the generator can render outputs.
-  if (!isEngineSelfRepo(loaded.rootDir)) {
-    emitTemplatesMirror(loaded.rootDir, ENGINE_PACKAGE_ROOT);
-  }
-
   await runFridaArtifactGenerator({});
 
   const runtimeConfigArtifacts = ensureRuntimeConfigArtifacts(loaded.rootDir, getContractReportingSettings(loaded.parsed));
@@ -140,9 +134,6 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
     console.log(`Frida contract mirror written: ${path.relative(loaded.rootDir, fridaMirrorDir)}`);
     const appMirrorDir = emitAppContractSourceMirror(loaded.rootDir);
     console.log(`App contract working copy written: ${path.relative(loaded.rootDir, appMirrorDir)}`);
-
-    const templatesDir = emitTemplatesMirror(loaded.rootDir, ENGINE_PACKAGE_ROOT);
-    console.log(`Frida templates distributed: ${path.relative(loaded.rootDir, templatesDir)}`);
 
     const projectedEntrypoints = emitCoreToolingEntrypoints(loaded.rootDir, loaded.parsed);
     for (const entrypointPath of projectedEntrypoints) {

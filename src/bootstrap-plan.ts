@@ -96,30 +96,23 @@ function normalizeComponentName(componentName: string): string {
   return componentName.trim().toLowerCase();
 }
 
+function isInterfaceInstructionResetComponent(componentName: string): boolean {
+  return normalizeComponentName(componentName) === 'interface-instructions-reset';
+}
+
 function entryMatchesComponent(entry: BootstrapPackageManifestEntry, componentName: string): boolean {
   const component = normalizeComponentName(componentName);
-  const target = toPosixRelativePath(entry.target);
+  const entryComponents = Array.isArray(entry.components)
+    ? entry.components.map((value) => normalizeComponentName(value))
+    : [];
 
   switch (component) {
     case 'all':
       return true;
-    case 'playbooks':
-      return (
-        target === '.frida/contract/playbooks' ||
-        target.startsWith('.frida/contract/playbooks/') ||
-        target === '.frida/playbooks' ||
-        target.startsWith('.frida/playbooks/')
-      );
-    case 'bootloader':
-    case 'agents':
-      return target === 'AGENTS.md';
     case 'generated':
       return entry.ownership_class === 'engine_generated';
-    case 'runtime-config-template':
-    case 'config-template':
-      return target === '.frida/templates/config.template.yaml';
     default:
-      return false;
+      return entryComponents.includes(component);
   }
 }
 
@@ -328,6 +321,9 @@ export function buildBootstrapPlan(options: BuildBootstrapPlanOptions): Bootstra
   const targetDir = path.resolve(options.targetDir);
   const { entries, modeOut } = resolveManifestEntries(options.manifest, options.mode, options.componentName);
   validateNoForbiddenTargets(entries, modeOut);
+  const componentName = options.componentName ?? null;
+  const forceInterfaceInstructionReset =
+    modeOut === 'component' && componentName !== null && isInterfaceInstructionResetComponent(componentName);
 
   const fullMode = modeOut !== 'component';
   checkPreservePruneConflicts(entries, fullMode);
@@ -403,6 +399,23 @@ export function buildBootstrapPlan(options: BuildBootstrapPlanOptions): Bootstra
     }
 
     if (entry.apply_mode === 'seed_if_absent') {
+      if (
+        forceInterfaceInstructionReset &&
+        Array.isArray(entry.components) &&
+        entry.components.map((value) => normalizeComponentName(value)).includes('interface-instructions-reset')
+      ) {
+        addEnsureDir(ops, seen, targetDir, path.posix.dirname(target), `Parent directory for ${entry.id}`);
+        addCopyFile(
+          ops,
+          seen,
+          options.packageRoot,
+          options.manifest,
+          targetDir,
+          entry,
+          `Restore packaged interface-instruction baseline (${entry.id})`
+        );
+        continue;
+      }
       if (entry.kind !== 'file') {
         throw new BootstrapPlanBuildError(
           'BOOTSTRAP_RECONCILE_PLAN_CONFLICT',

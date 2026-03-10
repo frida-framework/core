@@ -1,6 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
+import { fileURLToPath } from 'url';
 import type { ContractIndex } from './types.ts';
 
 export const CONTRACT_CANDIDATES = [
@@ -15,6 +18,13 @@ export interface LoadedContractDocument {
   parsed: Record<string, any>;
   modular: boolean;
 }
+
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const CONTRACT_INDEX_SCHEMA_PATH = path.resolve(MODULE_DIR, '../schemas/frida-canon-index.schema.json');
+
+let contractIndexValidator:
+  | ((payload: unknown) => { ok: boolean; message: string })
+  | null = null;
 
 export function resolveContractPath(rootDir: string, requestedPath?: string): string {
   const envContractPath = process.env.FRIDA_CONTRACT_PATH;
@@ -52,6 +62,32 @@ function isIndexFile(contractPath: string): boolean {
 
 function isPlainObject(value: unknown): value is Record<string, any> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function createContractIndexValidator(): (payload: unknown) => { ok: boolean; message: string } {
+  const schemaRaw = fs.readFileSync(CONTRACT_INDEX_SCHEMA_PATH, 'utf-8');
+  const schema = JSON.parse(schemaRaw);
+  const AjvCtor: any = (Ajv2020 as any).default || Ajv2020;
+  const addFormatsFn: any = (addFormats as any).default || addFormats;
+  const ajv = new AjvCtor({ allErrors: true, strict: false });
+  addFormatsFn(ajv);
+  const validate = ajv.compile(schema);
+
+  return (payload: unknown) => {
+    const ok = Boolean(validate(payload));
+    if (ok) return { ok: true, message: '' };
+    const message = (validate.errors || [])
+      .map((error: any) => `${error.instancePath || '/'} ${error.message || 'invalid'}`)
+      .join('; ');
+    return { ok: false, message };
+  };
+}
+
+function getContractIndexValidator(): (payload: unknown) => { ok: boolean; message: string } {
+  if (!contractIndexValidator) {
+    contractIndexValidator = createContractIndexValidator();
+  }
+  return contractIndexValidator;
 }
 
 function cloneNode<T>(value: T): T {
@@ -155,6 +191,11 @@ function loadModularContract(contractPath: string): Record<string, any> {
   const repoRoot = path.resolve(indexDir, '..');
   const indexRaw = fs.readFileSync(contractPath, 'utf-8');
   const index = yaml.parse(indexRaw) as ContractIndex;
+  const validation = getContractIndexValidator()(index);
+
+  if (!validation.ok) {
+    throw new Error(`Invalid contract index schema at ${contractPath}: ${validation.message}`);
+  }
 
   const layers = Array.isArray(index?.layers)
     ? index.layers
