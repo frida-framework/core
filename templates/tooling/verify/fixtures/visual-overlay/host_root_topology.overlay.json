@@ -1,0 +1,628 @@
+{
+  "meta": {
+    "schema_id": "frida-visual-overlay",
+    "schema_version": "1.0.0",
+    "generated_at": "2026-03-10T01:17:46.098Z",
+    "contract_sha256": "04fa7bef897cd0a0e3fe3e13f887c210480880baefa86095d4ba612e6bb12287",
+    "source": "templates/tooling/verify/fixtures/visual-overlay/host_root_topology.yaml",
+    "overlay_path": "fixtures/visual-overlay/out/host_root_topology.overlay.json",
+    "builder_entrypoint": "src/visual.ts",
+    "builder_command": "frida-core visual",
+    "projection_authority_ref": "FRIDA_VISUAL.component_projection",
+    "projection_unit_count": 2,
+    "component_boundary_count": 2,
+    "topology_node_count": 3,
+    "topology_edge_count": 3,
+    "flow_node_count": 5,
+    "flow_edge_count": 3,
+    "specification_node_count": 16,
+    "specification_edge_count": 14,
+    "dependency_edge_count": 0
+  },
+  "projection_units": [
+    {
+      "id": "projection_unit:app_host_root",
+      "boundary_id": "app_host_root",
+      "source_kind": "top_level_block",
+      "source_path": "app_host_root",
+      "contract_path": "templates/tooling/verify/fixtures/visual-overlay/host_root_topology.yaml",
+      "order_index": 0
+    },
+    {
+      "id": "projection_unit:summary_panel",
+      "boundary_id": "summary_panel",
+      "source_kind": "top_level_block",
+      "source_path": "summary_panel",
+      "contract_path": "templates/tooling/verify/fixtures/visual-overlay/host_root_topology.yaml",
+      "order_index": 1
+    }
+  ],
+  "component_boundaries": [
+    {
+      "id": "boundary:app_host_root",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root",
+      "parent_boundary_id": null,
+      "local_role": "host_root",
+      "slot_ref": "APP_HOST.root",
+      "mount_kind": "host-static",
+      "entry_point_id": "entry_point:app_host_root",
+      "exit_point_ids": [],
+      "mounted_child_boundary_ids": [
+        "summary_panel"
+      ],
+      "content_node_ids": [
+        "host_mount_slots"
+      ],
+      "dependency_targets": [],
+      "inbound_interface_keys": [],
+      "order_index": 0
+    },
+    {
+      "id": "boundary:summary_panel",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel",
+      "parent_boundary_id": "app_host_root",
+      "local_role": "summary",
+      "slot_ref": "APP_HOST.root.summary_panel",
+      "mount_kind": "mapper-managed",
+      "entry_point_id": "entry_point:summary_panel",
+      "exit_point_ids": [
+        "exit_point:summary_panel:close"
+      ],
+      "mounted_child_boundary_ids": [],
+      "content_node_ids": [
+        "render_summary"
+      ],
+      "dependency_targets": [],
+      "inbound_interface_keys": [],
+      "order_index": 1
+    }
+  ],
+  "topology_nodes": [
+    {
+      "id": "topology:boundary:app_host_root",
+      "kind": "component_boundary",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "app_host_root",
+      "source_path": "app_host_root.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "topology:domain:app_host_root:host_mount_slots",
+      "kind": "domain_block",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "host_mount_slots",
+      "source_path": "app_host_root.component_domain_blocks.host_mount_slots",
+      "order_index": 0
+    },
+    {
+      "id": "topology:boundary:summary_panel",
+      "kind": "component_boundary",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "summary_panel",
+      "source_path": "summary_panel.component_hierarchy_position",
+      "order_index": 1
+    }
+  ],
+  "topology_edges": [
+    {
+      "id": "topology_edge:contains_domain_block:app_host_root:host_mount_slots",
+      "kind": "contains_domain_block",
+      "source_id": "topology:boundary:app_host_root",
+      "target_id": "topology:domain:app_host_root:host_mount_slots",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root.component_domain_blocks.host_mount_slots",
+      "order_index": 0
+    },
+    {
+      "id": "topology_edge:mounted_child:app_host_root:summary_panel",
+      "kind": "mounted_child",
+      "source_id": "topology:boundary:app_host_root",
+      "target_id": "topology:boundary:summary_panel",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root.component_mount_point.mounted_child_boundaryRefs[0]",
+      "order_index": 0
+    },
+    {
+      "id": "topology_edge:parent_child:app_host_root:summary_panel",
+      "kind": "parent_child",
+      "source_id": "topology:boundary:app_host_root",
+      "target_id": "topology:boundary:summary_panel",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel.component_hierarchy_position",
+      "order_index": 1
+    }
+  ],
+  "flow_nodes": [
+    {
+      "id": "flow:entry:app_host_root",
+      "kind": "entry_point",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "app_host_root:entry",
+      "source_path": "app_host_root.component_mount_point",
+      "order_index": 0
+    },
+    {
+      "id": "flow:inbound_interface:app_host_root",
+      "kind": "inbound_interface",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "app_host_root:inbound",
+      "source_path": "app_host_root.component_input_interface",
+      "order_index": 0
+    },
+    {
+      "id": "flow:exit:summary_panel:close",
+      "kind": "exit_point",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "close",
+      "source_path": "summary_panel.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow:entry:summary_panel",
+      "kind": "entry_point",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "summary_panel:entry",
+      "source_path": "summary_panel.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "flow:inbound_interface:summary_panel",
+      "kind": "inbound_interface",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "summary_panel:inbound",
+      "source_path": "summary_panel.component_input_interface",
+      "order_index": 1
+    }
+  ],
+  "flow_edges": [
+    {
+      "id": "flow_edge:entry_to_inbound_interface:app_host_root",
+      "kind": "entry_to_inbound_interface",
+      "source_id": "flow:entry:app_host_root",
+      "target_id": "flow:inbound_interface:app_host_root",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root.component_mount_point",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:inbound_interface_to_exit:summary_panel:close",
+      "kind": "inbound_interface_to_exit",
+      "source_id": "flow:inbound_interface:summary_panel",
+      "target_id": "flow:exit:summary_panel:close",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel.component_output_interface.exits[0]",
+      "order_index": 0
+    },
+    {
+      "id": "flow_edge:entry_to_inbound_interface:summary_panel",
+      "kind": "entry_to_inbound_interface",
+      "source_id": "flow:entry:summary_panel",
+      "target_id": "flow:inbound_interface:summary_panel",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel.component_mount_point",
+      "order_index": 1
+    }
+  ],
+  "specification_nodes": [
+    {
+      "id": "specification:boundary:app_host_root",
+      "kind": "component_boundary",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "app_host_root",
+      "source_path": "app_host_root",
+      "order_index": 0
+    },
+    {
+      "id": "specification:domain:app_host_root:host_mount_slots",
+      "kind": "domain_block",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "host_mount_slots",
+      "source_path": "app_host_root.component_domain_blocks.host_mount_slots",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:app_host_root:boundary_placement",
+      "kind": "section:boundary_placement",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "boundary_placement",
+      "source_path": "app_host_root.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:app_host_root:entry_boundary",
+      "kind": "section:entry_boundary",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "entry_boundary",
+      "source_path": "app_host_root.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:app_host_root:inbound_interface",
+      "kind": "section:inbound_interface",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "inbound_interface",
+      "source_path": "app_host_root.component_input_interface",
+      "order_index": 2
+    },
+    {
+      "id": "specification:section:app_host_root:exit_semantics",
+      "kind": "section:exit_semantics",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "exit_semantics",
+      "source_path": "app_host_root.component_output_interface",
+      "order_index": 3
+    },
+    {
+      "id": "specification:section:app_host_root:boundary_content",
+      "kind": "section:boundary_content",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "boundary_content",
+      "source_path": "app_host_root.component_domain_blocks",
+      "order_index": 4
+    },
+    {
+      "id": "specification:section:app_host_root:dependency_refs",
+      "kind": "section:dependency_refs",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "label": "dependency_refs",
+      "source_path": "app_host_root.component_shared_refs",
+      "order_index": 5
+    },
+    {
+      "id": "specification:domain:summary_panel:render_summary",
+      "kind": "domain_block",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "render_summary",
+      "source_path": "summary_panel.component_domain_blocks.render_summary",
+      "order_index": 0
+    },
+    {
+      "id": "specification:section:summary_panel:boundary_placement",
+      "kind": "section:boundary_placement",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "boundary_placement",
+      "source_path": "summary_panel.component_hierarchy_position",
+      "order_index": 0
+    },
+    {
+      "id": "specification:boundary:summary_panel",
+      "kind": "component_boundary",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "summary_panel",
+      "source_path": "summary_panel",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:summary_panel:entry_boundary",
+      "kind": "section:entry_boundary",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "entry_boundary",
+      "source_path": "summary_panel.component_mount_point",
+      "order_index": 1
+    },
+    {
+      "id": "specification:section:summary_panel:inbound_interface",
+      "kind": "section:inbound_interface",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "inbound_interface",
+      "source_path": "summary_panel.component_input_interface",
+      "order_index": 2
+    },
+    {
+      "id": "specification:section:summary_panel:exit_semantics",
+      "kind": "section:exit_semantics",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "exit_semantics",
+      "source_path": "summary_panel.component_output_interface",
+      "order_index": 3
+    },
+    {
+      "id": "specification:section:summary_panel:boundary_content",
+      "kind": "section:boundary_content",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "boundary_content",
+      "source_path": "summary_panel.component_domain_blocks",
+      "order_index": 4
+    },
+    {
+      "id": "specification:section:summary_panel:dependency_refs",
+      "kind": "section:dependency_refs",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "label": "dependency_refs",
+      "source_path": "summary_panel.component_shared_refs",
+      "order_index": 5
+    }
+  ],
+  "specification_edges": [
+    {
+      "id": "specification_edge:contains_domain_block:app_host_root:host_mount_slots",
+      "kind": "contains_domain_block",
+      "source_id": "specification:section:app_host_root:boundary_content",
+      "target_id": "specification:domain:app_host_root:host_mount_slots",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root.component_domain_blocks",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:app_host_root:boundary_placement",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:app_host_root",
+      "target_id": "specification:section:app_host_root:boundary_placement",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:app_host_root:entry_boundary",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:app_host_root",
+      "target_id": "specification:section:app_host_root:entry_boundary",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root",
+      "order_index": 1
+    },
+    {
+      "id": "specification_edge:contains_section:app_host_root:inbound_interface",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:app_host_root",
+      "target_id": "specification:section:app_host_root:inbound_interface",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root",
+      "order_index": 2
+    },
+    {
+      "id": "specification_edge:contains_section:app_host_root:exit_semantics",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:app_host_root",
+      "target_id": "specification:section:app_host_root:exit_semantics",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root",
+      "order_index": 3
+    },
+    {
+      "id": "specification_edge:contains_section:app_host_root:boundary_content",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:app_host_root",
+      "target_id": "specification:section:app_host_root:boundary_content",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root",
+      "order_index": 4
+    },
+    {
+      "id": "specification_edge:contains_section:app_host_root:dependency_refs",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:app_host_root",
+      "target_id": "specification:section:app_host_root:dependency_refs",
+      "source_boundary_id": "app_host_root",
+      "target_boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "source_path": "app_host_root",
+      "order_index": 5
+    },
+    {
+      "id": "specification_edge:contains_domain_block:summary_panel:render_summary",
+      "kind": "contains_domain_block",
+      "source_id": "specification:section:summary_panel:boundary_content",
+      "target_id": "specification:domain:summary_panel:render_summary",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel.component_domain_blocks",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:summary_panel:boundary_placement",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:summary_panel",
+      "target_id": "specification:section:summary_panel:boundary_placement",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel",
+      "order_index": 0
+    },
+    {
+      "id": "specification_edge:contains_section:summary_panel:entry_boundary",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:summary_panel",
+      "target_id": "specification:section:summary_panel:entry_boundary",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel",
+      "order_index": 1
+    },
+    {
+      "id": "specification_edge:contains_section:summary_panel:inbound_interface",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:summary_panel",
+      "target_id": "specification:section:summary_panel:inbound_interface",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel",
+      "order_index": 2
+    },
+    {
+      "id": "specification_edge:contains_section:summary_panel:exit_semantics",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:summary_panel",
+      "target_id": "specification:section:summary_panel:exit_semantics",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel",
+      "order_index": 3
+    },
+    {
+      "id": "specification_edge:contains_section:summary_panel:boundary_content",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:summary_panel",
+      "target_id": "specification:section:summary_panel:boundary_content",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel",
+      "order_index": 4
+    },
+    {
+      "id": "specification_edge:contains_section:summary_panel:dependency_refs",
+      "kind": "contains_section",
+      "source_id": "specification:boundary:summary_panel",
+      "target_id": "specification:section:summary_panel:dependency_refs",
+      "source_boundary_id": "summary_panel",
+      "target_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "source_path": "summary_panel",
+      "order_index": 5
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "entry_point:app_host_root",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "flow_node_id": "flow:entry:app_host_root",
+      "slot_ref": "APP_HOST.root",
+      "mount_kind": "host-static",
+      "order_index": 0
+    },
+    {
+      "id": "entry_point:summary_panel",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "flow_node_id": "flow:entry:summary_panel",
+      "slot_ref": "APP_HOST.root.summary_panel",
+      "mount_kind": "mapper-managed",
+      "order_index": 1
+    }
+  ],
+  "exit_points": [
+    {
+      "id": "exit_point:summary_panel:close",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "flow_node_id": "flow:exit:summary_panel:close",
+      "exit_id": "close",
+      "outcome": "exit",
+      "continuation_target_boundary_id": null,
+      "return_target_boundary_id": null,
+      "order_index": 0
+    }
+  ],
+  "mounted_child_relations": [
+    {
+      "id": "mounted_child_relation:app_host_root:summary_panel",
+      "parent_boundary_id": "app_host_root",
+      "child_boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "topology_edge_id": "topology_edge:mounted_child:app_host_root:summary_panel",
+      "order_index": 0
+    }
+  ],
+  "continuation_mappings": [],
+  "return_mappings": [],
+  "dependency_edges": [],
+  "context_shell_hints": [
+    {
+      "id": "context_shell:app_host_root",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "parent_boundary_id": null,
+      "local_role": "host_root",
+      "mount_kind": "host-static",
+      "shell_hint": "host_static_shell",
+      "order_index": 0
+    },
+    {
+      "id": "context_shell:summary_panel",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "parent_boundary_id": "app_host_root",
+      "local_role": "summary",
+      "mount_kind": "mapper-managed",
+      "shell_hint": "mapper_managed_shell",
+      "order_index": 1
+    }
+  ],
+  "trace_projection_hints": [
+    {
+      "id": "trace_projection:app_host_root",
+      "boundary_id": "app_host_root",
+      "projection_unit_id": "projection_unit:app_host_root",
+      "entry_point_id": "entry_point:app_host_root",
+      "exit_point_ids": [],
+      "mounted_child_relation_ids": [
+        "mounted_child_relation:app_host_root:summary_panel"
+      ],
+      "continuation_mapping_ids": [],
+      "return_mapping_ids": [],
+      "order_index": 0
+    },
+    {
+      "id": "trace_projection:summary_panel",
+      "boundary_id": "summary_panel",
+      "projection_unit_id": "projection_unit:summary_panel",
+      "entry_point_id": "entry_point:summary_panel",
+      "exit_point_ids": [
+        "exit_point:summary_panel:close"
+      ],
+      "mounted_child_relation_ids": [],
+      "continuation_mapping_ids": [],
+      "return_mapping_ids": [],
+      "order_index": 1
+    }
+  ]
+}

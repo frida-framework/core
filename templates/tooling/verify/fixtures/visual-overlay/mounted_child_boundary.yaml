@@ -59,6 +59,7 @@ parent_shell:
         outcome: exit
   component_domain_blocks:
     render_frame:
+      projection_domains: [flow]
       mode: host
   component_shared_refs: {}
 
@@ -83,6 +84,7 @@ child_dialog:
         return_target_boundaryRef: parent_shell
   component_domain_blocks:
     collect_input:
+      projection_domains: [flow]
       fields:
         - selection
   component_shared_refs: {}

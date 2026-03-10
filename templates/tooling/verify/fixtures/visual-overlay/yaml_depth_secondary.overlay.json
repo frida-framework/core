@@ -13,8 +13,8 @@
     "component_boundary_count": 1,
     "topology_node_count": 1,
     "topology_edge_count": 0,
-    "flow_node_count": 5,
-    "flow_edge_count": 6,
+    "flow_node_count": 3,
+    "flow_edge_count": 2,
     "specification_node_count": 9,
     "specification_edge_count": 8,
     "dependency_edge_count": 0
@@ -69,15 +69,6 @@
   "topology_edges": [],
   "flow_nodes": [
     {
-      "id": "flow:domain:yaml_depth_secondary:planner",
-      "kind": "domain_block",
-      "boundary_id": "yaml_depth_secondary",
-      "projection_unit_id": "projection_unit:yaml_depth_secondary",
-      "label": "planner",
-      "source_path": "$root.component_domain_blocks.planner",
-      "order_index": 0
-    },
-    {
       "id": "flow:entry:yaml_depth_secondary",
       "kind": "entry_point",
       "boundary_id": "yaml_depth_secondary",
@@ -103,29 +94,9 @@
       "label": "yaml_depth_secondary:inbound",
       "source_path": "$root.component_input_interface",
       "order_index": 0
-    },
-    {
-      "id": "flow:domain:yaml_depth_secondary:presenter",
-      "kind": "domain_block",
-      "boundary_id": "yaml_depth_secondary",
-      "projection_unit_id": "projection_unit:yaml_depth_secondary",
-      "label": "presenter",
-      "source_path": "$root.component_domain_blocks.presenter",
-      "order_index": 1
     }
   ],
   "flow_edges": [
-    {
-      "id": "flow_edge:domain_to_exit:yaml_depth_secondary:planner:complete",
-      "kind": "domain_block_to_exit",
-      "source_id": "flow:domain:yaml_depth_secondary:planner",
-      "target_id": "flow:exit:yaml_depth_secondary:complete",
-      "source_boundary_id": "yaml_depth_secondary",
-      "target_boundary_id": "yaml_depth_secondary",
-      "projection_unit_id": "projection_unit:yaml_depth_secondary",
-      "source_path": "$root.component_domain_blocks.planner",
-      "order_index": 0
-    },
     {
       "id": "flow_edge:entry_to_inbound_interface:yaml_depth_secondary",
       "kind": "entry_to_inbound_interface",
@@ -138,17 +109,6 @@
       "order_index": 0
     },
     {
-      "id": "flow_edge:inbound_interface_to_domain:yaml_depth_secondary:planner",
-      "kind": "inbound_interface_to_domain_block",
-      "source_id": "flow:inbound_interface:yaml_depth_secondary",
-      "target_id": "flow:domain:yaml_depth_secondary:planner",
-      "source_boundary_id": "yaml_depth_secondary",
-      "target_boundary_id": "yaml_depth_secondary",
-      "projection_unit_id": "projection_unit:yaml_depth_secondary",
-      "source_path": "$root.component_domain_blocks.planner",
-      "order_index": 0
-    },
-    {
       "id": "flow_edge:inbound_interface_to_exit:yaml_depth_secondary:complete",
       "kind": "inbound_interface_to_exit",
       "source_id": "flow:inbound_interface:yaml_depth_secondary",
@@ -158,28 +118,6 @@
       "projection_unit_id": "projection_unit:yaml_depth_secondary",
       "source_path": "$root.component_output_interface.exits[0]",
       "order_index": 0
-    },
-    {
-      "id": "flow_edge:inbound_interface_to_domain:yaml_depth_secondary:presenter",
-      "kind": "inbound_interface_to_domain_block",
-      "source_id": "flow:inbound_interface:yaml_depth_secondary",
-      "target_id": "flow:domain:yaml_depth_secondary:presenter",
-      "source_boundary_id": "yaml_depth_secondary",
-      "target_boundary_id": "yaml_depth_secondary",
-      "projection_unit_id": "projection_unit:yaml_depth_secondary",
-      "source_path": "$root.component_domain_blocks.presenter",
-      "order_index": 1
-    },
-    {
-      "id": "flow_edge:domain_to_exit:yaml_depth_secondary:presenter:complete",
-      "kind": "domain_block_to_exit",
-      "source_id": "flow:domain:yaml_depth_secondary:presenter",
-      "target_id": "flow:exit:yaml_depth_secondary:complete",
-      "source_boundary_id": "yaml_depth_secondary",
-      "target_boundary_id": "yaml_depth_secondary",
-      "projection_unit_id": "projection_unit:yaml_depth_secondary",
-      "source_path": "$root.component_domain_blocks.presenter",
-      "order_index": 100
     }
   ],
   "specification_nodes": [

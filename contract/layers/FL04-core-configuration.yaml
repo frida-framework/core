@@ -58,6 +58,8 @@ PATHS:
     fridaDir: "templates/frida"
     docsDir: "templates/docs-gen"
     appBasicDir: "templates/template_app_basic"
+  tooling:
+    visualizerDir: "templates/tooling/visualizer"
   bootstrap:
     assetsRootDir: "templates/template_app_basic"
     manifestFile: "contract/bootstrap-package.manifest.yaml"

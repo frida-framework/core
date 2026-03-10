@@ -75,6 +75,25 @@
       }
     },
     {
+      "id": "host_root_topology",
+      "contract": "host_root_topology.yaml",
+      "expected_overlay": "host_root_topology.overlay.json",
+      "expected_status": "pass",
+      "note": "Protects the explicit host_root anchor, L1 topology-visible host slots, and depth-zero baseline semantics outside core assembly.",
+      "assertions": {
+        "projection_unit_count": 2,
+        "component_boundary_count": 2,
+        "dependency_edge_count": 0,
+        "source_kinds": ["top_level_block", "top_level_block"],
+        "mounted_child_relations": [
+          {
+            "parent_boundary_id": "app_host_root",
+            "child_boundary_id": "summary_panel"
+          }
+        ]
+      }
+    },
+    {
       "id": "child_multiple_outcomes",
       "contract": "child_multiple_outcomes.yaml",
       "expected_overlay": "child_multiple_outcomes.overlay.json",

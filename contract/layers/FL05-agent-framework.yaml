@@ -228,14 +228,32 @@ FRIDA_ENFORCEMENT:
     - id: component_boundary_refs_resolve
       text: "Mounted child boundary refs and continuation/return targets MUST resolve when declared."
       scope: kernel
+    - id: component_root_parent_rule
+      text: "Root boundaries MAY omit parent_boundaryRef; non-root boundaries MUST resolve a valid parent boundary when required by the model."
+      scope: kernel
+    - id: component_host_root_anchor
+      text: "If a boundary declares local_role=host_root, it MUST be the unique null-parent depth=0 anchor and all other boundaries in that app baseline MUST resolve upward to it."
+      scope: kernel
+    - id: component_mounted_child_unique_non_self
+      text: "mounted_child_boundaryRefs MUST be unique per boundary, MUST NOT target the current boundary, and MUST NOT create ambiguous drill-in declarations."
+      scope: kernel
     - id: component_output_exit_semantics_canonical
       text: "component_output_interface exit entries MUST declare outcomes and remain the canonical source for exit semantics."
+      scope: kernel
+    - id: component_output_exit_target_matrix
+      text: "continue requires target_boundaryRef, return requires return_target_boundaryRef, and exit forbids both."
       scope: kernel
     - id: component_child_non_auto_expand
       text: "Mounted child internals MUST remain collapsed in the parent specification view until explicit drill-in."
       scope: kernel
+    - id: component_domain_blocks_selector_driven
+      text: "component_domain_blocks MUST project only through explicit projection_domains selectors on top-level child blocks; heuristics are forbidden."
+      scope: kernel
     - id: component_shared_refs_dependency_only
       text: "component_shared_refs MUST remain dependency-only and MUST NOT redefine ownership or boundary semantics."
+      scope: kernel
+    - id: component_authoritative_examples_runtime_free
+      text: "Authoritative component-contract examples MUST remain runtime-free; viewer/session demo state is allowed only in explicit fixture-only surfaces."
       scope: kernel
     - id: component_legacy_namespace_forbidden
       text: "Legacy component-boundary section names are forbidden in active contract definitions unless explicitly historical/deprecated."
@@ -319,17 +337,41 @@ FRIDA_ENFORCEMENT:
       kind: chain
       statement: "Mounted child boundary refs and continuation/return targets MUST resolve when declared."
       enforcement: hard
+    - id: GUARD_COMPONENT_ROOT_PARENT_RULE
+      kind: chain
+      statement: "Root boundaries MAY omit parent_boundaryRef; non-root boundaries MUST resolve a valid parent boundary when required by the model."
+      enforcement: hard
+    - id: GUARD_COMPONENT_HOST_ROOT_ANCHOR
+      kind: chain
+      statement: "If local_role=host_root is present, it MUST be unique, MUST omit parent_boundaryRef, and MUST act as the single depth=0 anchor for the host baseline."
+      enforcement: hard
+    - id: GUARD_COMPONENT_MOUNTED_CHILD_UNIQUE_NON_SELF
+      kind: ban
+      statement: "mounted_child_boundaryRefs MUST be unique, MUST NOT self-target, and MUST NOT create ambiguous child drill-in declarations."
+      enforcement: hard
     - id: GUARD_COMPONENT_EXIT_SEMANTICS_COMPLETE
       kind: chain
       statement: "component_output_interface exit entries MUST include required outcome semantics."
+      enforcement: hard
+    - id: GUARD_COMPONENT_EXIT_TARGET_MATRIX
+      kind: chain
+      statement: "continue requires target_boundaryRef, return requires return_target_boundaryRef, and exit forbids both."
       enforcement: hard
     - id: GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE
       kind: chain
       statement: "Parent specification view MUST NOT inline mounted child internals; child expansion requires explicit drill-in."
       enforcement: hard
+    - id: GUARD_COMPONENT_DOMAIN_BLOCK_SELECTOR_DRIVEN
+      kind: drift
+      statement: "component_domain_blocks projection MUST remain selector-driven on explicit projection_domains declarations and MUST NOT use heuristics."
+      enforcement: hard
     - id: GUARD_COMPONENT_SHARED_REFS_DEPENDENCY_ONLY
       kind: ban
       statement: "component_shared_refs MUST remain dependency-only and MUST NOT carry ownership, hierarchy, entry, or exit semantics."
+      enforcement: hard
+    - id: GUARD_COMPONENT_AUTHORITATIVE_EXAMPLE_RUNTIME_FREE
+      kind: ban
+      statement: "Authoritative component-contract examples MUST remain runtime-free; viewer/session demo state is allowed only in explicit fixture-only reference surfaces."
       enforcement: hard
     - id: GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN
       kind: ban
@@ -532,8 +574,13 @@ FRIDA_VALIDATION_RULES:
     - GUARD_CONTRACT_NOT_RUNTIME
     - GUARD_COMPONENT_BOUNDARY_SECTIONS_COMPLETE
     - GUARD_COMPONENT_BOUNDARY_REFS_RESOLVE
+    - GUARD_COMPONENT_ROOT_PARENT_RULE
+    - GUARD_COMPONENT_HOST_ROOT_ANCHOR
+    - GUARD_COMPONENT_MOUNTED_CHILD_UNIQUE_NON_SELF
     - GUARD_COMPONENT_EXIT_SEMANTICS_COMPLETE
+    - GUARD_COMPONENT_EXIT_TARGET_MATRIX
     - GUARD_COMPONENT_SHARED_REFS_DEPENDENCY_ONLY
+    - GUARD_COMPONENT_AUTHORITATIVE_EXAMPLE_RUNTIME_FREE
     - GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN
     - GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN
   repo_guards:
@@ -555,6 +602,7 @@ FRIDA_VALIDATION_RULES:
   visual_guards:
     - GUARD_VISUAL_DETERMINISM
     - GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE
+    - GUARD_COMPONENT_DOMAIN_BLOCK_SELECTOR_DRIVEN
     - GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST
     - visual_overlay_only
     - visual_on_demand

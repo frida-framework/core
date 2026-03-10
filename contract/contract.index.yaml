@@ -137,19 +137,6 @@ layers:
     blocks:
       - FRIDA_VISUAL
 
-  - id: visual-reference-components
-    path: contract/layers/FL10A-visual-reference-components.yaml
-    visibility: public
-    keywords:
-      - visual
-      - overlay
-      - reference-components
-      - boundary-first
-    blocks:
-      - visual_demo_root
-      - visual_demo_summary
-      - visual_demo_details
-
   - id: management
     path: contract/layers/FL11-management.yaml
     visibility: mixed

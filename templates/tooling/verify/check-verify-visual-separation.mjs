@@ -59,8 +59,7 @@ function main() {
     'frida:visual',
     'check-visual-schema-determinism',
     'check-visual-overlay-goldens',
-    'check-visual-viewer-runtime',
-    'check-visual-reference-viewer',
+    'run-visualizer-module-checks',
   ];
 
   for (const required of requiredInVerifyVisual) {

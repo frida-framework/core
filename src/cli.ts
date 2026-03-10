@@ -4,7 +4,7 @@ import { runFridaAgentsContractSetCheck } from './agents-contract-set.ts';
 import { runFridaCheckCli } from './zone-check.ts';
 import { runFridaHashCli } from './template-hash.ts';
 import { runFridaVisualCli } from './visual.ts';
-import { runFridaVisualViewerCli } from './visual-reference-viewer.ts';
+import { runFridaVisualViewerCli } from './visualizer-dispatch.ts';
 import { runFridaInitCli } from './init.ts';
 import { runFridaReportCli } from './report.ts';
 import { runFridaBuildCli } from './build.ts';

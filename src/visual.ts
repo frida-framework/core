@@ -36,6 +36,8 @@ const SPECIFICATION_SECTION_IDS = {
 
 type AnyObject = Record<string, unknown>;
 type SourceKind = 'contract_root' | 'top_level_block';
+type ProjectionDomain = 'topology' | 'flow' | 'specification';
+const ALLOWED_PROJECTION_DOMAINS: readonly ProjectionDomain[] = ['topology', 'flow', 'specification'] as const;
 type MountKind = (typeof ALLOWED_MOUNT_KINDS)[number];
 type ExitOutcome = (typeof ALLOWED_EXIT_OUTCOMES)[number];
 
@@ -226,6 +228,8 @@ interface ParsedComponentUnit {
     inputInterfaceKeys: string[];
     exits: ParsedExitRecord[];
     domainBlockIds: string[];
+    /** Maps each domain block key to its explicit projection_domains set (empty set = no selector, opaque). */
+    domainBlockProjectionDomains: Map<string, Set<ProjectionDomain>>;
     sharedRefTargets: string[];
     contractPath: string;
     orderIndex: number;
@@ -435,9 +439,9 @@ function parseComponentUnit(
         mount.mounted_child_boundaryRefs === undefined
             ? []
             : asStringArray(
-                  mount.mounted_child_boundaryRefs,
-                  `${sourcePath}.component_mount_point.mounted_child_boundaryRefs`
-              ),
+                mount.mounted_child_boundaryRefs,
+                `${sourcePath}.component_mount_point.mounted_child_boundaryRefs`
+            ),
         `${sourcePath}.component_mount_point.mounted_child_boundaryRefs`
     );
 
@@ -513,6 +517,23 @@ function parseComponentUnit(
         `${sourcePath}.component_shared_refs`
     );
 
+    // Build projection_domains eligibility map for each domain block.
+    // Only top-level child block objects may carry a projection_domains selector.
+    // Non-object entries (strings, nulls, arrays) carry no selector and are opaque.
+    const domainBlockProjectionDomains = new Map<string, Set<ProjectionDomain>>();
+    for (const blockId of stableObjectKeys(domainBlocks)) {
+        const blockValue = domainBlocks[blockId];
+        const domainSet = new Set<ProjectionDomain>();
+        if (isObjectLike(blockValue) && Array.isArray((blockValue as AnyObject).projection_domains)) {
+            for (const entry of (blockValue as AnyObject).projection_domains as unknown[]) {
+                if (isNonEmptyString(entry) && ALLOWED_PROJECTION_DOMAINS.includes(entry.trim() as ProjectionDomain)) {
+                    domainSet.add(entry.trim() as ProjectionDomain);
+                }
+            }
+        }
+        domainBlockProjectionDomains.set(blockId, domainSet);
+    }
+
     return {
         projectionUnitId: `projection_unit:${toIdSegment(rawBoundaryId)}`,
         boundaryId: rawBoundaryId,
@@ -526,6 +547,7 @@ function parseComponentUnit(
         inputInterfaceKeys: stableObjectKeys(inputInterface),
         exits,
         domainBlockIds: stableObjectKeys(domainBlocks),
+        domainBlockProjectionDomains,
         sharedRefTargets,
         contractPath,
         orderIndex,
@@ -628,7 +650,29 @@ function assertVisualContractConsistency(contract: AnyObject): void {
 
 function assertUnitRelations(units: ParsedComponentUnit[]): void {
     const boundaryIdSet = new Set(units.map((unit) => unit.boundaryId));
+    const unitByBoundaryId = new Map(units.map((unit) => [unit.boundaryId, unit] as const));
     const mountedChildOwner = new Map<string, string>();
+    const hostRootUnits = units.filter((unit) => unit.localRole === 'host_root');
+
+    if (hostRootUnits.length > 1) {
+        throw new Error(
+            `Multiple host_root anchors are declared: ${hostRootUnits.map((unit) => unit.boundaryId).join(', ')}.`
+        );
+    }
+
+    const hostRootUnit = hostRootUnits[0] ?? null;
+    if (hostRootUnit) {
+        if (hostRootUnit.parentBoundaryId) {
+            throw new Error(
+                `${hostRootUnit.sourcePath}.component_hierarchy_position.local_role=host_root must omit parent_boundaryRef.`
+            );
+        }
+        if (hostRootUnit.mountKind !== 'host-static') {
+            throw new Error(
+                `${hostRootUnit.sourcePath}.component_mount_point.mount_kind must equal host-static for local_role=host_root.`
+            );
+        }
+    }
 
     for (const unit of units) {
         if (unit.parentBoundaryId && !boundaryIdSet.has(unit.parentBoundaryId)) {
@@ -686,6 +730,35 @@ function assertUnitRelations(units: ParsedComponentUnit[]): void {
             if (boundaryIdSet.has(dependencyTarget)) {
                 throw new Error(
                     `Dependency edge misuse: ${unit.sourcePath}.component_shared_refs targets boundary '${dependencyTarget}' instead of a shared ref.`
+                );
+            }
+        }
+    }
+
+    for (const unit of units) {
+        const seen = new Set<string>([unit.boundaryId]);
+        let cursor = unit;
+        while (cursor.parentBoundaryId) {
+            if (seen.has(cursor.parentBoundaryId)) {
+                throw new Error(`Cyclic parent chain detected at boundary '${cursor.parentBoundaryId}'.`);
+            }
+            seen.add(cursor.parentBoundaryId);
+            const parent = unitByBoundaryId.get(cursor.parentBoundaryId);
+            if (!parent) {
+                break;
+            }
+            cursor = parent;
+        }
+
+        if (hostRootUnit && unit.boundaryId !== hostRootUnit.boundaryId) {
+            if (unit.parentBoundaryId === null) {
+                throw new Error(
+                    `Boundary '${unit.boundaryId}' omits parent_boundaryRef even though host_root '${hostRootUnit.boundaryId}' is present.`
+                );
+            }
+            if (!seen.has(hostRootUnit.boundaryId)) {
+                throw new Error(
+                    `Boundary '${unit.boundaryId}' does not resolve upward to host_root '${hostRootUnit.boundaryId}'.`
                 );
             }
         }
@@ -1021,29 +1094,33 @@ export function extractVisualSchemaOverlay(
 
         for (const [domainIndex, domainBlockId] of unit.domainBlockIds.entries()) {
             const domainNodeId = `specification:domain:${boundarySegment}:${toIdSegment(domainBlockId)}`;
-            const flowDomainNodeId = `flow:domain:${boundarySegment}:${toIdSegment(domainBlockId)}`;
+            const blockProjectionDomains = unit.domainBlockProjectionDomains.get(domainBlockId) ?? new Set<ProjectionDomain>();
 
-            flowNodes.push({
-                id: flowDomainNodeId,
-                kind: 'domain_block',
-                boundary_id: unit.boundaryId,
-                projection_unit_id: unit.projectionUnitId,
-                label: domainBlockId,
-                source_path: `${unit.sourcePath}.component_domain_blocks.${domainBlockId}`,
-                order_index: domainIndex,
-            });
-            flowEdges.push({
-                id: `flow_edge:inbound_interface_to_domain:${boundarySegment}:${toIdSegment(domainBlockId)}`,
-                kind: 'inbound_interface_to_domain_block',
-                source_id: inboundInterfaceFlowNodeId,
-                target_id: flowDomainNodeId,
-                source_boundary_id: unit.boundaryId,
-                target_boundary_id: unit.boundaryId,
-                projection_unit_id: unit.projectionUnitId,
-                source_path: `${unit.sourcePath}.component_domain_blocks.${domainBlockId}`,
-                order_index: domainIndex,
-            });
+            if (blockProjectionDomains.has('topology')) {
+                const topologyDomainNodeId = `topology:domain:${boundarySegment}:${toIdSegment(domainBlockId)}`;
+                topologyNodes.push({
+                    id: topologyDomainNodeId,
+                    kind: 'domain_block',
+                    boundary_id: unit.boundaryId,
+                    projection_unit_id: unit.projectionUnitId,
+                    label: domainBlockId,
+                    source_path: `${unit.sourcePath}.component_domain_blocks.${domainBlockId}`,
+                    order_index: domainIndex,
+                });
+                topologyEdges.push({
+                    id: `topology_edge:contains_domain_block:${boundarySegment}:${toIdSegment(domainBlockId)}`,
+                    kind: 'contains_domain_block',
+                    source_id: boundaryNodeId,
+                    target_id: topologyDomainNodeId,
+                    source_boundary_id: unit.boundaryId,
+                    target_boundary_id: unit.boundaryId,
+                    projection_unit_id: unit.projectionUnitId,
+                    source_path: `${unit.sourcePath}.component_domain_blocks.${domainBlockId}`,
+                    order_index: domainIndex,
+                });
+            }
 
+            // Specification: always emit the collapsed specification-local declaration anchor.
             specificationNodes.push({
                 id: domainNodeId,
                 kind: 'domain_block',
@@ -1064,6 +1141,31 @@ export function extractVisualSchemaOverlay(
                 source_path: `${unit.sourcePath}.component_domain_blocks`,
                 order_index: domainIndex,
             });
+
+            // Flow: only blocks with explicit projection_domains containing 'flow' are projected.
+            if (blockProjectionDomains.has('flow')) {
+                const flowDomainNodeId = `flow:domain:${boundarySegment}:${toIdSegment(domainBlockId)}`;
+                flowNodes.push({
+                    id: flowDomainNodeId,
+                    kind: 'domain_block',
+                    boundary_id: unit.boundaryId,
+                    projection_unit_id: unit.projectionUnitId,
+                    label: domainBlockId,
+                    source_path: `${unit.sourcePath}.component_domain_blocks.${domainBlockId}`,
+                    order_index: domainIndex,
+                });
+                flowEdges.push({
+                    id: `flow_edge:inbound_interface_to_domain:${boundarySegment}:${toIdSegment(domainBlockId)}`,
+                    kind: 'inbound_interface_to_domain_block',
+                    source_id: inboundInterfaceFlowNodeId,
+                    target_id: flowDomainNodeId,
+                    source_boundary_id: unit.boundaryId,
+                    target_boundary_id: unit.boundaryId,
+                    projection_unit_id: unit.projectionUnitId,
+                    source_path: `${unit.sourcePath}.component_domain_blocks.${domainBlockId}`,
+                    order_index: domainIndex,
+                });
+            }
         }
 
         for (const [sharedIndex, dependencyTarget] of unit.sharedRefTargets.entries()) {
@@ -1119,7 +1221,12 @@ export function extractVisualSchemaOverlay(
                 order_index: exit.orderIndex,
             });
 
+            // Only flow-projected domain blocks produce domain_block_to_exit edges.
             for (const [domainIndex, domainBlockId] of unit.domainBlockIds.entries()) {
+                const blockProjectionDomains = unit.domainBlockProjectionDomains.get(domainBlockId) ?? new Set<ProjectionDomain>();
+                if (!blockProjectionDomains.has('flow')) {
+                    continue;
+                }
                 flowEdges.push({
                     id: `flow_edge:domain_to_exit:${boundarySegment}:${toIdSegment(domainBlockId)}:${toIdSegment(exit.id)}`,
                     kind: 'domain_block_to_exit',

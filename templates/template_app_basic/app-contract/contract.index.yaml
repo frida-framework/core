@@ -28,6 +28,11 @@ contract_index:
         - ZONES
         - TASK_PROFILES
         - INVARIANTS
+    - id: host-root
+      path: layers/AL03-host-root.yaml
+      purpose: Explicit zero-depth host anchor for L1 topology and mounting.
+      blocks:
+        - app_host_root
 
 # Available inactive extensions (activate by uncommenting the full layer entry):
 #   - id: extension-backend

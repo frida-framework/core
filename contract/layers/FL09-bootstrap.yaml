@@ -68,7 +68,8 @@ FRIDA_CONTRACT_BOOTSTRAP:
         First-time zero-state onboarding for a clean application repository. Deploys the cold-engine FRIDA
         infrastructure from package reference and seeds the neutral `template_app_basic` files: README.md, package.json,
         .frida/inbox/app-contract/contract.index.yaml, .frida/inbox/app-contract/layers/AL01-shared.yaml,
-        .frida/inbox/app-contract/layers/AL02-agent-framework.yaml, and inactive app-extension layers under
+        .frida/inbox/app-contract/layers/AL02-agent-framework.yaml, .frida/inbox/app-contract/layers/AL03-host-root.yaml,
+        and inactive app-extension layers under
         .frida/inbox/app-contract/extensions/. Post-generation runs with fixed
         generatedAt=1970-01-01T00:00:00.000Z so identical clean initial state and identical package input
         yield identical zero-start output.

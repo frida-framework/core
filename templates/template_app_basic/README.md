@@ -41,6 +41,7 @@ npm run frida:check
 - `.frida/inbox/app-contract/contract.index.yaml`
 - `.frida/inbox/app-contract/layers/AL01-shared.yaml`
 - `.frida/inbox/app-contract/layers/AL02-agent-framework.yaml`
+- `.frida/inbox/app-contract/layers/AL03-host-root.yaml`
 - `.frida/inbox/app-contract/extensions/AL11-extension_backend.yaml`
 - `.frida/inbox/app-contract/extensions/AL12-extension_backend_supabase.yaml`
 - `.frida/contract/docs/policy/**`
@@ -50,6 +51,7 @@ npm run frida:check
 
 - replace placeholder metadata in `package.json`
 - edit `.frida/inbox/app-contract/contract.index.yaml`
+- treat `.frida/inbox/app-contract/layers/AL03-host-root.yaml` as the depth=0 host anchor; extend around it rather than deleting it
 - activate shipped extensions by linking their `AL##` layer entries in `.frida/inbox/app-contract/contract.index.yaml`
 - expand `.frida/inbox/app-contract/layers/*` as the repository grows
 - use `npm run frida:bootstrap` for later reconcile/repair; do not rerun zero-start

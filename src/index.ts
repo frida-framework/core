@@ -1,13 +1,6 @@
 export { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
 export { runFridaVisualCli } from './visual.ts';
-export { runFridaVisualViewerCli } from './visual-reference-viewer.ts';
-export {
-  createVisualViewerState,
-  reduceVisualViewerState,
-  deriveVisualViewerFrame,
-  normalizeViewerStateForComparison,
-} from './visual-viewer.ts';
-export { mountVisualReferenceViewer } from './visual-reference-viewer-app.ts';
+export { runFridaVisualViewerCli } from './visualizer-dispatch.ts';
 export { runFridaInitCli } from './init.ts';
 export { runFridaBootstrapCli } from './bootstrap.ts';
 export { runFridaReportCli } from './report.ts';
@@ -45,19 +38,4 @@ export type {
   ContextShellHintRecord,
   TraceProjectionHintRecord,
 } from './visual.ts';
-export type {
-  ViewerLod,
-  ViewerFocusKind,
-  ViewerPortalKind,
-  ViewerTraceProjectionMode,
-  VisualViewerScope,
-  VisualViewerFocus,
-  VisualViewerContextShell,
-  VisualViewerPeekState,
-  VisualViewerTraceState,
-  VisualViewerNavigationFrame,
-  VisualViewerRuntimeStateV1,
-  VisualViewerFrame,
-  VisualViewerAction,
-} from './visual-viewer.ts';
 export type { Zone, ZoneCandidate, DecisionStep, ValidationResult } from './zone-check.ts';

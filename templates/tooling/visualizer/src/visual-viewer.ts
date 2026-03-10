@@ -10,7 +10,7 @@ import type {
     OverlayNodeRecord,
     TraceProjectionHintRecord,
     VisualOverlayV1,
-} from './visual.ts';
+} from '../../../../dist/visual.js';
 
 const VIEWER_RUNTIME_SCHEMA_ID = 'frida-visual-viewer-runtime';
 const VIEWER_RUNTIME_SCHEMA_VERSION = '1.0.0';
@@ -197,6 +197,7 @@ export type VisualViewerAction =
 interface ViewerIndexes {
     boundariesById: Map<string, ComponentBoundaryRecord>;
     boundaryRecordIdByBoundaryId: Map<string, string>;
+    hostAnchorBoundaryId: string | null;
     entryPointsByBoundaryId: Map<string, EntryPointRecord>;
     exitPointsByBoundaryId: Map<string, ExitPointRecord[]>;
     mountedChildRelationsByParent: Map<string, MountedChildRelationRecord[]>;
@@ -237,6 +238,53 @@ function pushGrouped<T>(map: Map<string, T[]>, key: string, value: T): void {
     const current = map.get(key) || [];
     current.push(value);
     map.set(key, current);
+}
+
+function resolveHostAnchorBoundaryId(overlay: VisualOverlayV1): string | null {
+    const hostAnchors = overlay.component_boundaries.filter((entry) => entry.local_role === 'host_root');
+    if (hostAnchors.length > 1) {
+        throw new Error(`Viewer runtime found multiple host_root anchors: ${hostAnchors.map((entry) => entry.boundary_id).join(', ')}.`);
+    }
+    if (hostAnchors[0]) {
+        return hostAnchors[0].boundary_id;
+    }
+    const rootBoundary = overlay.component_boundaries.find((entry) => entry.parent_boundary_id === null);
+    return rootBoundary ? rootBoundary.boundary_id : null;
+}
+
+function computeBoundaryDepth(indexes: ViewerIndexes, boundaryId: string): number {
+    const hostAnchorBoundaryId = indexes.hostAnchorBoundaryId;
+    const seen = new Set<string>();
+    let currentBoundaryId = boundaryId;
+    let depth = 0;
+
+    while (true) {
+        if (seen.has(currentBoundaryId)) {
+            throw new Error(`Viewer runtime detected a cyclic parent chain at boundary '${currentBoundaryId}'.`);
+        }
+        seen.add(currentBoundaryId);
+
+        if (hostAnchorBoundaryId && currentBoundaryId === hostAnchorBoundaryId) {
+            return depth;
+        }
+
+        const boundary = indexes.boundariesById.get(currentBoundaryId);
+        if (!boundary) {
+            throw new Error(`Viewer runtime cannot compute depth for unknown boundary '${currentBoundaryId}'.`);
+        }
+
+        if (!boundary.parent_boundary_id) {
+            if (hostAnchorBoundaryId) {
+                throw new Error(
+                    `Viewer runtime found boundary '${boundaryId}' outside host_root '${hostAnchorBoundaryId}'.`
+                );
+            }
+            return depth;
+        }
+
+        currentBoundaryId = boundary.parent_boundary_id;
+        depth += 1;
+    }
 }
 
 function buildViewerIndexes(overlay: VisualOverlayV1): ViewerIndexes {
@@ -353,9 +401,12 @@ function buildViewerIndexes(overlay: VisualOverlayV1): ViewerIndexes {
         ['trace', new Set(overlay.trace_projection_hints.map((entry) => `viewer_trace:${toIdSegment(entry.boundary_id)}`))],
     ]);
 
+    const hostAnchorBoundaryId = resolveHostAnchorBoundaryId(overlay);
+
     return {
         boundariesById,
         boundaryRecordIdByBoundaryId,
+        hostAnchorBoundaryId,
         entryPointsByBoundaryId,
         exitPointsByBoundaryId,
         mountedChildRelationsByParent,
@@ -384,6 +435,24 @@ function assertOverlayCompatibility(overlay: VisualOverlayV1, indexes: ViewerInd
         throw new Error('Viewer runtime requires visual overlay schema v1 input.');
     }
 
+    if (indexes.hostAnchorBoundaryId) {
+        const hostBoundary = indexes.boundariesById.get(indexes.hostAnchorBoundaryId);
+        if (!hostBoundary) {
+            throw new Error(`Viewer runtime missing host_root boundary '${indexes.hostAnchorBoundaryId}'.`);
+        }
+        if (hostBoundary.parent_boundary_id !== null) {
+            throw new Error(`Viewer runtime requires host_root '${indexes.hostAnchorBoundaryId}' to omit parent_boundary_id.`);
+        }
+        const foreignNullParents = overlay.component_boundaries.filter(
+            (entry) => entry.parent_boundary_id === null && entry.boundary_id !== indexes.hostAnchorBoundaryId
+        );
+        if (foreignNullParents.length > 0) {
+            throw new Error(
+                `Viewer runtime found null-parent boundaries outside host_root '${indexes.hostAnchorBoundaryId}': ${foreignNullParents.map((entry) => entry.boundary_id).join(', ')}.`
+            );
+        }
+    }
+
     for (const boundary of overlay.component_boundaries) {
         if (!indexes.entryPointsByBoundaryId.has(boundary.boundary_id)) {
             throw new Error(`Viewer runtime missing entry point for boundary '${boundary.boundary_id}'.`);
@@ -394,6 +463,7 @@ function assertOverlayCompatibility(overlay: VisualOverlayV1, indexes: ViewerInd
         if (!indexes.traceHintByBoundaryId.has(boundary.boundary_id)) {
             throw new Error(`Viewer runtime missing trace projection hint for boundary '${boundary.boundary_id}'.`);
         }
+        computeBoundaryDepth(indexes, boundary.boundary_id);
     }
 }
 
@@ -403,6 +473,10 @@ function getInitialBoundaryId(overlay: VisualOverlayV1, indexes: ViewerIndexes, 
             throw new Error(`Requested viewer scope boundary '${requestedBoundaryId}' does not exist in overlay.`);
         }
         return requestedBoundaryId;
+    }
+
+    if (indexes.hostAnchorBoundaryId) {
+        return indexes.hostAnchorBoundaryId;
     }
 
     const rootBoundary = overlay.component_boundaries.find((entry) => entry.parent_boundary_id === null);
@@ -424,7 +498,6 @@ function buildScope(
         viaPortalKind?: ViewerPortalKind | null;
         viaPortalId?: string | null;
         viaExitPointId?: string | null;
-        depth?: number;
     } = {}
 ): VisualViewerScope {
     const boundary = indexes.boundariesById.get(boundaryId);
@@ -441,7 +514,7 @@ function buildScope(
         via_portal_kind: options.viaPortalKind ?? null,
         via_portal_id: options.viaPortalId ?? null,
         via_exit_point_id: options.viaExitPointId ?? null,
-        depth: options.depth ?? 0,
+        depth: computeBoundaryDepth(indexes, boundaryId),
     };
 }
 
@@ -481,7 +554,7 @@ function buildContextShell(
         return_target_boundary_ids: returnMappings.map((entry) => entry.target_boundary_id),
         shell_hint: hint.shell_hint,
         local_role: boundary.local_role,
-        current_position_hint: boundary.parent_boundary_id ? 'nested_boundary' : 'root_boundary',
+        current_position_hint: indexes.hostAnchorBoundaryId === boundaryId || !boundary.parent_boundary_id ? 'root_boundary' : 'nested_boundary',
         minimap_boundary_ids: minimapBoundaryIds,
         trace_hint_id: traceHint ? traceHint.id : null,
     };
@@ -783,7 +856,6 @@ export function reduceVisualViewerState(
                 viaPortalKind: portal.portalKind,
                 viaPortalId: portal.portalId,
                 viaExitPointId: portal.viaExitPointId,
-                depth: state.current_scope.depth + 1,
             });
             return buildState(
                 overlay,
@@ -797,6 +869,9 @@ export function reduceVisualViewerState(
             );
         }
         case 'up': {
+            if (indexes.hostAnchorBoundaryId && state.current_scope.boundary_id === indexes.hostAnchorBoundaryId) {
+                throw new Error(`Viewer runtime cannot move up from host_root boundary '${state.current_scope.boundary_id}'.`);
+            }
             if (!state.current_scope.parent_boundary_id) {
                 throw new Error(`Viewer runtime cannot move up from root boundary '${state.current_scope.boundary_id}'.`);
             }
@@ -804,7 +879,6 @@ export function reduceVisualViewerState(
             const nextScope = buildScope(indexes, targetBoundaryId, {
                 callerBoundaryId: state.current_scope.boundary_id,
                 via: 'up',
-                depth: Math.max(0, state.current_scope.depth - 1),
             });
             return buildState(
                 overlay,

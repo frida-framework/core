@@ -1,6 +1,6 @@
 PATHS:
   visual:
-    overlayFile: fixtures/visual-overlay/out/internal_flow.overlay.json
+    overlayFile: fixtures/visual-overlay/out/host_root_topology.overlay.json
 
 FRIDA_CONFIG:
   visual:
@@ -42,35 +42,40 @@ FRIDA_VISUAL:
     projection_authorityRef: FRIDA_VISUAL.component_projection
     builder_entrypoint: src/visual.ts
 
-component_hierarchy_position:
-  local_role: worker
+app_host_root:
+  component_hierarchy_position:
+    local_role: host_root
+  component_mount_point:
+    slotRef: APP_HOST.root
+    mount_kind: host-static
+    mounted_child_boundaryRefs:
+      - summary_panel
+  component_input_interface: {}
+  component_output_interface:
+    exits: []
+  component_domain_blocks:
+    host_mount_slots:
+      projection_domains: [topology]
+      slots:
+        - id: summary_panel_slot
+          slotRef: APP_HOST.root.summary_panel
+  component_shared_refs: {}
 
-component_mount_point:
-  slotRef: pipeline.stage
-  mount_kind: mapper-managed
-  mounted_child_boundaryRefs: []
-
-component_input_interface:
-  payload:
-    kind: record
-  policy:
-    kind: ref
-
-component_output_interface:
-  exits:
-    - id: complete
-      outcome: exit
-    - id: rejected
-      outcome: exit
-
-component_domain_blocks:
-  validate_request:
-    projection_domains: [flow]
-    rules:
-      - required_fields
-      - permissions
-  assemble_response:
-    projection_domains: [flow]
-    format: summary
-
-component_shared_refs: {}
+summary_panel:
+  component_hierarchy_position:
+    parent_boundaryRef: app_host_root
+    local_role: summary
+  component_mount_point:
+    slotRef: APP_HOST.root.summary_panel
+    mount_kind: mapper-managed
+    mounted_child_boundaryRefs: []
+  component_input_interface: {}
+  component_output_interface:
+    exits:
+      - id: close
+        outcome: exit
+  component_domain_blocks:
+    render_summary:
+      projection_domains: [specification]
+      purpose: summary
+  component_shared_refs: {}

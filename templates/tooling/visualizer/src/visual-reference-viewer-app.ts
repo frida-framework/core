@@ -2,14 +2,14 @@ import {
     createVisualViewerState,
     deriveVisualViewerFrame,
     reduceVisualViewerState,
-} from './visual-viewer.ts';
-import type { VisualOverlayV1 } from './visual.ts';
+} from './visual-viewer.js';
+import type { VisualOverlayV1 } from '../../../../dist/visual.js';
 import type {
     VisualViewerAction,
     VisualViewerFocus,
     VisualViewerFrame,
     VisualViewerRuntimeStateV1,
-} from './visual-viewer.ts';
+} from './visual-viewer.js';
 
 declare const document: any;
 

@@ -109,6 +109,169 @@ function assertVisualPaths(contract, issues) {
   }
 }
 
+function assertOverlayAuthorityModel(contract, issues) {
+  const visual = contract.FRIDA_VISUAL;
+  if (!isObjectLike(visual)) {
+    return;
+  }
+
+  const authorityChain = visual.authority_chain;
+  if (!isObjectLike(authorityChain)) {
+    issues.push('FRIDA_VISUAL.authority_chain is missing or invalid.');
+  } else {
+    const expectedRefs = {
+      source_contract_semantics: 'FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT.component_contract_spec',
+      source_to_overlay_projection: 'FRIDA_VISUAL.component_projection',
+      overlay_entity_model: 'FRIDA_VISUAL.overlay_entity_model_v1',
+      overlay_schema_delivery: 'FRIDA_VISUAL.overlay_schema_v1',
+      runtime_viewer_contract: 'FRIDA_VISUAL.viewer_runtime_v1',
+      reference_viewer_scope: 'FRIDA_VISUAL.reference_viewer',
+    };
+
+    for (const [key, expectedRef] of Object.entries(expectedRefs)) {
+      if (authorityChain?.[key]?.authorityRef !== expectedRef) {
+        issues.push(`FRIDA_VISUAL.authority_chain.${key}.authorityRef must equal ${expectedRef}.`);
+      }
+    }
+
+    if (
+      typeof authorityChain?.rule !== 'string' ||
+      !authorityChain.rule.includes('source contract semantics -> derived overlay semantics -> runtime/viewer contract')
+    ) {
+      issues.push('FRIDA_VISUAL.authority_chain.rule must preserve the source -> overlay -> runtime/viewer authority flow.');
+    }
+  }
+
+  const overlayModel = visual.overlay_entity_model_v1;
+  if (!isObjectLike(overlayModel)) {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1 is missing or invalid.');
+    return;
+  }
+
+  if (overlayModel.id !== 'frida-visual-overlay-entity-model') {
+    issues.push("FRIDA_VISUAL.overlay_entity_model_v1.id must equal 'frida-visual-overlay-entity-model'.");
+  }
+  if (overlayModel.version !== '1.0.0') {
+    issues.push("FRIDA_VISUAL.overlay_entity_model_v1.version must equal '1.0.0'.");
+  }
+  if (overlayModel.projection_authorityRef !== 'FRIDA_VISUAL.component_projection') {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.projection_authorityRef must equal FRIDA_VISUAL.component_projection.');
+  }
+  if (overlayModel.runtime_authorityRef !== 'FRIDA_VISUAL.viewer_runtime_v1') {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.runtime_authorityRef must equal FRIDA_VISUAL.viewer_runtime_v1.');
+  }
+  if (
+    typeof overlayModel?.checkability_rule !== 'string' ||
+    !overlayModel.checkability_rule.includes('normatively declared here')
+  ) {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.checkability_rule must require runtime/viewer references to use declared overlay entity families only.');
+  }
+
+  const entityFamilies = overlayModel.entity_families;
+  const expectedFamilies = [
+    'projection_units',
+    'component_boundaries',
+    'boundary_relations',
+    'entry_points',
+    'exit_points',
+    'mounted_child_relations',
+    'continuation_mappings',
+    'return_mappings',
+    'topology_nodes',
+    'topology_edges',
+    'flow_nodes',
+    'flow_edges',
+    'specification_nodes',
+    'specification_edges',
+    'dependency_edges',
+    'context_shell_hints',
+    'trace_projection_hints',
+  ];
+
+  for (const family of expectedFamilies) {
+    if (!isObjectLike(entityFamilies?.[family])) {
+      issues.push(`FRIDA_VISUAL.overlay_entity_model_v1.entity_families.${family} is missing or invalid.`);
+    }
+  }
+
+  const boundaryRelations = entityFamilies?.boundary_relations;
+  if (
+    !Array.isArray(boundaryRelations?.required_fields) ||
+    !boundaryRelations.required_fields.includes('relation_kind') ||
+    !boundaryRelations.required_fields.includes('relation_ref')
+  ) {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.entity_families.boundary_relations.required_fields must include relation_kind and relation_ref.');
+  }
+  if (
+    typeof boundaryRelations?.carrier_rule !== 'string' ||
+    !boundaryRelations.carrier_rule.includes('mounted_child_relations') ||
+    !boundaryRelations.carrier_rule.includes('continuation_mappings') ||
+    !boundaryRelations.carrier_rule.includes('return_mappings')
+  ) {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.entity_families.boundary_relations.carrier_rule must preserve typed relation carriers.');
+  }
+
+  const relationPrecedence = overlayModel.relation_precedence;
+  if (
+    typeof relationPrecedence?.mounted_child_first !== 'string' ||
+    !relationPrecedence.mounted_child_first.includes('mounted_child_relations')
+  ) {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.relation_precedence.mounted_child_first must materialize mounted_child_relations first.');
+  }
+  if (
+    typeof relationPrecedence?.continuation_first !== 'string' ||
+    !relationPrecedence.continuation_first.includes('continuation_mappings')
+  ) {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.relation_precedence.continuation_first must materialize continuation_mappings first.');
+  }
+  if (
+    typeof relationPrecedence?.return_first !== 'string' ||
+    !relationPrecedence.return_first.includes('return_mappings')
+  ) {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.relation_precedence.return_first must materialize return_mappings first.');
+  }
+  if (
+    typeof relationPrecedence?.generic_edge_rule !== 'string' ||
+    !relationPrecedence.generic_edge_rule.includes('MUST NOT become the sole carrier')
+  ) {
+    issues.push('FRIDA_VISUAL.overlay_entity_model_v1.relation_precedence.generic_edge_rule must forbid typed semantics from collapsing into generic edges.');
+  }
+
+  const referenceViewer = visual.reference_viewer;
+  if (!isObjectLike(referenceViewer)) {
+    issues.push('FRIDA_VISUAL.reference_viewer is missing or invalid.');
+  } else {
+    if (referenceViewer.overlay_delivery_authorityRef !== 'FRIDA_VISUAL.overlay_schema_v1') {
+      issues.push('FRIDA_VISUAL.reference_viewer.overlay_delivery_authorityRef must equal FRIDA_VISUAL.overlay_schema_v1.');
+    }
+    if (referenceViewer.runtime_contract_ref !== 'FRIDA_VISUAL.viewer_runtime_v1') {
+      issues.push('FRIDA_VISUAL.reference_viewer.runtime_contract_ref must equal FRIDA_VISUAL.viewer_runtime_v1.');
+    }
+    if (referenceViewer.fixture_marker_field !== 'fixture_only') {
+      issues.push('FRIDA_VISUAL.reference_viewer.fixture_marker_field must equal fixture_only.');
+    }
+    if (
+      typeof referenceViewer?.authority_rule !== 'string' ||
+      !referenceViewer.authority_rule.includes('optional-module wiring') ||
+      !referenceViewer.authority_rule.includes('demo-fixture wiring')
+    ) {
+      issues.push('FRIDA_VISUAL.reference_viewer.authority_rule must limit the block to scope, delivery, and demo-fixture wiring.');
+    }
+    if (
+      typeof referenceViewer?.fixture_rule !== 'string' ||
+      !referenceViewer.fixture_rule.includes('fixture_only: true')
+    ) {
+      issues.push('FRIDA_VISUAL.reference_viewer.fixture_rule must isolate viewer/session demo inputs behind fixture_only: true.');
+    }
+    if (referenceViewer.module_rootDirRef !== 'PATHS.tooling.visualizerDir') {
+      issues.push('FRIDA_VISUAL.reference_viewer.module_rootDirRef must equal PATHS.tooling.visualizerDir.');
+    }
+    if (referenceViewer.browser_runtime_entrypoint !== 'templates/tooling/visualizer/src/visual-reference-viewer-app.ts') {
+      issues.push('FRIDA_VISUAL.reference_viewer.browser_runtime_entrypoint must equal templates/tooling/visualizer/src/visual-reference-viewer-app.ts.');
+    }
+  }
+}
+
 function assertBoundaryFirstVisualProjection(contract, issues) {
   const visual = contract.FRIDA_VISUAL;
   if (!isObjectLike(visual)) {
@@ -137,8 +300,17 @@ function assertBoundaryFirstVisualProjection(contract, issues) {
     if (overlaySchema.projection_authorityRef !== 'FRIDA_VISUAL.component_projection') {
       issues.push('FRIDA_VISUAL.overlay_schema_v1.projection_authorityRef must equal FRIDA_VISUAL.component_projection.');
     }
+    if (overlaySchema.entity_model_authorityRef !== 'FRIDA_VISUAL.overlay_entity_model_v1') {
+      issues.push('FRIDA_VISUAL.overlay_schema_v1.entity_model_authorityRef must equal FRIDA_VISUAL.overlay_entity_model_v1.');
+    }
     if (overlaySchema.builder_entrypoint !== 'src/visual.ts') {
       issues.push('FRIDA_VISUAL.overlay_schema_v1.builder_entrypoint must equal src/visual.ts.');
+    }
+    if (
+      typeof overlaySchema?.authority_rule !== 'string' ||
+      !overlaySchema.authority_rule.includes('overlay serialization')
+    ) {
+      issues.push('FRIDA_VISUAL.overlay_schema_v1.authority_rule must limit the block to overlay serialization concerns.');
     }
   }
 
@@ -233,6 +405,13 @@ function assertBoundaryFirstVisualProjection(contract, issues) {
     }
   }
 
+  if (
+    typeof mappingRules?.component_domain_blocks?.forbidden_rule !== 'string' ||
+    !mappingRules.component_domain_blocks.forbidden_rule.includes('MUST NOT be promoted')
+  ) {
+    issues.push('FRIDA_VISUAL.component_projection.mapping_rules.component_domain_blocks.forbidden_rule must forbid heuristic promotion.');
+  }
+
   if (projection?.entry_semantics?.source_section !== 'component_mount_point') {
     issues.push('FRIDA_VISUAL.component_projection.entry_semantics.source_section must equal component_mount_point.');
   }
@@ -265,6 +444,39 @@ function assertBoundaryFirstVisualProjection(contract, issues) {
 
   if (projection?.continuation_return_semantics?.source_fields?.return !== 'component_output_interface.return_target_boundaryRef') {
     issues.push('FRIDA_VISUAL.component_projection.continuation_return_semantics.source_fields.return must equal component_output_interface.return_target_boundaryRef.');
+  }
+
+  const domainBlockRouting = projection?.component_domain_block_routing;
+  if (!isObjectLike(domainBlockRouting)) {
+    issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing is missing or invalid.');
+  } else {
+    if (domainBlockRouting.selector_field !== 'projection_domains') {
+      issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing.selector_field must equal projection_domains.');
+    }
+    const selectorValues = Array.isArray(domainBlockRouting.selector_allowed_values)
+      ? domainBlockRouting.selector_allowed_values
+      : [];
+    if (JSON.stringify(selectorValues) !== JSON.stringify(['topology', 'flow', 'specification'])) {
+      issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing.selector_allowed_values must equal [topology, flow, specification].');
+    }
+    if (
+      typeof domainBlockRouting?.authoritative_rule !== 'string' ||
+      !domainBlockRouting.authoritative_rule.includes('selector-driven only')
+    ) {
+      issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing.authoritative_rule must require selector-driven routing.');
+    }
+    if (
+      typeof domainBlockRouting?.forbidden_without_selector !== 'string' ||
+      !domainBlockRouting.forbidden_without_selector.includes('MUST NOT produce topology nodes')
+    ) {
+      issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing.forbidden_without_selector must keep selector-less blocks out of topology/flow/expanded specification.');
+    }
+    if (
+      typeof domainBlockRouting?.fallback_rule !== 'string' ||
+      !domainBlockRouting.fallback_rule.includes('collapsed specification-local declaration anchor')
+    ) {
+      issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing.fallback_rule must keep selector-less blocks collapsed.');
+    }
   }
 
   const principles = new Map(
@@ -330,6 +542,18 @@ function assertBoundaryFirstVisualProjection(contract, issues) {
     issues.push('FRIDA_VISUAL.determinism.stable_interpretation.domain_order must equal [topology, flow, specification].');
   }
 
+  const volatileFields = Array.isArray(visual?.determinism?.volatile_fields) ? visual.determinism.volatile_fields : [];
+  if (JSON.stringify(volatileFields) !== JSON.stringify(['meta.generated_at'])) {
+    issues.push("FRIDA_VISUAL.determinism.volatile_fields must equal ['meta.generated_at'].");
+  }
+
+  if (
+    typeof visual?.determinism?.rule !== 'string' ||
+    !visual.determinism.rule.includes('byte-identical')
+  ) {
+    issues.push('FRIDA_VISUAL.determinism.rule must require byte-identical output after volatile-field normalization.');
+  }
+
   if (
     typeof visual?.determinism?.stable_identity?.node_rule !== 'string' ||
     !visual.determinism.stable_identity.node_rule.includes('canonical source paths')
@@ -342,6 +566,39 @@ function assertBoundaryFirstVisualProjection(contract, issues) {
     !visual.determinism.stable_sort.edge_rule.includes('source path')
   ) {
     issues.push('FRIDA_VISUAL.determinism.stable_sort.edge_rule must define stable edge ordering.');
+  }
+
+  const refMapping = visual.ref_to_edge_mapping;
+  if (!isObjectLike(refMapping)) {
+    issues.push('FRIDA_VISUAL.ref_to_edge_mapping is missing or invalid.');
+  } else {
+    if (
+      typeof refMapping?.rule !== 'string' ||
+      !refMapping.rule.includes('Typed relation families MUST be materialized before any generic edge projection')
+    ) {
+      issues.push('FRIDA_VISUAL.ref_to_edge_mapping.rule must give typed relations precedence over generic edges.');
+    }
+
+    const precedence = refMapping.precedence;
+    const requiredPrecedence = {
+      'component_mount_point.mounted_child_boundaryRefs': 'mounted_child_relations',
+      'component_output_interface.target_boundaryRef': 'continuation_mappings',
+      'component_output_interface.return_target_boundaryRef': 'return_mappings',
+      'component_shared_refs.*Ref_or_*Refs': 'dependency_edges',
+    };
+
+    for (const [key, expectedFragment] of Object.entries(requiredPrecedence)) {
+      if (typeof precedence?.[key] !== 'string' || !precedence[key].includes(expectedFragment)) {
+        issues.push(`FRIDA_VISUAL.ref_to_edge_mapping.precedence.${key} must mention ${expectedFragment}.`);
+      }
+    }
+
+    if (
+      typeof refMapping?.generic_edge_rule !== 'string' ||
+      !refMapping.generic_edge_rule.includes('MUST NOT become the sole carrier')
+    ) {
+      issues.push('FRIDA_VISUAL.ref_to_edge_mapping.generic_edge_rule must forbid generic edges from erasing typed semantics.');
+    }
   }
 }
 
@@ -366,11 +623,14 @@ function assertViewerRuntimeContract(contract, issues) {
   if (viewer.schema_file !== 'schemas/frida-visual-viewer-runtime.schema.json') {
     issues.push('FRIDA_VISUAL.viewer_runtime_v1.schema_file must equal schemas/frida-visual-viewer-runtime.schema.json.');
   }
-  if (viewer.runtime_entrypoint !== 'src/visual-viewer.ts') {
-    issues.push('FRIDA_VISUAL.viewer_runtime_v1.runtime_entrypoint must equal src/visual-viewer.ts.');
+  if (viewer.runtime_entrypoint !== 'templates/tooling/visualizer/src/visual-viewer.ts') {
+    issues.push('FRIDA_VISUAL.viewer_runtime_v1.runtime_entrypoint must equal templates/tooling/visualizer/src/visual-viewer.ts.');
   }
   if (viewer.overlay_input_ref !== 'FRIDA_VISUAL.overlay_schema_v1') {
     issues.push('FRIDA_VISUAL.viewer_runtime_v1.overlay_input_ref must equal FRIDA_VISUAL.overlay_schema_v1.');
+  }
+  if (viewer.overlay_entity_model_authorityRef !== 'FRIDA_VISUAL.overlay_entity_model_v1') {
+    issues.push('FRIDA_VISUAL.viewer_runtime_v1.overlay_entity_model_authorityRef must equal FRIDA_VISUAL.overlay_entity_model_v1.');
   }
 
   const sourceVocabulary = Array.isArray(viewer?.vocabulary_separation?.source_contract_vocabulary)
@@ -392,14 +652,23 @@ function assertViewerRuntimeContract(contract, issues) {
     'component_shared_refs',
   ];
   const expectedOverlayVocabulary = [
-    'topology',
-    'flow',
-    'specification',
-    'boundary',
-    'entry',
-    'exit',
-    'continuation',
-    'mounted_child_relation',
+    'projection_units',
+    'component_boundaries',
+    'boundary_relations',
+    'entry_points',
+    'exit_points',
+    'mounted_child_relations',
+    'continuation_mappings',
+    'return_mappings',
+    'topology_nodes',
+    'topology_edges',
+    'flow_nodes',
+    'flow_edges',
+    'specification_nodes',
+    'specification_edges',
+    'dependency_edges',
+    'context_shell_hints',
+    'trace_projection_hints',
   ];
   const expectedRuntimeVocabulary = [
     'scope',
@@ -429,6 +698,14 @@ function assertViewerRuntimeContract(contract, issues) {
     !viewer.vocabulary_separation.rule.includes('MUST use runtime vocabulary')
   ) {
     issues.push('FRIDA_VISUAL.viewer_runtime_v1.vocabulary_separation.rule must enforce source/overlay/runtime separation.');
+  }
+
+  const consumedEntities = viewer.consumed_overlay_entities;
+  const expectedConsumedGroups = ['scope_records', 'navigation_relations', 'lod_projections', 'shell_and_trace'];
+  for (const key of expectedConsumedGroups) {
+    if (!isObjectLike(consumedEntities) || !(key in consumedEntities)) {
+      issues.push(`FRIDA_VISUAL.viewer_runtime_v1.consumed_overlay_entities.${key} is missing.`);
+    }
   }
 
   const runtimeVocabularyMap = viewer.runtime_vocabulary;
@@ -494,6 +771,7 @@ function main() {
 
   assertVisualContracts(contract, issues);
   assertVisualPaths(contract, issues);
+  assertOverlayAuthorityModel(contract, issues);
   assertBoundaryFirstVisualProjection(contract, issues);
   assertViewerRuntimeContract(contract, issues);
 

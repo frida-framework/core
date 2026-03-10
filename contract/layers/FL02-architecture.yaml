@@ -91,12 +91,17 @@ FRIDA_ARCHITECTURE_DECISIONS:
       status: ACCEPTED
       decision:
         - "Component-level contract file is the primary visual projection unit."
-        - "FRIDA_VISUAL.component_projection is the authoritative source for source-contract-to-visual mapping semantics."
+        - "FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT.component_contract_spec is the authoritative source for component-boundary source semantics."
+        - "FRIDA_VISUAL.component_projection is the authoritative source for source-contract-to-overlay projection semantics."
+        - "FRIDA_VISUAL.overlay_entity_model_v1 is the authoritative source for derived overlay entity semantics, and FRIDA_VISUAL.overlay_schema_v1 is authoritative for overlay serialization and artifact delivery."
+        - "FRIDA_VISUAL.viewer_runtime_v1 is the authoritative runtime/viewer contract and MUST consume overlay, not raw contract, for visual semantics."
         - "Component boundary semantics are established before any YAML-depth expansion."
         - "Topology, flow, and specification are interpreted relative to the current component boundary."
+        - "component_domain_blocks projection is selector-driven only through explicit projection_domains declarations on top-level child blocks; no shape, key-name, or UI heuristics are allowed."
         - "Mounted child internals stay collapsed in parent specification view until explicit drill-in through component_mount_point.mounted_child_boundaryRefs."
-        - "Typed reference keys (*Ref, *Refs) produce explicit edges."
-        - "Overlay is deterministic: same contract → same overlay (up to isomorphism)."
+        - "Mounted-child, continuation, and return refs produce typed overlay relations before any generic edge projection."
+        - "Reference-viewer demo state is fixture-only and MUST NOT be taught as general component_input_interface semantics."
+        - "Overlay is deterministic: identical normalized contract input and identical generator build/configuration yield byte-identical overlay output after normalization of explicitly declared volatile fields only."
       evidence:
         - src/visual.ts
 

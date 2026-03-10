@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { loadVisualizerModuleConfig } from '../lib/visualizer-module.mjs';
 
 const ROOT_DIR = path.resolve(process.cwd());
 const NODE_EXE = process.execPath;
@@ -24,6 +25,12 @@ function fail(message) {
 
 function main() {
   console.log('🔍 Checking visual reference viewer...');
+
+  const config = loadVisualizerModuleConfig();
+  if (!config.enabled) {
+    console.log('ℹ️ Optional visualizer module disabled; skipping reference viewer check.');
+    return;
+  }
 
   if (fs.existsSync(OUTPUT_DIR)) {
     fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });

@@ -61,6 +61,7 @@ component_output_interface:
 
 component_domain_blocks:
   render_panel:
+    projection_domains: [flow]
     layout: compact
 
 component_shared_refs:

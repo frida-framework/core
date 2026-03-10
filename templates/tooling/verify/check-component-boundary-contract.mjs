@@ -26,6 +26,14 @@ const LEGACY_TERMS = [
   'shared_refs',
 ];
 
+const RUNTIME_VIEWER_INPUT_KEYS = [
+  'active_view',
+  'active_lod',
+  'trace_mode',
+  'selected_projection_unit',
+  'focused_boundary',
+];
+
 const HISTORICAL_MARKERS = /\b(deprecated|legacy|historical|migration|compat)\b/i;
 const RELEVANT_ROOTS = [
   'contract',
@@ -133,6 +141,20 @@ function assertListIncludesAll(actual, expected, label, issues) {
   }
 }
 
+function loadYamlObject(relativePath, issues) {
+  const absolutePath = path.join(ROOT_DIR, relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    issues.push(`Required file is missing: ${relativePath}`);
+    return null;
+  }
+  const parsed = yaml.parse(fs.readFileSync(absolutePath, 'utf8'));
+  if (!isObjectLike(parsed)) {
+    issues.push(`Required YAML file must parse to an object: ${relativePath}`);
+    return null;
+  }
+  return parsed;
+}
+
 function assertComponentContractSpec(contract, issues) {
   const management = contract.FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT;
   const spec = management?.component_contract_spec;
@@ -151,13 +173,19 @@ function assertComponentContractSpec(contract, issues) {
 
   if (
     typeof spec?.authoritative_rule !== 'string' ||
-    !spec.authoritative_rule.includes('Visual projection behavior is authoritative only via FRIDA_VISUAL.component_projection')
+    !spec.authoritative_rule.includes('FRIDA_VISUAL.component_projection -> FRIDA_VISUAL.overlay_entity_model_v1 -> FRIDA_VISUAL.viewer_runtime_v1')
   ) {
-    issues.push('component_contract_spec.authoritative_rule must defer visual projection authority to FRIDA_VISUAL.component_projection.');
+    issues.push('component_contract_spec.authoritative_rule must preserve the source -> projection -> overlay entity model -> viewer runtime authority chain.');
   }
 
   if (spec?.visual_projection_authorityRef !== 'FRIDA_VISUAL.component_projection') {
     issues.push('component_contract_spec.visual_projection_authorityRef must equal FRIDA_VISUAL.component_projection.');
+  }
+  if (spec?.overlay_entity_model_authorityRef !== 'FRIDA_VISUAL.overlay_entity_model_v1') {
+    issues.push('component_contract_spec.overlay_entity_model_authorityRef must equal FRIDA_VISUAL.overlay_entity_model_v1.');
+  }
+  if (spec?.viewer_runtime_authorityRef !== 'FRIDA_VISUAL.viewer_runtime_v1') {
+    issues.push('component_contract_spec.viewer_runtime_authorityRef must equal FRIDA_VISUAL.viewer_runtime_v1.');
   }
 
   const mountRules = spec?.section_field_rules?.component_mount_point;
@@ -184,6 +212,55 @@ function assertComponentContractSpec(contract, issues) {
     assertListIncludesAll(sharedRules.optional_fields || [], ['refs'], 'component_shared_refs.optional_fields', issues);
   }
 
+  const hierarchyRules = spec?.section_field_rules?.component_hierarchy_position;
+  if (!isObjectLike(hierarchyRules)) {
+    issues.push('component_contract_spec.section_field_rules.component_hierarchy_position is missing.');
+  } else if (
+    typeof hierarchyRules?.host_root_rule !== 'string' ||
+    !hierarchyRules.host_root_rule.includes('local_role=host_root')
+  ) {
+    issues.push('component_contract_spec.section_field_rules.component_hierarchy_position.host_root_rule must define the host_root anchor semantics.');
+  }
+
+  const domainRules = spec?.section_field_rules?.component_domain_blocks;
+  if (!isObjectLike(domainRules)) {
+    issues.push('component_contract_spec.section_field_rules.component_domain_blocks is missing.');
+  } else {
+    if (domainRules.projection_selector_field !== 'projection_domains') {
+      issues.push('component_contract_spec.section_field_rules.component_domain_blocks.projection_selector_field must equal projection_domains.');
+    }
+    assertListIncludesAll(
+      domainRules.projection_selector_allowed_values || [],
+      ['topology', 'flow', 'specification'],
+      'component_domain_blocks.projection_selector_allowed_values',
+      issues,
+    );
+    assertListIncludesAll(
+      domainRules.optional_block_fields || [],
+      ['projection_domains', 'fixture_only'],
+      'component_domain_blocks.optional_block_fields',
+      issues,
+    );
+    if (
+      typeof domainRules?.rule !== 'string' ||
+      !domainRules.rule.includes('Projection routing MUST NOT guess')
+    ) {
+      issues.push('component_contract_spec.section_field_rules.component_domain_blocks.rule must forbid heuristic routing.');
+    }
+    if (
+      typeof domainRules?.fallback_rule !== 'string' ||
+      !domainRules.fallback_rule.includes('MUST NOT be promoted into topology')
+    ) {
+      issues.push('component_contract_spec.section_field_rules.component_domain_blocks.fallback_rule must keep selector-less blocks collapsed.');
+    }
+    if (
+      typeof domainRules?.fixture_only_rule !== 'string' ||
+      !domainRules.fixture_only_rule.includes('fixture_only: true')
+    ) {
+      issues.push('component_contract_spec.section_field_rules.component_domain_blocks.fixture_only_rule must isolate viewer/runtime demo state behind fixture_only: true.');
+    }
+  }
+
   const example = spec.example_component_contract;
   if (!isObjectLike(example)) {
     issues.push('component_contract_spec.example_component_contract is missing.');
@@ -203,6 +280,31 @@ function assertComponentContractSpec(contract, issues) {
     const outcomes = exits.map((entry) => entry?.outcome).filter(Boolean);
     if (!outcomes.includes('continue') || !outcomes.includes('return')) {
       issues.push('component_contract_spec.example_component_contract must demonstrate continue and return outcomes.');
+    }
+  }
+
+  const exampleInputKeys = Object.keys(example?.component_input_interface || {});
+  for (const forbiddenKey of RUNTIME_VIEWER_INPUT_KEYS) {
+    if (exampleInputKeys.includes(forbiddenKey)) {
+      issues.push(`component_contract_spec.example_component_contract must not include runtime/viewer input key '${forbiddenKey}'.`);
+    }
+  }
+
+  const exampleDomainBlocks = example?.component_domain_blocks;
+  if (!isObjectLike(exampleDomainBlocks)) {
+    issues.push('component_contract_spec.example_component_contract.component_domain_blocks must be an object.');
+  } else {
+    const selectorSets = Object.values(exampleDomainBlocks)
+      .filter(isObjectLike)
+      .map((entry) => Array.isArray(entry.projection_domains) ? entry.projection_domains : []);
+    if (!selectorSets.some((entry) => entry.includes('topology'))) {
+      issues.push('component_contract_spec.example_component_contract must demonstrate topology projection_domains routing.');
+    }
+    if (!selectorSets.some((entry) => entry.includes('flow'))) {
+      issues.push('component_contract_spec.example_component_contract must demonstrate flow projection_domains routing.');
+    }
+    if (!selectorSets.some((entry) => entry.includes('specification'))) {
+      issues.push('component_contract_spec.example_component_contract must demonstrate specification projection_domains routing.');
     }
   }
 }
@@ -268,6 +370,98 @@ function assertVisualSemantics(contract, issues) {
   ) {
     issues.push('FRIDA_VISUAL.component_projection.continuation_return_semantics must map continuation and return to the canonical component_output_interface fields.');
   }
+
+  const domainBlockRouting = projection?.component_domain_block_routing;
+  if (!isObjectLike(domainBlockRouting)) {
+    issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing is missing.');
+  } else {
+    if (domainBlockRouting.selector_field !== 'projection_domains') {
+      issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing.selector_field must equal projection_domains.');
+    }
+    assertListIncludesAll(
+      domainBlockRouting.selector_allowed_values || [],
+      ['topology', 'flow', 'specification'],
+      'FRIDA_VISUAL.component_projection.component_domain_block_routing.selector_allowed_values',
+      issues,
+    );
+    if (
+      typeof domainBlockRouting?.authoritative_rule !== 'string' ||
+      !domainBlockRouting.authoritative_rule.includes('selector-driven only')
+    ) {
+      issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing.authoritative_rule must forbid heuristic routing.');
+    }
+    if (
+      typeof domainBlockRouting?.fallback_rule !== 'string' ||
+      !domainBlockRouting.fallback_rule.includes('collapsed specification-local declaration anchor')
+    ) {
+      issues.push('FRIDA_VISUAL.component_projection.component_domain_block_routing.fallback_rule must keep selector-less blocks collapsed.');
+    }
+  }
+}
+
+function assertHostRootBaseline(issues) {
+  const contractIndex = loadYamlObject('templates/template_app_basic/app-contract/contract.index.yaml', issues);
+  if (!contractIndex) {
+    return;
+  }
+
+  const layers = Array.isArray(contractIndex?.contract_index?.layers)
+    ? contractIndex.contract_index.layers
+    : [];
+  const hostLayer = layers.find((entry) => entry?.id === 'host-root');
+  if (!hostLayer || hostLayer.path !== 'layers/AL03-host-root.yaml') {
+    issues.push('template_app_basic contract index must activate layers/AL03-host-root.yaml as the host-root baseline layer.');
+  }
+
+  const hostLayerDoc = loadYamlObject('templates/template_app_basic/app-contract/layers/AL03-host-root.yaml', issues);
+  if (!hostLayerDoc) {
+    return;
+  }
+
+  const hostRoot = hostLayerDoc.app_host_root;
+  if (!isObjectLike(hostRoot)) {
+    issues.push('AL03-host-root.yaml must export app_host_root.');
+    return;
+  }
+
+  const hierarchy = hostRoot.component_hierarchy_position;
+  const mount = hostRoot.component_mount_point;
+  const input = hostRoot.component_input_interface;
+  const output = hostRoot.component_output_interface;
+  const domainBlocks = hostRoot.component_domain_blocks;
+  const sharedRefs = hostRoot.component_shared_refs;
+
+  if (!isObjectLike(hierarchy) || hierarchy.local_role !== 'host_root') {
+    issues.push('app_host_root.component_hierarchy_position.local_role must equal host_root.');
+  }
+  if (isObjectLike(hierarchy) && 'parent_boundaryRef' in hierarchy) {
+    issues.push('app_host_root.component_hierarchy_position must omit parent_boundaryRef.');
+  }
+  if (!isObjectLike(mount) || mount.mount_kind !== 'host-static') {
+    issues.push('app_host_root.component_mount_point.mount_kind must equal host-static.');
+  }
+  if (!isObjectLike(mount) || typeof mount.slotRef !== 'string' || !mount.slotRef.trim()) {
+    issues.push('app_host_root.component_mount_point.slotRef must be a non-empty string.');
+  }
+  if (!isObjectLike(input) || Object.keys(input).length !== 0) {
+    issues.push('app_host_root.component_input_interface must be an empty object.');
+  }
+  if (!isObjectLike(output) || !Array.isArray(output.exits) || output.exits.length !== 0) {
+    issues.push('app_host_root.component_output_interface.exits must equal [].');
+  }
+  if (!isObjectLike(sharedRefs) || Object.keys(sharedRefs).length !== 0) {
+    issues.push('app_host_root.component_shared_refs must be an empty object.');
+  }
+  if (!isObjectLike(domainBlocks)) {
+    issues.push('app_host_root.component_domain_blocks must be an object.');
+  } else {
+    const topologyBlocks = Object.values(domainBlocks).filter(
+      (entry) => isObjectLike(entry) && Array.isArray(entry.projection_domains) && entry.projection_domains.includes('topology')
+    );
+    if (topologyBlocks.length === 0) {
+      issues.push('app_host_root.component_domain_blocks must include at least one topology-visible block.');
+    }
+  }
 }
 
 function assertValidationCoverage(contract, issues) {
@@ -283,8 +477,13 @@ function assertValidationCoverage(contract, issues) {
     contractChecks,
     [
       'Component contract files use the canonical component boundary section ids and do not retain legacy aliases unless a declared temporary deprecation window exists.',
+      'Root boundaries may omit parent_boundaryRef; non-root boundaries resolve a valid parent boundary when the model requires parent placement.',
+      'If local_role=host_root is present, it is the unique null-parent depth=0 anchor and all other boundaries in that baseline resolve upward to it.',
+      'mounted_child_boundaryRefs are unique per boundary, do not self-target, and do not create ambiguous child drill-in declarations.',
       'component_mount_point.mounted_child_boundaryRefs and component_output_interface.*boundaryRef fields resolve only to explicit component boundaries when present.',
+      'component_output_interface exit entries obey the strict target matrix: continue -> target_boundaryRef, return -> return_target_boundaryRef, exit -> neither.',
       'Component-level contract examples and snippets use only the canonical component_* vocabulary.',
+      'Authoritative component-contract examples remain runtime-free unless a fixture-only marker is explicit.',
       'Mixed legacy/new component-boundary namespace use in active definitions is a hard failure.',
     ],
     'FRIDA_VALIDATION_CHECKLIST.contract_consistency',
@@ -299,6 +498,10 @@ function assertValidationCoverage(contract, issues) {
       'Parent specification view does not auto-expand mounted child internals; cross-component drill-in requires component_mount_point.mounted_child_boundaryRefs.',
       'Flow projection reads canonical exits, outcomes, and continuation/return targeting only from component_output_interface.',
       'component_shared_refs project dependency edges only and do not override ownership or boundary semantics.',
+      'component_domain_blocks project only through explicit projection_domains selectors on top-level child blocks; heuristics are forbidden.',
+      'A component_domain_blocks child block without projection_domains remains collapsed source detail and is not promoted into topology, flow, or expanded specification detail.',
+      'Optional visualizer demo state remains fixture-only and is not taught as general component_input_interface semantics.',
+      'When host_root is present, viewer depth is measured relative to that anchor and never becomes negative.',
     ],
     'FRIDA_VALIDATION_CHECKLIST.visual_consistency',
     issues,
@@ -319,9 +522,15 @@ function assertGuardCoverage(contract, issues) {
     [
       'component_boundary_sections_complete',
       'component_boundary_refs_resolve',
+      'component_root_parent_rule',
+      'component_host_root_anchor',
+      'component_mounted_child_unique_non_self',
       'component_output_exit_semantics_canonical',
+      'component_output_exit_target_matrix',
       'component_child_non_auto_expand',
+      'component_domain_blocks_selector_driven',
       'component_shared_refs_dependency_only',
+      'component_authoritative_examples_runtime_free',
       'component_legacy_namespace_forbidden',
       'component_boundary_visual_primary',
     ],
@@ -333,16 +542,32 @@ function assertGuardCoverage(contract, issues) {
   const expectedPolicies = [
     'GUARD_COMPONENT_BOUNDARY_SECTIONS_COMPLETE',
     'GUARD_COMPONENT_BOUNDARY_REFS_RESOLVE',
+    'GUARD_COMPONENT_ROOT_PARENT_RULE',
+    'GUARD_COMPONENT_HOST_ROOT_ANCHOR',
+    'GUARD_COMPONENT_MOUNTED_CHILD_UNIQUE_NON_SELF',
     'GUARD_COMPONENT_EXIT_SEMANTICS_COMPLETE',
+    'GUARD_COMPONENT_EXIT_TARGET_MATRIX',
     'GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE',
+    'GUARD_COMPONENT_DOMAIN_BLOCK_SELECTOR_DRIVEN',
     'GUARD_COMPONENT_SHARED_REFS_DEPENDENCY_ONLY',
+    'GUARD_COMPONENT_AUTHORITATIVE_EXAMPLE_RUNTIME_FREE',
     'GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN',
     'GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN',
     'GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST',
   ];
   assertListIncludesAll(policyIds, expectedPolicies, 'FRIDA_ENFORCEMENT.policies', issues);
-  assertListIncludesAll(validationRules.contract_consistency || [], expectedPolicies.filter((id) => id !== 'GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE' && id !== 'GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST'), 'FRIDA_VALIDATION_RULES.contract_consistency', issues);
-  assertListIncludesAll(validationRules.visual_guards || [], ['GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE', 'GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST'], 'FRIDA_VALIDATION_RULES.visual_guards', issues);
+  assertListIncludesAll(
+    validationRules.contract_consistency || [],
+    expectedPolicies.filter((id) => !['GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE', 'GUARD_COMPONENT_DOMAIN_BLOCK_SELECTOR_DRIVEN', 'GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST'].includes(id)),
+    'FRIDA_VALIDATION_RULES.contract_consistency',
+    issues,
+  );
+  assertListIncludesAll(
+    validationRules.visual_guards || [],
+    ['GUARD_COMPONENT_CHILD_BOUNDARY_NO_INLINE', 'GUARD_COMPONENT_DOMAIN_BLOCK_SELECTOR_DRIVEN', 'GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST'],
+    'FRIDA_VALIDATION_RULES.visual_guards',
+    issues,
+  );
 }
 
 function main() {
@@ -352,6 +577,7 @@ function main() {
 
   assertComponentContractSpec(contract, issues);
   assertVisualSemantics(contract, issues);
+  assertHostRootBaseline(issues);
   assertValidationCoverage(contract, issues);
   assertGuardCoverage(contract, issues);
 

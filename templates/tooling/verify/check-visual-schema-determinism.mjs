@@ -9,7 +9,6 @@ import {
   normalizeOverlayForComparison,
   resolveVisualOverlayPath,
 } from '../lib/visual-schema-extractor.mjs';
-import { loadModularContract } from '../lib/load-contract.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,15 +20,11 @@ function fail(message) {
 }
 
 function loadContract() {
-  const candidates = [
-    path.join(ROOT_DIR, '.frida', 'inbox', 'app-contract', 'contract.index.yaml'),
-    path.join(ROOT_DIR, 'contract', 'contract.index.yaml'),
-  ];
-  const contractPath = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!contractPath) {
-    fail(`Contract index not found: ${candidates.map((entry) => path.relative(ROOT_DIR, entry)).join(' or ')}`);
+  const contractPath = path.join(ROOT_DIR, 'contract', 'contract.index.yaml');
+  if (!fs.existsSync(contractPath)) {
+    fail(`Core contract index not found: ${path.relative(ROOT_DIR, contractPath)}`);
   }
-  const contract = loadModularContract(ROOT_DIR);
+  const contract = loadContractFromIndex(contractPath);
   if (!contract || typeof contract !== 'object') {
     fail('Contract artifact parsed to empty or non-object value.');
   }
@@ -39,6 +34,56 @@ function loadContract() {
     contractPath,
     sourcePath: path.relative(ROOT_DIR, contractPath).replace(/\\/g, '/'),
   };
+}
+
+function loadContractFromIndex(indexPath) {
+  const index = yaml.parse(fs.readFileSync(indexPath, 'utf8'));
+  const layers = Array.isArray(index?.layers)
+    ? index.layers
+    : Array.isArray(index?.contract_index?.layers)
+      ? index.contract_index.layers
+      : null;
+  if (!layers) {
+    fail(`Contract index at ${path.relative(ROOT_DIR, indexPath)} is missing layers.`);
+  }
+
+  const indexDir = path.dirname(indexPath);
+  const repoRoot = path.resolve(indexDir, '..');
+  const contract = {};
+  for (const layer of layers) {
+    const relativePath = layer?.path;
+    if (typeof relativePath !== 'string' || !relativePath.trim()) {
+      continue;
+    }
+    const layerPathFromIndexDir = path.resolve(indexDir, relativePath);
+    const layerPathFromRepoRoot = path.resolve(repoRoot, relativePath);
+    const layerPath = fs.existsSync(layerPathFromIndexDir) ? layerPathFromIndexDir : layerPathFromRepoRoot;
+    if (!fs.existsSync(layerPath)) {
+      fail(`Contract layer not found: ${path.relative(ROOT_DIR, layerPath)}`);
+    }
+    Object.assign(contract, yaml.parse(fs.readFileSync(layerPath, 'utf8')));
+  }
+  return contract;
+}
+
+function isObjectLike(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function mergeContracts(base, incoming) {
+  if (!isObjectLike(base) || !isObjectLike(incoming)) {
+    return incoming;
+  }
+
+  const out = { ...base };
+  for (const [key, value] of Object.entries(incoming)) {
+    if (key in out && isObjectLike(out[key]) && isObjectLike(value)) {
+      out[key] = mergeContracts(out[key], value);
+      continue;
+    }
+    out[key] = value;
+  }
+  return out;
 }
 
 function toAbsolutePath(relativeOrAbsolute) {
@@ -89,7 +134,7 @@ function compareGeneratedArtifact(contract, expectedOverlay) {
 
 function assertNonEmptyLiveOverlay(overlay) {
   if (overlay.projection_units.length === 0 || overlay.component_boundaries.length === 0) {
-    fail('Live visual overlay must be non-empty for the assembled authoritative contract.');
+    fail('Seeded host-root visual smoke overlay must be non-empty.');
   }
 }
 
@@ -129,11 +174,27 @@ function main() {
   console.log('🔍 Checking visual overlay determinism...');
   const { contract, raw, sourcePath, contractPath } = loadContract();
   const expectedOverlay = compareDeterminism(contract, raw, sourcePath, contractPath);
-  assertNonEmptyLiveOverlay(expectedOverlay);
   assertOverlayVocabulary(expectedOverlay);
   compareGeneratedArtifact(contract, expectedOverlay);
+
+  const templateContractPath = path.join(ROOT_DIR, 'templates', 'template_app_basic', 'app-contract', 'contract.index.yaml');
+  if (!fs.existsSync(templateContractPath)) {
+    fail(`Template app contract index not found: ${path.relative(ROOT_DIR, templateContractPath)}`);
+  }
+  const templateContract = loadContractFromIndex(templateContractPath);
+  const seededSmokeContract = mergeContracts(contract, templateContract);
+  const seededRaw = yaml.stringify(seededSmokeContract);
+  const seededOverlay = compareDeterminism(
+    seededSmokeContract,
+    seededRaw,
+    'contract/contract.index.yaml + templates/template_app_basic/app-contract/contract.index.yaml',
+    templateContractPath,
+  );
+  assertNonEmptyLiveOverlay(seededOverlay);
+  assertOverlayVocabulary(seededOverlay);
+
   console.log(
-    `✅ Visual overlay determinism OK (units=${expectedOverlay.projection_units.length}, boundaries=${expectedOverlay.component_boundaries.length})`
+    `✅ Visual overlay determinism OK (core_units=${expectedOverlay.projection_units.length}, core_boundaries=${expectedOverlay.component_boundaries.length}, seeded_units=${seededOverlay.projection_units.length}, seeded_boundaries=${seededOverlay.component_boundaries.length})`
   );
 }
 

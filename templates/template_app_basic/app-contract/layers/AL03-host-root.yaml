@@ -1,0 +1,19 @@
+app_host_root:
+  component_hierarchy_position:
+    local_role: host_root
+  component_mount_point:
+    slotRef: APP_HOST.root
+    mount_kind: host-static
+    mounted_child_boundaryRefs: []
+  component_input_interface: {}
+  component_output_interface:
+    exits: []
+  component_domain_blocks:
+    host_mount_slots:
+      projection_domains:
+        - topology
+      purpose: "Explicit L1 topology anchor for host-owned mount slots."
+      slots:
+        - id: root_slot
+          slotRef: APP_HOST.root
+  component_shared_refs: {}

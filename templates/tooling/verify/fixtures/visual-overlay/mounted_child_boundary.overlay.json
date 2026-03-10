@@ -3,7 +3,7 @@
     "schema_id": "frida-visual-overlay",
     "schema_version": "1.0.0",
     "generated_at": "1970-01-01T00:00:00.000Z",
-    "contract_sha256": "05b72c4f7d370a45c950c74a8fe617a75c02e5fb8eccc5f50a4091ee187b8b36",
+    "contract_sha256": "07890aad256eb7ca961568ac4397c26f48d701dc380d80096222daacf6db0437",
     "source": "templates/tooling/verify/fixtures/visual-overlay/mounted_child_boundary.yaml",
     "overlay_path": "fixtures/visual-overlay/out/mounted_child_boundary.overlay.json",
     "builder_entrypoint": "src/visual.ts",

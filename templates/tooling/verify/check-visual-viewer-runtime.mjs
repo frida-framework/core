@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import { loadVisualizerModuleConfig, resolveVisualizerModuleDistFile } from '../lib/visualizer-module.mjs';
 
 const ROOT_DIR = path.resolve(process.cwd());
 const SCHEMA_FILE = path.join(ROOT_DIR, 'schemas', 'frida-visual-viewer-runtime.schema.json');
@@ -23,14 +24,20 @@ function normalizePath(filePath) {
 }
 
 async function loadRuntime() {
-  const modulePath = path.join(ROOT_DIR, 'dist', 'visual-viewer.js');
-  if (!fs.existsSync(modulePath)) {
-    fail('Viewer runtime module not found at dist/visual-viewer.js. Run `npm run build` first.');
+  const config = loadVisualizerModuleConfig();
+  if (!config.enabled) {
+    console.log('ℹ️ Optional visualizer module disabled; skipping viewer runtime contract check.');
+    process.exit(0);
+  }
+
+  const modulePath = resolveVisualizerModuleDistFile('visual-viewer.js');
+  if (!modulePath || !fs.existsSync(modulePath)) {
+    fail('Viewer runtime module not found in the optional visualizer module build output. Run `npm run build` first.');
   }
   const runtime = await import(pathToFileURL(modulePath).href);
   for (const fn of ['createVisualViewerState', 'reduceVisualViewerState', 'deriveVisualViewerFrame', 'normalizeViewerStateForComparison']) {
     if (typeof runtime[fn] !== 'function') {
-      fail(`dist/visual-viewer.js is missing ${fn}.`);
+      fail(`Optional visualizer runtime is missing ${fn}.`);
     }
   }
   return runtime;
@@ -60,6 +67,7 @@ async function main() {
   const validate = ajv.compile(readJson(SCHEMA_FILE));
 
   const simpleLeaf = loadOverlay('simple_leaf.overlay.json');
+  const hostRoot = loadOverlay('host_root_topology.overlay.json');
   const mountedChild = loadOverlay('mounted_child_boundary.overlay.json');
   const routed = loadOverlay('parent_exit_routing.overlay.json');
 
@@ -77,6 +85,38 @@ async function main() {
   const simpleFrame = runtime.deriveVisualViewerFrame(simpleLeaf, simpleState);
   if (simpleFrame.visible.specification_nodes.some((entry) => entry.boundary_id !== 'simple_leaf')) {
     fail('simple_leaf specification frame leaked nodes across boundaries.');
+  }
+
+  const hostState = runtime.createVisualViewerState(hostRoot);
+  validateState(validate, hostState, 'host_root_topology initial state');
+  if (hostState.current_scope.boundary_id !== 'app_host_root') {
+    fail('host_root_topology initial state must start at the explicit host_root boundary.');
+  }
+  if (hostState.current_scope.depth !== 0) {
+    fail('host_root_topology initial state must start at depth 0.');
+  }
+  let hostUpFailed = false;
+  try {
+    runtime.reduceVisualViewerState(hostRoot, hostState, { type: 'up' });
+  } catch {
+    hostUpFailed = true;
+  }
+  if (!hostUpFailed) {
+    fail('Viewer runtime must reject `up` from the explicit host_root anchor.');
+  }
+  const hostChildState = runtime.reduceVisualViewerState(hostRoot, hostState, {
+    type: 'enter',
+    target_boundary_id: 'summary_panel',
+    portal_kind: 'mounted_child_relation',
+    portal_id: 'mounted_child_relation:app_host_root:summary_panel',
+  });
+  validateState(validate, hostChildState, 'host_root_topology child enter state');
+  if (hostChildState.current_scope.depth !== 1) {
+    fail('Entering a child from host_root must increase depth to 1.');
+  }
+  const hostBackToRoot = runtime.reduceVisualViewerState(hostRoot, hostChildState, { type: 'up' });
+  if (hostBackToRoot.current_scope.boundary_id !== 'app_host_root' || hostBackToRoot.current_scope.depth !== 0) {
+    fail('Moving up from a child scope must return to host_root at depth 0.');
   }
 
   const parentState = runtime.createVisualViewerState(mountedChild, {

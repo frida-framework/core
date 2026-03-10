@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { loadContractDocument } from './contract-path.ts';
-import { resolveVisualOverlayPath } from './visual.ts';
+import { loadContractDocument } from '../../../../dist/contract-path.js';
+import { resolveVisualOverlayPath } from '../../../../dist/visual.js';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DIST_ROOT = path.resolve(MODULE_DIR);

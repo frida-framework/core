@@ -60,6 +60,7 @@ caller_shell:
         outcome: exit
   component_domain_blocks:
     render_shell:
+      projection_domains: [flow]
       frame: wizard
   component_shared_refs: {}
 
@@ -84,6 +85,7 @@ wizard_step:
         return_target_boundaryRef: caller_shell
   component_domain_blocks:
     evaluate_choice:
+      projection_domains: [flow]
       mode: deterministic
   component_shared_refs: {}
 
@@ -104,5 +106,6 @@ after_success:
         outcome: exit
   component_domain_blocks:
     render_success:
+      projection_domains: [flow]
       emphasis: strong
   component_shared_refs: {}

@@ -427,7 +427,7 @@ Next steps:
   2. Verify the seeded repository:
        cd ${absoluteTarget} && npm run frida:check
   3. Review README.md and .frida/inbox/app-contract/ for the seeded template_app_basic contract surface.
-  4. Edit the seeded app-contract files — replace placeholder values and expand layers as the repo grows.
+  4. Edit the seeded app-contract files — keep AL03-host-root as the baseline anchor, replace placeholder values, and expand layers as the repo grows.
   5. For subsequent reconcile/repair:
        npm run frida:bootstrap
 `);

@@ -107,10 +107,24 @@ FRIDA_GUARD_SPEC:
       text: "A declared mounted child boundary or continuation/return boundary ref does not resolve."
     - id: component_output_exit_outcome_missing
       text: "A component_output_interface exit entry is missing required outcome semantics."
+    - id: component_root_parent_rule_violation
+      text: "A component boundary violates the root/non-root parent_boundaryRef rule."
+    - id: component_mounted_child_duplicate
+      text: "mounted_child_boundaryRefs contains duplicate child boundary declarations."
+    - id: component_mounted_child_self_target
+      text: "mounted_child_boundaryRefs targets the current boundary itself."
+    - id: component_exit_target_matrix_violation
+      text: "A component_output_interface exit entry violates the continue/return/exit target matrix."
     - id: component_parent_child_inline_violation
       text: "Parent specification inlines mounted child internals where explicit drill-in is required."
     - id: component_shared_refs_boundary_override
       text: "component_shared_refs is used to smuggle ownership, hierarchy, entry, or exit semantics."
+    - id: component_runtime_state_in_authoritative_example
+      text: "Viewer/runtime state appears in an authoritative source-contract example without explicit fixture-only marking."
+    - id: component_ambiguous_child_drill_in
+      text: "Child drill-in declarations are ambiguous, duplicated, or otherwise non-deterministic."
+    - id: component_domain_block_projection_selector_invalid
+      text: "component_domain_blocks projection routing is missing, invalid, or relies on heuristics instead of explicit selectors."
     - id: component_legacy_term_detected
       text: "A legacy component-boundary section name appears in an active contract definition."
     - id: component_namespace_mixed
@@ -201,7 +215,7 @@ FRIDA_INTERFACE_VERIFY:
       description: "Run full generation pipeline."
       protocol: "frida-core gen"
     visual_check:
-      description: "Check visual overlay freshness."
+      description: "Check visual overlay freshness, boundary-first overlay contract consistency, and strict determinism after volatile-field normalization."
       protocol: "frida-core visual check"
     component_boundary_check:
       description: "Check boundary-first component contract semantics, legacy-term bans, and drill-in/exit enforcement."
@@ -317,23 +331,51 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
     component_boundaries:
       - id: boundary_sections_complete
         rule: "Component-level contract files MUST declare all canonical component_* sections defined by component_contract_spec.required_sections."
+      - id: boundary_root_parent_rule
+        rule: "Root boundaries MAY omit parent_boundaryRef; non-root boundaries MUST resolve a valid parent boundary when the model requires parent placement."
+      - id: boundary_host_root_anchor
+        rule: "If local_role=host_root is present, it MUST be unique, MUST omit parent_boundaryRef, and all other boundaries in that baseline MUST resolve upward to it as the single depth=0 anchor."
+      - id: boundary_mounted_child_unique_non_self
+        rule: "mounted_child_boundaryRefs MUST be unique per boundary, MUST NOT target the current boundary, and MUST NOT create ambiguous child drill-in declarations."
       - id: boundary_refs_resolve
         rule: "component_mount_point.mounted_child_boundaryRefs and component_output_interface.*boundaryRef targets MUST resolve when declared."
+      - id: boundary_exit_target_matrix
+        rule: "component_output_interface outcome target matrix is strict: continue requires target_boundaryRef, return requires return_target_boundaryRef, exit forbids both."
       - id: boundary_exit_semantics_complete
         rule: "component_output_interface exit entries MUST declare id and outcome and remain usable as the canonical source for flow and exit semantics."
+      - id: boundary_domain_block_selector_driven
+        rule: "component_domain_blocks projection eligibility is selector-driven only through explicit projection_domains declarations on top-level child blocks."
       - id: boundary_namespace_clean
         rule: "Legacy section names and mixed old/new namespace use are forbidden in active component-boundary definitions."
       - id: boundary_non_duplication
         rule: "Parent component contracts MUST NOT inline mounted child internals when drill-in is required, and component_shared_refs MUST remain dependency-only."
+      - id: boundary_runtime_example_clean
+        rule: "Authoritative source-contract examples MUST NOT place viewer/runtime session state in component_input_interface or other general teaching surfaces unless the data is explicitly marked fixture-only."
     visualization_boundaries:
       - id: boundary_first_projection
         rule: "Visualization interprets topology, flow, and specification relative to the current component boundary before using YAML depth."
+      - id: overlay_authority_chain_strict
+        rule: "Authority MUST flow source contract semantics -> FRIDA_VISUAL.component_projection -> FRIDA_VISUAL.overlay_entity_model_v1 -> FRIDA_VISUAL.viewer_runtime_v1, and reference viewer scope MUST remain delivery-only."
+      - id: overlay_entity_inventory_declared
+        rule: "Runtime/viewer may consume only overlay entity families normatively declared in FRIDA_VISUAL.overlay_entity_model_v1."
       - id: child_drill_in_explicit
         rule: "Cross-component drill-in MUST use explicit mounted child boundaries from component_mount_point.mounted_child_boundaryRefs."
       - id: child_non_auto_expand
         rule: "Parent specification view MUST NOT auto-expand mounted child internals."
       - id: exit_projection_canonical
         rule: "Flow projection reads canonical exits, outcomes, and continuation/return targeting only from component_output_interface."
+      - id: typed_relation_precedence
+        rule: "Mounted-child, continuation, and return refs MUST first materialize typed overlay relations and MUST NOT collapse directly into generic edges."
+      - id: domain_block_projection_selector_only
+        rule: "Topology, flow, and specification projection of component_domain_blocks MUST route only through explicit projection_domains selectors on top-level child blocks."
+      - id: domain_block_projection_fallback_strict
+        rule: "A component_domain_blocks child block without projection_domains remains collapsed source detail only and MUST NOT be heuristically promoted into topology, flow, or expanded specification detail."
+      - id: reference_fixture_runtime_leakage_blocked
+        rule: "Optional visualizer/demo state MUST remain fixture-only and MUST NOT appear as normative component_input_interface teaching material."
+      - id: host_anchor_depth_zero
+        rule: "When a host_root boundary is present, viewer/runtime depth is measured from that anchor and MUST NOT become negative."
+      - id: overlay_determinism_strict
+        rule: "Visual overlay output MUST be byte-stable after normalization of explicitly declared volatile fields only."
     playbook_ref: "templates/management/AGENT-contract-update.md"
 
   diagnostic_framework:
@@ -363,8 +405,10 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
 
   component_contract_spec:
     purpose: "Normative structure for component-level contract files that define component boundary semantics."
-    authoritative_rule: "This block is the authoritative source for component-level contract section names, field requirements, and source-contract semantics. Visual projection behavior is authoritative only via FRIDA_VISUAL.component_projection."
+    authoritative_rule: "This block is the authoritative source for component-level contract section names, field requirements, and source-contract semantics. Derived visual semantics are authoritative only through FRIDA_VISUAL.component_projection -> FRIDA_VISUAL.overlay_entity_model_v1 -> FRIDA_VISUAL.viewer_runtime_v1."
     visual_projection_authorityRef: "FRIDA_VISUAL.component_projection"
+    overlay_entity_model_authorityRef: "FRIDA_VISUAL.overlay_entity_model_v1"
+    viewer_runtime_authorityRef: "FRIDA_VISUAL.viewer_runtime_v1"
     required_sections:
       - id: component_hierarchy_position
         description: >-
@@ -404,6 +448,13 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
           for dependency reuse only. These refs MUST NOT override ownership
           boundaries or duplicate shared source-of-truth content.
     section_field_rules:
+      component_hierarchy_position:
+        optional_fields:
+          - parent_boundaryRef
+          - local_role
+        root_parent_rule: "Root boundaries MAY omit parent_boundaryRef."
+        non_root_parent_rule: "Non-root boundaries MUST resolve a valid parent_boundaryRef when the model requires parent placement."
+        host_root_rule: "If local_role=host_root is declared, parent_boundaryRef MUST be absent and the boundary becomes the unique depth=0 anchor for that app baseline."
       component_mount_point:
         required_fields:
           - slotRef
@@ -415,6 +466,9 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
           boundaries. Cross-component drill-in is allowed only through those
           refs; absent refs mean no child boundary drill-in target is declared
           at this mount boundary.
+        uniqueness_rule: "mounted_child_boundaryRefs entries MUST be unique within the current boundary."
+        self_target_rule: "mounted_child_boundaryRefs MUST NOT include the current boundary id."
+        ambiguity_rule: "mounted_child_boundaryRefs MUST NOT declare ambiguous child drill-in targets for the same boundary transition."
         example:
           mounted_child_boundaryRefs:
             - "route_details_panel"
@@ -437,10 +491,45 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
           outcome classifies the canonical exit. target_boundaryRef and
           return_target_boundaryRef define continuation and return targeting for
           boundary-aware flow projection when present.
+        target_matrix_rule: "continue requires target_boundaryRef, return requires return_target_boundaryRef, and exit forbids both."
         example_exit:
           id: "open_details"
           outcome: "continue"
           target_boundaryRef: "route_details_panel"
+      component_domain_blocks:
+        projection_unit: "Top-level child block under component_domain_blocks"
+        optional_block_fields:
+          - projection_domains
+          - fixture_only
+        projection_selector_field: "projection_domains"
+        projection_selector_allowed_values:
+          - topology
+          - flow
+          - specification
+        rule: >-
+          Only top-level child blocks that explicitly declare projection_domains
+          are eligible for individual topology/flow/specification projection.
+          Projection routing MUST NOT guess from block shape, key names, or UI
+          heuristics.
+        fallback_rule: >-
+          A top-level child block without projection_domains remains opaque
+          boundary-local source detail and MUST NOT be promoted into topology,
+          flow, or expanded nested specification detail.
+        nested_rule: >-
+          Nested grandchildren inside component_domain_blocks are not
+          independently projectable. They remain source detail unless a future
+          contract extension declares explicit selectors.
+        fixture_only_rule: >-
+          Viewer/runtime demo state MUST NOT appear in authoritative source
+          examples or ordinary component_input_interface surfaces. If retained
+          for optional visualizer module fixtures or app-baseline demos, it
+          MUST live only inside component_domain_blocks child blocks marked
+          fixture_only: true.
+        example:
+          summary_stack:
+            projection_domains:
+              - specification
+            purpose: "Boundary-local source detail projected explicitly into specification."
       component_shared_refs:
         optional_fields:
           - refs
@@ -472,8 +561,18 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
             outcome: "return"
             return_target_boundaryRef: "dashboard_root"
       component_domain_blocks:
+        layout_anchor:
+          projection_domains:
+            - topology
+          purpose: "Explicit topology-visible domain block for local layout anchoring."
+        route_resolution:
+          projection_domains:
+            - flow
+          purpose: "Explicit flow-visible domain block for continuation evaluation."
         summary_stack:
-          purpose: "Internal source-contract detail for the current component boundary."
+          projection_domains:
+            - specification
+          purpose: "Explicit specification-visible domain block for local detail."
       component_shared_refs:
         refs:
           - "GLOSSARY.route"
@@ -482,6 +581,11 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
       Component contract files MUST use only the canonical section ids listed
       here. Legacy aliases are forbidden unless an explicit versioned migration
       block declares a temporary deprecation window.
+    authoritative_example_rule: >-
+      Authoritative source-contract examples MUST stay runtime-free. Viewer or
+      session demo inputs are allowed only in explicit fixture-only reference
+      surfaces and MUST NOT be taught as general component_input_interface
+      semantics.
     constraint: >-
       Total file size MUST fit in agent context window for task formulation.
       Required sections are interpreted by component boundary semantics first;

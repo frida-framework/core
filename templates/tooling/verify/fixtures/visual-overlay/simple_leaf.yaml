@@ -61,6 +61,7 @@ component_output_interface:
 
 component_domain_blocks:
   render_card:
+    projection_domains: [flow]
     steps:
       - draw_title
 
