@@ -38,7 +38,7 @@ const ALLOWED_STATUS = new Set(['OPEN', 'DONE', 'DRIFT']);
 function isFridaSelfRepo() {
   try {
     const packageJson = JSON.parse(requireText(path.join(ROOT_DIR, 'package.json')));
-    return packageJson?.name === '@hanszel/core' && existsSync(path.join(ROOT_DIR, 'contract', 'contract.index.yaml'));
+    return packageJson?.name === '@frida-framework/core' && existsSync(path.join(ROOT_DIR, 'contract', 'contract.index.yaml'));
   } catch {
     return false;
   }

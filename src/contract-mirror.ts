@@ -213,7 +213,7 @@ function buildContractSetVerifierWrapper(): string {
  * semantics remain owned by the Frida core package.
  */
 
-const CORE_PACKAGE_CANDIDATES = ['@frida-framework/core', '@hanszel/core'];
+const CORE_PACKAGE_CANDIDATES = ['@frida-framework/core', '@frida-framework/core'];
 
 async function loadCore() {
   const failures = [];

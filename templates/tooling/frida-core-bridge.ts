@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-type CorePackageName = '@frida-framework/core' | '@hanszel/core' | 'local-dist';
+type CorePackageName = '@frida-framework/core' | '@frida-framework/core' | 'local-dist';
 
 type LoadedCore = {
   module: Record<string, unknown>;
@@ -50,11 +50,11 @@ async function loadCorePackage(): Promise<LoadedCore> {
     };
   } catch (primaryError) {
     try {
-      const module = await dynamicImport('@hanszel/core');
+      const module = await dynamicImport('@frida-framework/core');
       return {
         module,
-        packageName: '@hanszel/core',
-        schemaRef: '@hanszel/core/schemas/frida-contract.schema.json',
+        packageName: '@frida-framework/core',
+        schemaRef: '@frida-framework/core/schemas/frida-contract.schema.json',
       };
     } catch (fallbackError) {
       const local = await loadLocalDist();
@@ -77,7 +77,7 @@ async function loadCorePackage(): Promise<LoadedCore> {
         ],
       };
       throw new Error(
-        `Unable to load FRIDA core package. Tried @frida-framework/core, @hanszel/core, and local dist fallbacks. ${JSON.stringify(details)}`,
+        `Unable to load FRIDA core package. Tried @frida-framework/core, @frida-framework/core, and local dist fallbacks. ${JSON.stringify(details)}`,
       );
     }
   }

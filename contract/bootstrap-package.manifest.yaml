@@ -439,7 +439,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:ca6f2726a2e2782a03e11453a5be9756127721ae52400de52b9f327975f25153
+    sha256: sha256:1c2550c50df5882019a9a620d97a1c7974fe53ba4b96b7dce9cb23da2921fd98
     modes:
       - zero-start
   - id: zero_start_template_app_basic_agent_framework_layer_seed
@@ -484,7 +484,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:92d7d797b95e493a0076a77933d8351776150ae53e74a761dea52d7778ae70ad
+    sha256: sha256:d777d0adf269f7438e8a45371994c4a2ff773809fe306c5f778aa8ca89632a94
     modes:
       - zero-start
   - id: zero_start_template_app_basic_package_json_seed
@@ -493,6 +493,6 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:90e587026e491c8bccea9143dd2d7aaf49e62a1170b61c2d900923756890d176
+    sha256: sha256:f6be0a935ee1e2e651e813974d3c46baaa1b0b23f44d74b761e57db8b0fae08f
     modes:
       - zero-start

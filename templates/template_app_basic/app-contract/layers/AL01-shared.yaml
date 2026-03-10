@@ -32,7 +32,7 @@ PATHS:
     verify:
       checkAgentsContractSetScript: scripts/verify/check-agents-contract-set.mjs
     schemas:
-      fridaContractSchema: node_modules/@hanszel/core/schemas/frida-contract.schema.json
+      fridaContractSchema: node_modules/@frida-framework/core/schemas/frida-contract.schema.json
   docs:
     policyDir: .frida/contract/docs/policy
     referenceDir: .frida/contract/docs/reference

@@ -28,7 +28,7 @@ const BASE_REF = process.env.BASE_REF || 'origin/main...HEAD';
 function isFridaSelfRepo() {
   try {
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
-    return packageJson?.name === '@hanszel/core' && existsSync('contract/contract.index.yaml');
+    return packageJson?.name === '@frida-framework/core' && existsSync('contract/contract.index.yaml');
   } catch {
     return false;
   }

@@ -10,7 +10,7 @@ Zero-start is valid only for a clean repository:
 - no existing `.frida/inbox/app-contract/**`
 - no FRIDA bootloader `AGENTS.md`
 
-Under the same initial repository state and the same `@hanszel/core` package build, zero-start is deterministic and must produce the same file contents. The FRIDA post-generation step runs with fixed `generatedAt=1970-01-01T00:00:00.000Z`.
+Under the same initial repository state and the same `@frida-framework/core` package build, zero-start is deterministic and must produce the same file contents. The FRIDA post-generation step runs with fixed `generatedAt=1970-01-01T00:00:00.000Z`.
 
 ## Exact first run
 
