@@ -3,7 +3,7 @@
 CONTRACT_META:
   _visibility: private
   id: frida-contract-meta
-  version: 5.1.0
+  version: 5.2.0
   owner: frida-core
   updated_at: "2026-03-09"
   scope:

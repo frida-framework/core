@@ -66,6 +66,8 @@ FRIDA_VALIDATION_CHECKLIST:
     - "A component_domain_blocks child block without projection_domains remains collapsed source detail and is not promoted into topology, flow, or expanded specification detail."
     - "Optional visualizer demo state remains fixture-only and is not taught as general component_input_interface semantics."
     - "When host_root is present, viewer depth is measured relative to that anchor and never becomes negative."
+    - "service-managed mount points declare service_providerRef and it resolves to SERVICE_PROVIDERS.*"
+    - "service-managed boundaries project a service-type anchor with service style token/class."
   template_integrity:
     - "Template-integrity manifest validates against schema."
     - "Hash drift returns non-zero exit code."

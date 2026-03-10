@@ -6,7 +6,7 @@
 
 schema_version: "6.1"
 contract_id: "FRIDA_CORE_CONTRACT"
-version: "5.1.0"
+version: "5.2.0"
 
 layers:
   - id: identity
