@@ -131,6 +131,10 @@ FRIDA_GUARD_SPEC:
       text: "Old and new component-boundary namespaces coexist in an active contract definition."
     - id: component_visual_semantics_drift
       text: "Visualization semantics drift from the boundary-first component model."
+    - id: component_service_managed_provider_missing
+      text: "mount_kind=service-managed is declared but service_providerRef is missing."
+    - id: component_service_provider_ref_unresolved
+      text: "service_providerRef does not resolve to a declared application service provider."
 
 FRIDA_INVARIANT_SPEC:
   _visibility: private
@@ -500,6 +504,65 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
           Refs to shared contract blocks (GLOSSARY, DATABASE_SCHEMA, RESOURCES)
           for dependency reuse only. These refs MUST NOT override ownership
           boundaries or duplicate shared source-of-truth content.
+    component_classification:
+      purpose: "Defines what qualifies as a component boundary vs. what remains a domain block or shared ref."
+      boundary_qualifying_criteria:
+        - id: independent_lifecycle
+          rule: >-
+            The entity can be added, removed, or replaced without structurally
+            breaking any other declared component boundary.
+        - id: typed_interface
+          rule: >-
+            The entity has a typed inbound contract interface (data it
+            receives) and a typed outbound contract interface (exits, events,
+            callbacks it produces).
+        - id: mount_surface
+          rule: >-
+            The entity attaches to a declared mount surface — a UI slot, a
+            service endpoint, or a host container — through which it becomes
+            reachable.
+        - id: internal_domain
+          rule: >-
+            The entity contains internal domain blocks (structure, behavior,
+            data schema, algorithms) that are opaque to its parent until
+            explicit drill-in.
+      boundary_disqualifying_criteria:
+        - id: no_independent_lifecycle
+          rule: >-
+            If removing the entity necessarily breaks the internal structure of
+            another boundary, it is a domain block of that boundary, not a
+            separate boundary.
+        - id: pure_data_reference
+          rule: >-
+            If the entity only provides shared data (glossary, schema,
+            resources) consumed by multiple boundaries, it is a shared ref
+            target, not a boundary.
+        - id: internal_substructure_only
+          rule: >-
+            If the entity exists only as nested detail inside another
+            boundary's domain blocks and has no independent mount surface, it
+            remains a domain block.
+      endpoint_validation:
+        purpose: "Endpoints as boundary correctness check."
+        rule: >-
+          A correctly identified component boundary MUST have at least one
+          addressable endpoint — a mount surface through which the boundary is
+          entered. If an entity has no addressable endpoint, it cannot be a
+          component boundary. The endpoint type determines mount_kind.
+        endpoint_types:
+          ui_slot:
+            mount_kind:
+              - mapper-managed
+              - host-static
+            endpoint_example: "DOM element, route slot, portal target"
+          service_endpoint:
+            mount_kind:
+              - service-managed
+            endpoint_example: "Supabase project functions, API gateway route, service mesh endpoint"
+        cross_check_rule: >-
+          If every qualifying criterion is met but no endpoint can be
+          identified, the entity is likely a domain block with misleading
+          independence characteristics, not a true component boundary.
     section_field_rules:
       component_hierarchy_position:
         optional_fields:
@@ -514,6 +577,29 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
           - mount_kind
         optional_fields:
           - mounted_child_boundaryRefs
+          - service_providerRef
+        allowed_mount_kinds:
+          - mapper-managed
+          - host-static
+          - service-managed
+        mount_kind_semantics:
+          mapper-managed:
+            description: "Component is structurally adapted and mounted into a UI slot by the mapper build pipeline."
+            slotRef_semantics: "References a UI slot defined in PATHS.slots.* or UI_STRUCTURE.*"
+            applicable_to: "Frontend components transformed and injected by the mapper."
+          host-static:
+            description: "Component is statically hosted in a UI container (page, layout) without mapper transformation."
+            slotRef_semantics: "References a host container defined in PATHS.slots.* or UI_STRUCTURE.*"
+            applicable_to: "Pages, layout containers, static host shells."
+          service-managed:
+            description: "Component operates as a backend service boundary, attached to an infrastructure endpoint rather than a UI slot."
+            slotRef_semantics: "References a service endpoint defined in PATHS.services.*, RESOURCES.*, or environment configuration."
+            applicable_to: "Backend pipelines, serverless function groups, service layers, API handler bundles."
+            required_fields:
+              - service_providerRef
+            service_provider_rule: >-
+              When mount_kind=service-managed, service_providerRef MUST resolve
+              to SERVICE_PROVIDERS.* in the application contract.
         rule: >-
           mounted_child_boundaryRefs declare explicit mounted child component
           boundaries. Cross-component drill-in is allowed only through those
@@ -630,6 +716,33 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
         refs:
           - "GLOSSARY.route"
           - "RESOURCES.maps_api"
+    service_managed_example:
+      component_hierarchy_position:
+        parent_boundaryRef: "APP_HOST_ROOT"
+        local_role: "service_backend"
+      component_mount_point:
+        slotRef: "RESOURCES.supabase.projectEndpoint"
+        mount_kind: "service-managed"
+        service_providerRef: "SERVICE_PROVIDERS.supabase_main"
+      component_input_interface:
+        route_id: "string (UUID)"
+        skeleton_raw: "object"
+      component_output_interface:
+        exits:
+          - id: "pipeline_complete"
+            outcome: "exit"
+          - id: "pipeline_error"
+            outcome: "exit"
+      component_domain_blocks:
+        route_generation:
+          projection_domains:
+            - flow
+          purpose: "Route generation pipeline stages"
+      component_shared_refs:
+        refs:
+          - "DATABASE_SCHEMA.routes"
+          - "RESOURCES.mapboxDirections"
+          - "GLOSSARY.skeleton"
     consistency_rule: >-
       Component contract files MUST use only the canonical section ids listed
       here. Legacy aliases are forbidden unless an explicit versioned migration

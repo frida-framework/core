@@ -23,7 +23,7 @@ const REQUIRED_BOUNDARY_ESTABLISHMENT_ORDER = [
     'component_input_interface',
     'component_output_interface',
 ] as const;
-const ALLOWED_MOUNT_KINDS = ['mapper-managed', 'host-static'] as const;
+const ALLOWED_MOUNT_KINDS = ['mapper-managed', 'host-static', 'service-managed'] as const;
 const ALLOWED_EXIT_OUTCOMES = ['continue', 'return', 'exit'] as const;
 const SPECIFICATION_SECTION_IDS = {
     component_hierarchy_position: 'boundary_placement',
@@ -433,6 +433,14 @@ function parseComponentUnit(
         throw new Error(
             `${sourcePath}.component_mount_point.mount_kind must be one of: ${ALLOWED_MOUNT_KINDS.join(', ')}.`
         );
+    }
+
+    if (mount.mount_kind === 'service-managed') {
+        if (!isNonEmptyString(mount.service_providerRef)) {
+            throw new Error(
+                `${sourcePath}.component_mount_point.service_providerRef is required when mount_kind=service-managed.`
+            );
+        }
     }
 
     const mountedChildBoundaryIds = uniquePreservingOrder(

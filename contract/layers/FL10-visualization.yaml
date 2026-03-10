@@ -83,9 +83,15 @@ FRIDA_VISUAL:
           entry_boundary: "Projects the current component boundary entry anchor at slotRef."
           mounted_child_boundaries: "Each mounted_child_boundaryRefs entry projects a mounted child boundary anchor."
           mount_transition: "Each mounted child boundary anchor projects a mount transition from the current component boundary entry anchor."
+          service_boundary: "For service-managed components, projects a service boundary anchor distinct from UI host anchors."
         flow:
           entry_semantics: "Defines the canonical entry boundary and drill-in origin for the current component boundary."
         specification: "Projects mount metadata only; mounted child internals remain collapsed until explicit drill-in."
+        style_semantics:
+          service_boundary:
+            anchor_kind: "service"
+            style_token: "anchor.service"
+            note: "Visual distinction is required at style level; deeper rendering optimization may be added later."
       component_input_interface:
         topology: "Projects no ownership or containment changes."
         flow:
