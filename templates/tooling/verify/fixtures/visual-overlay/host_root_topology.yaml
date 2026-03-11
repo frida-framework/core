@@ -53,12 +53,7 @@ app_host_root:
   component_input_interface: {}
   component_output_interface:
     exits: []
-  component_domain_blocks:
-    host_mount_slots:
-      projection_domains: [topology]
-      slots:
-        - id: summary_panel_slot
-          slotRef: APP_HOST.root.summary_panel
+  component_domain_blocks: {}
   component_shared_refs: {}
 
 summary_panel:

@@ -452,15 +452,8 @@ function assertHostRootBaseline(issues) {
   if (!isObjectLike(sharedRefs) || Object.keys(sharedRefs).length !== 0) {
     issues.push('app_host_root.component_shared_refs must be an empty object.');
   }
-  if (!isObjectLike(domainBlocks)) {
-    issues.push('app_host_root.component_domain_blocks must be an object.');
-  } else {
-    const topologyBlocks = Object.values(domainBlocks).filter(
-      (entry) => isObjectLike(entry) && Array.isArray(entry.projection_domains) && entry.projection_domains.includes('topology')
-    );
-    if (topologyBlocks.length === 0) {
-      issues.push('app_host_root.component_domain_blocks must include at least one topology-visible block.');
-    }
+  if (!isObjectLike(domainBlocks) || Object.keys(domainBlocks).length !== 0) {
+    issues.push('app_host_root.component_domain_blocks must be an empty object.');
   }
 }
 

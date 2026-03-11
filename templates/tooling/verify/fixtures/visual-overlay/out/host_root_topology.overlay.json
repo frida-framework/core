@@ -2,10 +2,10 @@
   "meta": {
     "schema_id": "frida-visual-overlay",
     "schema_version": "1.0.0",
-    "generated_at": "1970-01-01T00:00:00.000Z",
+    "generated_at": "2026-03-11T01:25:59.469Z",
     "contract_sha256": "efe8c75811c34b3bb1862a0a7c51d8ac1bd79cf022bfaf24a3733005847e98b3",
     "source": "templates/tooling/verify/fixtures/visual-overlay/host_root_topology.yaml",
-    "overlay_path": "fixtures/visual-overlay/out/host_root_topology.overlay.json",
+    "overlay_path": "templates/tooling/verify/fixtures/visual-overlay/out/host_root_topology.overlay.json",
     "builder_entrypoint": "src/visual.ts",
     "builder_command": "frida-core visual",
     "projection_authority_ref": "FRIDA_VISUAL.component_projection",
