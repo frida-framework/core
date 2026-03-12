@@ -190,7 +190,7 @@ FRIDA_FOUNDATION_PRINCIPLES:
         core-configuration layer file. Other layers may reference config
         entries only and MUST NOT duplicate config details inline.
     - id: frida_root_ownership_split
-      text: "`.frida` root is an ownership-split surface: only runtime config files at root; engine-managed artifacts in `.frida/contract`, reports in `.frida/reports`, and inbound SSOT data in protected `.frida/inbox`."
+      text: "`.frida` root is an ownership-split surface: only runtime config files at root; engine-managed artifacts in `.frida/contract`, reports in `.frida/reports`, and inbound SSOT data in profile-gated `.frida/inbox`, where `.frida/inbox/app-contract/**` is writable only through app-contract update interfaces."
     - id: name_reflects_content
       text: "Names must accurately describe content. Misleading names must be corrected."
     - id: domain_grouped_validation

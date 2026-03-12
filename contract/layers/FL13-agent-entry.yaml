@@ -92,10 +92,11 @@ FRIDA_INTERFACE_ROUTING:
         - specification
         - update app contract
         - extend app contract
+        - change app contract
+        - repair app contract
       allowed_profiles:
         target_app_repo:
-          - app_governance
-          - app_architect_inbox
+          - app_contract_editor
     - id: update_app_by_code
       clause_ref: FL13:6.5
       interface_ref: FRIDA_INTERFACE_UPDATE_APP_BY_CODE
@@ -103,10 +104,10 @@ FRIDA_INTERFACE_ROUTING:
         - code outpaces contract
         - update contract by code
         - extract contract from code
+        - sync contract from code
       allowed_profiles:
         target_app_repo:
-          - app_governance
-          - app_architect_inbox
+          - app_contract_editor
 
 FRIDA_INT_AGENT_ROUTING:
   _visibility: private

@@ -120,6 +120,19 @@ ZONES:
       - Temporary files must stay under .temp/.
     verification: n/a
     guardRefs: []
+  appContractInbox:
+    owner: Platform
+    path: ".frida/inbox/app-contract/**"
+    readOnly: false
+    purpose: Canonical target app contract source-of-truth and writable mutation surface for app-contract interfaces.
+    agentsPath: ".frida/inbox/app-contract"
+    agentsTemplate: service
+    constraints:
+      - Use this zone only for direct app-contract authoring.
+      - Treat `.frida/inbox/app-contract/**` as SSOT; `.frida/contract/app/**` is a derived mirror.
+      - Store scratch notes and temporary migration artifacts only under `.temp/**`.
+    verification: npx frida-core check contract-set
+    guardRefs: []
   fridaInternalArtifacts:
     owner: Platform
     path: ".frida/**"
@@ -297,6 +310,38 @@ TASK_PROFILES:
       edit_allow:
         - tasks/inbox/**
         - tasks/inbox/README.md
+      create_allow:
+        - tasks/sessions/*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - src/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  app_contract_editor:
+    description: Interface-scoped profile for direct target app contract authoring in `.frida/inbox/app-contract/**`.
+    keywords:
+      - update app contract
+      - extend app contract
+      - change app contract
+      - repair app contract
+      - update contract by code
+      - extract contract from code
+      - code outpaces contract
+    role: ARCHITECT_AGENT
+    security:
+      read_allow:
+        - .frida/**
+        - docs/**
+        - tasks/**
+        - .temp/**
+      edit_allow:
+        - .frida/inbox/app-contract/**
+        - .temp/**
       create_allow:
         - tasks/sessions/*.md
         - .frida/reports/*.yaml

@@ -31,11 +31,15 @@ To restore the shipped baseline after local customization, run `frida-core boots
 ## Required Concepts
 
 - Repair targets only the target app contract and app-facing Frida surfaces that are safe to read.
+- Use the interface-scoped contract editor profile when mutating the target app contract.
+- Direct app-contract repairs happen only in `.frida/inbox/app-contract/**`.
+- Read the broader `.frida/**` deployment surface for context, but treat `.frida/contract/app/**` as derived mirror-only context.
+- Use `.temp/**` for scratch notes, migration diffs, and temporary artifacts.
 - If a shipped but inactive extension explains the mismatch, stop and require activation rather than inventing a replacement structure.
 - If repair would require new Frida semantics, stop with `requires_new_frida_extension`.
 - Escalate structural app-contract changes through the update baseline instead of improvising.
 - Evaluate `FRIDA_VERSION_POLICY` when the repair changes declared app contract structure.
-- Run `frida-core check contract-set` and `frida-core check zone --path .`.
+- Run `frida-core check contract-set` and `frida-core check zone --path .frida/inbox/app-contract`.
 - Emit a report that includes `frida_report`, `profile_id`, `verification`, and `summary`.
 
 Required invariants:
@@ -54,11 +58,12 @@ Required rules refs:
 
 ## Minimal Procedure Baseline
 
-1. Localize the inconsistency inside the target app contract.
+1. Localize the inconsistency inside `.frida/inbox/app-contract/**`.
 2. Confirm the repair stays inside `target_app_contract_only`.
-3. If needed, switch to the update baseline for deliberate structural changes.
-4. Re-run the required checks.
-5. Emit the structured report.
+3. Use `.temp/**` for temporary notes or migration scratch output.
+4. If needed, switch to the update baseline for deliberate structural changes.
+5. Re-run the required checks.
+6. Emit the structured report.
 
 ---
 

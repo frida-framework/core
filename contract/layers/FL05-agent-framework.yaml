@@ -147,7 +147,7 @@ FRIDA_ENFORCEMENT:
       text: "Warm and cold-engine bootstrap modes MUST NOT modify app-contract files."
       scope: kernel
     - id: frida_inbox_no_agent_access
-      text: "Agents MUST NOT directly read or modify `.frida/inbox/**`; work must use `.frida/contract/app/**` working copy surfaces."
+      text: "Agents MUST NOT use `.frida/inbox/**` as a general-purpose work surface. Direct edits are allowed only under `.frida/inbox/app-contract/**` through `FRIDA_INTERFACE_UPDATE_APP_BY_SPEC` or `FRIDA_INTERFACE_UPDATE_APP_BY_CODE` using the interface-scoped `app_contract_editor` profile; all other consumers use `.frida/contract/app/**` or read-only Frida surfaces."
       scope: kernel
     - id: zone_resolution_path_only
       text: "Zone is resolved ONLY by path matching, never by profile keywords or heuristics."
@@ -183,7 +183,7 @@ FRIDA_ENFORCEMENT:
       text: "`template_app_basic` is a shipped derivative baseline and MUST NOT define unique normative Frida semantics absent from core contract or bootstrap policy."
       scope: kernel
     - id: target_delivery_no_internal_authoring_surfaces
-      text: "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml`."
+      text: "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml` and the app-contract SSOT authoring surface `.frida/inbox/app-contract/**` used by the public app-contract update interfaces."
       scope: kernel
     - id: interface_instruction_surfaces_seed_then_user_owned
       text: "Public interface-instruction surfaces in target repos are seeded by Frida once and then remain user-owned in form; Frida validates only normative completeness against the backing interface."

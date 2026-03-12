@@ -799,6 +799,7 @@ FRIDA_INTERFACE_UPDATE_APP_BY_SPEC:
     required_concepts:
       - target_app_repo_only
       - target_app_contract_only
+      - interface-scoped contract editor profile
       - shipped but inactive extension
       - requires_new_frida_extension
       - FRIDA_VERSION_POLICY
@@ -813,7 +814,7 @@ FRIDA_INTERFACE_UPDATE_APP_BY_SPEC:
     required_guard_refs: []
     required_verification:
       - frida-core check contract-set
-      - frida-core check zone --path .
+      - frida-core check zone --path .frida/inbox/app-contract
     required_report_fields:
       - frida_report
       - profile_id
@@ -823,6 +824,15 @@ FRIDA_INTERFACE_UPDATE_APP_BY_SPEC:
       - "This instruction authorizes mutation of the Frida core contract."
       - "This instruction authorizes changes under templates/management."
     baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    authoring_surface:
+      source_of_truth: ".frida/inbox/app-contract/**"
+      read_context:
+        - ".frida/**"
+      edit_scope:
+        - ".frida/inbox/app-contract/**"
+        - ".temp/**"
+      derived_mirror: ".frida/contract/app/**"
+      required_profile_id: app_contract_editor
     instruction_surfaces:
       update:
         source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
@@ -898,6 +908,7 @@ FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
     required_concepts:
       - target_app_repo_only
       - target_app_contract_only
+      - interface-scoped contract editor profile
       - shipped but inactive extension
       - requires_new_frida_extension
       - FRIDA_VERSION_POLICY
@@ -912,7 +923,7 @@ FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
     required_guard_refs: []
     required_verification:
       - frida-core check contract-set
-      - frida-core check zone --path .
+      - frida-core check zone --path .frida/inbox/app-contract
     required_report_fields:
       - frida_report
       - profile_id
@@ -922,6 +933,15 @@ FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
       - "This instruction authorizes mutation of the Frida core contract."
       - "This instruction authorizes changes under templates/management."
     baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    authoring_surface:
+      source_of_truth: ".frida/inbox/app-contract/**"
+      read_context:
+        - ".frida/**"
+      edit_scope:
+        - ".frida/inbox/app-contract/**"
+        - ".temp/**"
+      derived_mirror: ".frida/contract/app/**"
+      required_profile_id: app_contract_editor
     instruction_surfaces:
       update:
         source_playbook_ref: "templates/management/AGENT-app-contract-update.md"

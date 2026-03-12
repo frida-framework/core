@@ -1302,8 +1302,12 @@ function validateContract(contract: Contract): EffectiveGuards {
     const readAllowRequired = policyList('read_allow_required', ['tasks/**']);
     const readAllowGovernanceRequired = policyList('read_allow_governance_required', []);
     const readAllowTaskSetterRequired = policyList('read_allow_task_setter_required', []);
+    const contractEditorProfileIds = policyList('contract_editor_profile_ids', ['app_contract_editor']);
+    const readAllowContractEditorRequired = policyList('read_allow_contract_editor_required', []);
     const editAllowArchitectRequired = policyList('edit_allow_architect_required', ['tasks/inbox/**']);
     const editAllowArchitectAllowedOnly = policyList('edit_allow_architect_allowed_only', ['tasks/inbox/**', 'tasks/inbox/README.md']);
+    const editAllowContractEditorRequired = policyList('edit_allow_contract_editor_required', []);
+    const editAllowContractEditorAllowedOnly = policyList('edit_allow_contract_editor_allowed_only', []);
     const editAllowNonArchitectRequired = policyList('edit_allow_non_architect_required', ['tasks/README.md', 'tasks/**/README.md']);
     const editForbidRequired = policyList('edit_forbid_required', ['tasks/TASK-*.md', 'tasks/**/TASK-*.md', '.frida/reports/*.yaml']);
     const forbidMustInclude = policyList('forbid_must_include', ['.frida/**']);
@@ -1329,6 +1333,7 @@ function validateContract(contract: Contract): EffectiveGuards {
             const sec = (profileData as any).security || {};
             const role = (profileData as any).role;
             const isArchitect = role === 'ARCHITECT_AGENT';
+            const isContractEditorProfile = contractEditorProfileIds.includes(profileId);
             const isGovernanceProfile = profileId === 'frida_governance' || profileId === 'app_governance';
             const isTaskSetterProfile = role === 'TASK_SETTER_AGENT';
             const resolvedSec = resolveSecurity(contract, sec, `${profileBlockName}.${profileId}.security`);
@@ -1357,10 +1362,24 @@ function validateContract(contract: Contract): EffectiveGuards {
                     }
                 }
             }
+            if (isContractEditorProfile) {
+                for (const requiredPath of readAllowContractEditorRequired) {
+                    if (!has(readAllow, requiredPath)) {
+                        tasksPolicyErrors.push(`${profileBlockName}.${profileId}: contract editor profile missing security.read_allow "${requiredPath}"`);
+                    }
+                }
+            }
 
             // Check required edit_allow based on role
             if (isArchitect) {
-                for (const requiredPath of editAllowArchitectRequired) {
+                const requiredArchitectEditAllow = isContractEditorProfile && editAllowContractEditorRequired.length > 0
+                    ? editAllowContractEditorRequired
+                    : editAllowArchitectRequired;
+                const allowedArchitectEditAllow = isContractEditorProfile && editAllowContractEditorAllowedOnly.length > 0
+                    ? editAllowContractEditorAllowedOnly
+                    : editAllowArchitectAllowedOnly;
+
+                for (const requiredPath of requiredArchitectEditAllow) {
                     if (!has(editAllow, requiredPath)) {
                         tasksPolicyErrors.push(`${profileBlockName}.${profileId}: ARCHITECT_AGENT must include security.edit_allow "${requiredPath}"`);
                     }
@@ -1368,7 +1387,7 @@ function validateContract(contract: Contract): EffectiveGuards {
 
                 const disallowedArchitectWrites = editAllow.filter((p: any) => (
                     typeof p === 'string' &&
-                    !hasAny([p], editAllowArchitectAllowedOnly)
+                    !hasAny([p], allowedArchitectEditAllow)
                 ));
                 if (disallowedArchitectWrites.length > 0) {
                     tasksPolicyErrors.push(

@@ -243,8 +243,21 @@ FRIDA_CONFIG:
             - ".frida/templates/config.template.yaml"
             - ".frida/contract/**"
             - ".frida/reports/*.yaml"
+          contract_editor_profile_ids:
+            - "app_contract_editor"
+          read_allow_contract_editor_required:
+            - ".frida/**"
           edit_allow_architect_required:
             - "tasks/inbox/**"
+          edit_allow_architect_allowed_only:
+            - "tasks/inbox/**"
+            - "tasks/inbox/README.md"
+          edit_allow_contract_editor_required:
+            - ".frida/inbox/app-contract/**"
+            - ".temp/**"
+          edit_allow_contract_editor_allowed_only:
+            - ".frida/inbox/app-contract/**"
+            - ".temp/**"
           edit_allow_non_architect_required:
             - "tasks/README.md"
             - "tasks/**/README.md"
@@ -252,8 +265,7 @@ FRIDA_CONFIG:
             - "tasks/TASK-*.md"
             - "tasks/**/TASK-*.md"
             - ".frida/reports/*.yaml"
-          forbid_must_include:
-            - ".frida/inbox/**"
+          forbid_must_include: []
           forbid_must_not_include:
             - "tasks/**"
             - "tasks/README.md"
@@ -318,9 +330,20 @@ FRIDA_ROOT_LAYOUT_POLICY:
     fail: "Used by warm/cold-engine bootstrap post-gen to guarantee clean Frida layout in one command."
   inbox_access_policy:
     path: ".frida/inbox/**"
-    agent_access: forbidden
+    agent_access: profile_gated
+    authoring_exception:
+      path: ".frida/inbox/app-contract/**"
+      interface_refs:
+        - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+        - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      required_profile: "app_contract_editor"
+      read_allow:
+        - ".frida/**"
+      edit_allow:
+        - ".frida/inbox/app-contract/**"
+        - ".temp/**"
     work_surface_redirect: ".frida/contract/app/**"
-    note: "Inbox stores inbound/SSOT app-contract material and raw sync payloads; agents operate on working copies."
+    note: "Inbox stores inbound/SSOT app-contract material and raw sync payloads. General agents stay out; app-contract mutation interfaces author in `.frida/inbox/app-contract/**`, while mirror consumers may read `.frida/contract/app/**`."
 
 FRIDA_CONFIG_FIELD_DOCS:
   _visibility: public
@@ -705,16 +728,34 @@ FRIDA_CONFIG_FIELD_DOCS:
       purpose: "Guarantees a clean `.frida` root after warm/cold-engine bootstrap post-generation."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy"
       what: "Protection policy for `.frida/inbox/**`."
-      purpose: "Declares inbox as a protected inbound/SSOT surface and redirects agent work to mirrored contract copy."
+      purpose: "Declares inbox as a profile-gated inbound/SSOT surface and documents the narrow authoring exception for target app contract mutation."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.path"
       what: "Protected inbox path glob."
-      purpose: "Pins the no-agent-access boundary to `.frida/inbox/**`."
+      purpose: "Pins the bounded inbox surface to `.frida/inbox/**`."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.agent_access"
       what: "Agent access rule for inbox."
-      purpose: "Marks inbox as forbidden for direct agent reads/writes."
+      purpose: "Declares that inbox access is not general-purpose and must be granted only through explicit profile-gated exceptions."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception"
+      what: "Exception block for direct app-contract authoring in inbox."
+      purpose: "Names the only deployed direct-write exception under `.frida/inbox/**`."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.path"
+      what: "Writable app-contract subtree inside inbox."
+      purpose: "Constrains direct authoring to `.frida/inbox/app-contract/**`."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.interface_refs"
+      what: "Interfaces allowed to use the inbox authoring exception."
+      purpose: "Binds the writable inbox exception to the public app-contract mutation interfaces only."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.required_profile"
+      what: "Canonical profile id required for direct inbox authoring."
+      purpose: "Makes the deployed app-contract editor profile explicit."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.read_allow"
+      what: "Read permissions required by the inbox authoring exception."
+      purpose: "Documents that the editor reads the full Frida deployment surface for context."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.edit_allow"
+      what: "Edit permissions required by the inbox authoring exception."
+      purpose: "Documents that authoring is limited to app-contract inbox files plus `.temp/**` scratch space."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.work_surface_redirect"
       what: "Preferred working-copy path for agent/tooling operations."
-      purpose: "Directs consumers to `.frida/contract/app/**` instead of the protected inbox."
+      purpose: "Directs non-authoring consumers to `.frida/contract/app/**` instead of the source inbox."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.note"
       what: "Explanatory note for inbox usage."
-      purpose: "Documents why inbox is protected and how it relates to working copies and sync pipelines."
+      purpose: "Documents the split between inbox SSOT authoring and mirrored consumer surfaces."

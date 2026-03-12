@@ -31,11 +31,15 @@ To restore the shipped baseline after local customization, run `frida-core boots
 ## Required Concepts
 
 - Use only target app contract surfaces.
+- Use the interface-scoped contract editor profile when mutating the target app contract.
+- Direct app-contract edits happen only in `.frida/inbox/app-contract/**`.
+- Read the broader `.frida/**` deployment surface for context, but treat `.frida/contract/app/**` as derived mirror-only context.
+- Use `.temp/**` for scratch notes, migration diffs, and temporary artifacts.
 - Stay inside shipped Frida baseline semantics and already-designed app extensions.
 - If a shipped but inactive extension fits the request, stop and request explicit activation instead of inventing a parallel structure.
 - If no shipped extension fits, stop with `requires_new_frida_extension`.
 - Evaluate `FRIDA_VERSION_POLICY` after the change.
-- Run `frida-core check contract-set` and `frida-core check zone --path .`.
+- Run `frida-core check contract-set` and `frida-core check zone --path .frida/inbox/app-contract`.
 - Emit a report that includes `frida_report`, `profile_id`, `verification`, and `summary`.
 
 Required invariants:
@@ -54,12 +58,13 @@ Required rules refs:
 
 ## Minimal Procedure Baseline
 
-1. Read the current target app contract and the relevant app-facing Frida mirror.
+1. Read the current target app contract from `.frida/inbox/app-contract/**` and any relevant read-only Frida context under `.frida/**`.
 2. Identify whether the request is spec-driven or code-driven, but keep the same contract mutation boundary.
-3. Prepare the app-contract patch only.
-4. Verify refs, zones, and interface consistency.
-5. Run the required checks.
-6. Emit the structured report.
+3. Prepare the app-contract patch only inside `.frida/inbox/app-contract/**`.
+4. Use `.temp/**` for temporary notes or migration scratch output.
+5. Verify refs, zones, and interface consistency.
+6. Run the required checks.
+7. Emit the structured report.
 
 ---
 

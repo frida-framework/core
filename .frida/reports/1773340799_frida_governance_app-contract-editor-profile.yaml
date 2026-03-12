@@ -1,0 +1,32 @@
+frida_report: 1
+status: success
+model: GPT-5 Codex
+profile_id: frida_governance
+summary:
+  prompt: "Create a core-defined interface user/profile that can mutate target app contract inbox surfaces."
+  result: "Implemented a dedicated target-app contract editor profile, writable inbox zone, and routing/policy updates for app-contract mutation interfaces."
+changes:
+  modified:
+    - contract/layers/FL02-architecture.yaml
+    - contract/layers/FL04-core-configuration.yaml
+    - contract/layers/FL05-agent-framework.yaml
+    - contract/layers/FL11-management.yaml
+    - contract/layers/FL13-agent-entry.yaml
+    - src/generator.ts
+    - templates/management/AGENT-app-contract-update.md
+    - templates/management/AGENT-app-contract-repair.md
+    - templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml
+  created:
+    - .frida/reports/1773340799_frida_governance_app-contract-editor-profile.yaml
+  deleted: []
+verification:
+  commands:
+    - npm run build
+    - node dist/cli.js validate --contract contract/contract.index.yaml
+    - node dist/cli.js validate --contract templates/template_app_basic/app-contract/contract.index.yaml
+    - node templates/tooling/verify/check-surface-isolation.mjs
+    - node templates/tooling/verify/check-interface-instruction-surfaces.mjs
+  result: passed
+notes:
+  - "Target app update interfaces now route to app_contract_editor instead of inbox/governance proposal profiles."
+  - "Template app repos receive a specific writable zone for .frida/inbox/app-contract/** that overrides the generic .frida notouch zone by specificity."
