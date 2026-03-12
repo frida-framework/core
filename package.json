@@ -1,6 +1,6 @@
 {
   "name": "@frida-framework/core",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "description": "Schema-driven Frida Core generation engine",
   "private": false,
   "type": "module",
