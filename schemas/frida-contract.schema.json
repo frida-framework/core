@@ -1632,7 +1632,13 @@
       "type": "object",
       "x-frida-lod": 2,
       "additionalProperties": {
-        "$ref": "#/$defs/resourceEntry"
+        "$ref": "#/$defs/resourceNode"
+      }
+    },
+    "SERVICE_PROVIDERS": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/serviceProviderEntry"
       }
     },
     "MOUNT_POINTS": {
@@ -1821,6 +1827,12 @@
         }
       }
     },
+    "PATH_NORMALIZATION": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
     "LAYERS": {
       "type": "object",
       "properties": {
@@ -1864,6 +1876,27 @@
           "type": "object",
           "additionalProperties": {
             "type": "object"
+          }
+        }
+      }
+    },
+    "PATH_SURFACES": {
+      "type": "object",
+      "required": [
+        "roots",
+        "overrides"
+      ],
+      "properties": {
+        "roots": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/pathSurfaceEntry"
+          }
+        },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/pathSurfaceEntry"
           }
         }
       }
@@ -2469,6 +2502,19 @@
         }
       }
     },
+    "resourceNode": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/resourceEntry"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/resourceNode"
+          }
+        }
+      ]
+    },
     "resourceEntry": {
       "type": "object",
       "x-frida-entity": true,
@@ -2482,6 +2528,64 @@
         },
         "auth": {
           "type": "object"
+        }
+      }
+    },
+    "serviceProviderEntry": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "endpointRef": {
+              "type": "string"
+            },
+            "usage_boundaries": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "pathSurfaceEntry": {
+      "type": "object",
+      "required": [
+        "pathRef",
+        "authority",
+        "lifecycle"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pathRef": {
+          "type": "string",
+          "pattern": "^PATHS\\."
+        },
+        "authority": {
+          "type": "string",
+          "enum": [
+            "APP_REPO",
+            "FRIDA_CONTRACT",
+            "EXTERNAL_PACKAGE",
+            "DERIVED_BUILD"
+          ]
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "authorable",
+            "frida_static",
+            "frida_generated",
+            "external_package",
+            "derived_build"
+          ]
         }
       }
     },

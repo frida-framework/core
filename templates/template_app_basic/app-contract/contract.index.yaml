@@ -15,10 +15,10 @@ contract_index:
       purpose: Minimal FRIDA runtime paths, reporting config, and schema metadata.
       blocks:
         - PATHS
+        - PATH_SURFACES
         - FRIDA_CONFIG
         - meta
         - core
-        - PATH_STATUS
     - id: agent-framework
       path: layers/AL02-agent-framework.yaml
       purpose: Generic zones, profiles, guards, invariants, and verification semantics.

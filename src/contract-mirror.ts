@@ -16,6 +16,7 @@ export const APP_CONTRACT_INBOX_DIR_REL_PATH = APP_CONTRACT_SOURCE_DIR_REL_PATH;
 export const APP_CONTRACT_INBOX_INDEX_REL_PATH = APP_CONTRACT_SOURCE_INDEX_REL_PATH;
 export const FRIDA_CONTRACT_APP_MIRROR_DIR_REL_PATH = '.frida/contract/app';
 export const FRIDA_CONTRACT_ENGINE_MIRROR_DIR_REL_PATH = '.frida/contract/frida';
+export const FRIDA_TEMPLATES_DIR_REL_PATH = '.frida/templates';
 
 const PROJECTED_INTERNAL_ONLY_KEY_SET = new Set(PROJECTED_INTERNAL_ONLY_KEYS);
 
@@ -248,13 +249,15 @@ function resolvePathRef(contract: Record<string, any>, ref: string): string | nu
 }
 
 function resolveProjectedContractSetVerifierPath(contract: Record<string, any>): string {
-  const resolved = resolvePathRef(contract, 'PATHS.tooling.verify.checkAgentsContractSetScript');
-  if (resolved) {
-    return resolved;
+  for (const ref of ['PATHS.scripts.verify.checkAgentsContractSetFile', 'PATHS.tooling.verify.checkAgentsContractSetScript']) {
+    const resolved = resolvePathRef(contract, ref);
+    if (resolved) {
+      return resolved;
+    }
   }
   throw new ContractMirrorError(
     'APP_CONTRACT_INVALID',
-    'target app contract is missing PATHS.tooling.verify.checkAgentsContractSetScript'
+    'target app contract is missing PATHS.scripts.verify.checkAgentsContractSetFile'
   );
 }
 
@@ -353,7 +356,29 @@ export function emitFridaContractSourceMirror(targetRootDir: string, packageRoot
   return targetDir;
 }
 
-export function emitCoreToolingEntrypoints(targetRootDir: string, contract: Record<string, any>): string[] {
+function emitDeployedToolingTemplates(targetRootDir: string, packageRootDir: string): string[] {
+  const absoluteTargetRoot = path.resolve(targetRootDir);
+  const absolutePackageRoot = path.resolve(packageRootDir);
+  const sourceTemplatesRoot = path.resolve(absolutePackageRoot, 'templates');
+  const sourceToolingDir = path.join(sourceTemplatesRoot, 'tooling');
+  const sourceAgentsFile = path.join(sourceTemplatesRoot, 'AGENTS.md');
+
+  ensureDirExists(sourceTemplatesRoot, 'FRIDA_TEMPLATES_SOURCE_MISSING', 'frida package templates directory');
+  ensureDirExists(sourceToolingDir, 'FRIDA_TEMPLATES_SOURCE_MISSING', 'frida package tooling templates directory');
+  ensureFileExists(sourceAgentsFile, 'FRIDA_TEMPLATES_SOURCE_MISSING', 'frida package templates AGENTS.md');
+
+  const targetTemplatesRoot = path.resolve(absoluteTargetRoot, FRIDA_TEMPLATES_DIR_REL_PATH);
+  const targetToolingDir = path.join(targetTemplatesRoot, 'tooling');
+  const targetAgentsFile = path.join(targetTemplatesRoot, 'AGENTS.md');
+
+  replaceDirectoryTree(sourceToolingDir, targetToolingDir);
+  fs.mkdirSync(path.dirname(targetAgentsFile), { recursive: true });
+  fs.copyFileSync(sourceAgentsFile, targetAgentsFile);
+
+  return [targetAgentsFile, targetToolingDir];
+}
+
+export function emitCoreToolingEntrypoints(targetRootDir: string, packageRootDir: string, contract: Record<string, any>): string[] {
   const absoluteTargetRoot = path.resolve(targetRootDir);
   const verifierRelPath = resolveProjectedContractSetVerifierPath(contract);
   const verifierAbsPath = path.resolve(absoluteTargetRoot, verifierRelPath);
@@ -361,5 +386,5 @@ export function emitCoreToolingEntrypoints(targetRootDir: string, contract: Reco
   fs.mkdirSync(path.dirname(verifierAbsPath), { recursive: true });
   fs.writeFileSync(verifierAbsPath, buildContractSetVerifierWrapper(), 'utf-8');
 
-  return [verifierAbsPath];
+  return [verifierAbsPath, ...emitDeployedToolingTemplates(absoluteTargetRoot, packageRootDir)];
 }

@@ -64,8 +64,8 @@ CONTRACT_UNIQUENESS:
   first_rule: true
   rule: "Any contract entity MUST be declared exactly once."
   control:
-    enforcement: warn_only
-    fail_on_duplicate: false
+    enforcement: hard
+    fail_on_duplicate: true
     warning_code: CONTRACT_DUPLICATE_ENTITY
   strictness_freeze:
     change_requires_explicit_owner_instruction: true
@@ -79,7 +79,7 @@ meta:
   version: 1.0.0
   schemaVersion: "6.1"
   mode: schema
-  contractArtifactRef: "PATHS.contract.coreContractFile"
+  contractArtifactRef: "PATHS.contract.coreCanonFile"
 
 core:
   id: frida-assembly-core

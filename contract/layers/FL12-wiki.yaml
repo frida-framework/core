@@ -27,3 +27,13 @@ FRIDA_WIKI_MECHANICS:
         humanWiki: "Wiki pages definition"
         sourcesModel: "Tiered specification of source authorities"
         procedures: "SYNC triggers to refresh artifacts from wiki"
+  ownership_rule:
+    rule: "APP_CONTRACT_SSOT and Frida wiki mechanics are core-owned. Application contracts MAY store wiki-specific app data only."
+  forbidden_duplicate_mechanics:
+    structured_fields:
+      - "META.sourceOfTruth"
+      - "DOCS.sourceOfTruth"
+      - "DOCS.sourcesModel"
+      - "FRIDA_CONFIG.naming.wiki_sourceFilesRef"
+      - "FRIDA_CONFIG.naming.sourceSelectionPrecedence"
+    rule: "These mechanics are invalid in active app contract structured data because they duplicate core-owned SSOT/wiki behavior."

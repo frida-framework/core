@@ -309,15 +309,25 @@ function copyDirContentsRecursive(sourceDir: string, targetDir: string): void {
     }
 }
 
-function resolveContractPathString(contract: Contract, ref: string, fallback: string): string {
-    const resolved = resolvePathRef(contract, ref);
-    return typeof resolved === 'string' && resolved.trim() ? resolved : fallback;
+function resolveContractPathString(contract: Contract, ref: string | string[], fallback: string): string {
+    const refs = Array.isArray(ref) ? ref : [ref];
+    for (const candidate of refs) {
+        const resolved = resolvePathRef(contract, candidate);
+        if (typeof resolved === 'string' && resolved.trim()) {
+            return resolved;
+        }
+    }
+    return fallback;
 }
 
 function emitCanonicalMirrors(contract: Contract, runtimePaths: GeneratorRuntimePaths): void {
     // Root AGENTS.md remains the human/agent entrypoint. This internal mirror is engine-managed canonical state.
     const fridaContractBootloaderPath = fromRepoRoot(
-        resolveContractPathString(contract, 'PATHS.fridaContract.bootloaderFile', '.frida/contract/AGENTS.md')
+        resolveContractPathString(
+            contract,
+            ['PATHS.frida.contract.bootloaderFile', 'PATHS.fridaContract.bootloaderFile'],
+            '.frida/contract/AGENTS.md'
+        )
     );
     if (fs.existsSync(runtimePaths.bootloaderFilePath) && fs.statSync(runtimePaths.bootloaderFilePath).isFile()) {
         fs.mkdirSync(path.dirname(fridaContractBootloaderPath), { recursive: true });

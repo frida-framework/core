@@ -1,4 +1,9 @@
 export { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
+export {
+  runFridaValidateCli,
+  validateContractSemantics,
+  validateLoadedContractDocument,
+} from './contract-validator.ts';
 export { runFridaVisualCli } from './visual.ts';
 export { runFridaVisualViewerCli } from './visualizer-dispatch.ts';
 export { runFridaInitCli } from './init.ts';
@@ -19,6 +24,8 @@ export type {
   ContractNormalizationResult,
   ContractLayerSpec,
   ContractIndex,
+  ContractValidationIssue,
+  ContractValidationResult,
   GeneratorSpec,
   SourceSelectorSpec,
   RunFridaCoreOptions,

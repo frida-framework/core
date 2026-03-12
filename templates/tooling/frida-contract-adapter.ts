@@ -75,6 +75,7 @@ function loadAdapterConfig(rootDir: string, contractPath: string): AdapterConfig
   const boundariesTemplatePath = resolveTemplatePath(
     contract,
     [
+      'PATHS.frida.templates.docsGen.boundariesTemplateFile',
       'PATHS.tooling.templates.docsGen.boundariesTemplate',
       'PATHS.tooling.templates.docsGen.boundaries',
     ],
@@ -84,6 +85,7 @@ function loadAdapterConfig(rootDir: string, contractPath: string): AdapterConfig
   const apiReferenceTemplatePath = resolveTemplatePath(
     contract,
     [
+      'PATHS.frida.templates.docsGen.apiReferenceTemplateFile',
       'PATHS.tooling.templates.docsGen.apiReferenceTemplate',
       'PATHS.tooling.templates.docsGen.apiReference',
     ],

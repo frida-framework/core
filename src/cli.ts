@@ -9,12 +9,14 @@ import { runFridaInitCli } from './init.ts';
 import { runFridaReportCli } from './report.ts';
 import { runFridaBuildCli } from './build.ts';
 import { runFridaBootstrapCli } from './bootstrap.ts';
+import { runFridaValidateCli } from './contract-validator.ts';
 
 function printHelp(): void {
   console.log(`frida-core
 
 Usage:
   frida-core gen
+  frida-core validate [--contract <path>]
   frida-core migration-report
   frida-core init [--contract <path>] [--dry-run]
   frida-core bootstrap --target <dir> [--mode warm|cold-engine|demo|zero-start] [--dry-run]
@@ -44,6 +46,10 @@ async function run(): Promise<number> {
         rootDir: process.cwd(),
       });
       return 0;
+    case 'validate':
+      return runFridaValidateCli(args, {
+        rootDir: process.cwd(),
+      });
     case 'migration-report':
       return runFridaMigrationReport({
         rootDir: process.cwd(),

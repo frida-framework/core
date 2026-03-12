@@ -32,6 +32,28 @@ FRIDA_GENERATOR:
     Detailed generator spec (classes, functions, main_sequence, handlebars_helpers)
     belongs in the app contract annex as an implementation reference.
 
+FRIDA_CONTRACT_VALIDATOR:
+  _visibility: public
+  id: frida-contract-validator
+  version: 1.0.0
+  purpose: "Version-bound validator for schema-native Frida contracts."
+  command: "frida-core validate"
+  principles:
+    - "Validator coverage MUST track all known positive correctness signs and their negative counterparts."
+    - "If a correctness rule can be expressed in schema, it SHOULD live in schema and remain duplicated in validator only when better diagnostics are needed."
+    - "A FRIDA version X application contract for FRIDA version X MUST be green in validator X."
+    - "If validator X is not green for a contract intended for version X, investigation MUST cover the contract, the validator, and the schema together."
+    - "Core MUST validate service_providerRef structurally, but MUST NOT hardcode an engine-owned catalog of service providers."
+  required_checks:
+    - "schema validity for current core version"
+    - "declared index blocks assemble into real blocks"
+    - "typed contract refs resolve"
+    - "service_providerRef points to exactly one app-declared SERVICE_PROVIDERS entry"
+  delivery_rule: >-
+    Deployed validator scripts in target repositories MUST delegate to the
+    version-matched validator shipped by the installed @frida-framework/core
+    package rather than carrying a divergent local ruleset.
+
 FRIDA_MAPPER_MODEL:
   _visibility: public
   id: frida-mapper-model

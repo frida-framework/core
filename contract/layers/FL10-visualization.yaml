@@ -184,7 +184,7 @@ FRIDA_VISUAL:
           parent_boundaryRef: "dashboard_root"
           local_role: "screen_fragment"
         component_mount_point:
-          slotRef: "UI_STRUCTURE.dashboard.root.summarySlot"
+          slotRef: "example_ui.dashboard.root.summary_slot"
           mount_kind: "mapper-managed"
           mounted_child_boundaryRefs:
             - "route_details_panel"

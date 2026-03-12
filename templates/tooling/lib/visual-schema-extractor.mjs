@@ -110,6 +110,15 @@ export function resolveVisualOverlayPath(contract) {
   if (isNonEmptyString(pathsVisual?.overlayFile)) {
     return pathsVisual.overlayFile.trim();
   }
+  const pathsFrida = isObjectLike(contract?.PATHS) && isObjectLike(contract.PATHS.frida)
+    ? contract.PATHS.frida
+    : null;
+  const pathsFridaContractNested = isObjectLike(pathsFrida?.contract)
+    ? pathsFrida.contract
+    : null;
+  if (isObjectLike(pathsFridaContractNested?.visual) && isNonEmptyString(pathsFridaContractNested.visual?.overlayFile)) {
+    return pathsFridaContractNested.visual.overlayFile.trim();
+  }
   const pathsFridaContract = isObjectLike(contract?.PATHS) && isObjectLike(contract.PATHS.fridaContract)
     ? contract.PATHS.fridaContract
     : null;

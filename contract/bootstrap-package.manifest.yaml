@@ -543,7 +543,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:c0c18bb97e8c6d32eee4f15a8e62d717e5cbdc5ee27c09867ba018c2ccfe6635
+    sha256: sha256:0e3ca95b88962da68b43abe669b926d82b5e790c8d442dca34cb6d81d1fd204d
     modes:
       - zero-start
   - id: zero_start_template_app_basic_backend_extension_seed

@@ -542,6 +542,16 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
             If the entity exists only as nested detail inside another
             boundary's domain blocks and has no independent mount surface, it
             remains a domain block.
+        - id: identity_coupling_failure
+          rule: >-
+            If the entity cannot sustain a stable canonical identity across its
+            declaration name, boundary placement, and typed refs, it MUST NOT
+            remain a top-level boundary in active contract data.
+      resolution_rule:
+        rule: >-
+          Classification failures are resolved only by demoting the entity into
+          boundary-local/shared contract data or by splitting it into multiple
+          canonical entities. Exception registries are forbidden.
       endpoint_validation:
         purpose: "Endpoints as boundary correctness check."
         rule: >-
@@ -600,6 +610,11 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
             service_provider_rule: >-
               When mount_kind=service-managed, service_providerRef MUST resolve
               to SERVICE_PROVIDERS.* in the application contract.
+            provider_registry_rule: >-
+              SERVICE_PROVIDERS is application-owned. Core MAY require that a
+              referenced provider is declared exactly once and reached only via
+              service_providerRef, but core MUST NOT prescribe provider ids,
+              provider catalogs, or provider-specific semantics.
         rule: >-
           mounted_child_boundaryRefs declare explicit mounted child component
           boundaries. Cross-component drill-in is allowed only through those
@@ -684,7 +699,7 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
         parent_boundaryRef: "dashboard_root"
         local_role: "screen_fragment"
       component_mount_point:
-        slotRef: "UI_STRUCTURE.dashboard.root.summarySlot"
+        slotRef: "example_ui.dashboard.root.summary_slot"
         mount_kind: "mapper-managed"
         mounted_child_boundaryRefs:
           - "route_details_panel"
@@ -718,12 +733,12 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
           - "RESOURCES.maps_api"
     service_managed_example:
       component_hierarchy_position:
-        parent_boundaryRef: "APP_HOST_ROOT"
+        parent_boundaryRef: "example_app_host_root"
         local_role: "service_backend"
       component_mount_point:
-        slotRef: "RESOURCES.supabase.projectEndpoint"
+        slotRef: "example_resources.supabase.project_endpoint"
         mount_kind: "service-managed"
-        service_providerRef: "SERVICE_PROVIDERS.supabase_main"
+        service_providerRef: "example_service_providers.supabase_main"
       component_input_interface:
         route_id: "string (UUID)"
         skeleton_raw: "object"

@@ -1,53 +1,86 @@
 PATHS:
-  contract:
-    contractArtifact: .frida/inbox/app-contract/contract.index.yaml
   agents:
     bootloaderFile: AGENTS.md
   frida:
-    root: .frida
-    contractDir: .frida/contract
+    rootDir: .frida
     reportsDir: .frida/reports
-    ir: .frida/contract/artifacts/frida.ir.json
-    permissions: .frida/contract/artifacts/frida.permissions.json
-    graph: .frida/contract/artifacts/frida.graph.mmd
-    visualOverlayFile: .frida/contract/visual/canon-overlay.json
-  fridaContract:
-    rootDir: .frida/contract
-    fridaMirrorIndexFile: .frida/contract/frida/contract.index.yaml
-    specsDir: .frida/contract/specs
-    profilesDir: .frida/contract/profiles
-    docsPolicyDir: .frida/contract/docs/policy
-    docsReferenceDir: .frida/contract/docs/reference
-    internalDir: .frida
-    bootloaderFile: .frida/contract/AGENTS.md
-  fridaInbox:
-    rootDir: .frida/inbox
-    appContractDir: .frida/inbox/app-contract
-    contractIndexFile: .frida/inbox/app-contract/contract.index.yaml
-  tooling:
+    contract:
+      rootDir: .frida/contract
+      appDir: .frida/contract/app
+      fridaDir: .frida/contract/frida
+      specsDir: .frida/contract/specs
+      profilesDir: .frida/contract/profiles
+      bootloaderFile: .frida/contract/AGENTS.md
+      docs:
+        rootDir: .frida/contract/docs
+        policyDir: .frida/contract/docs/policy
+        referenceDir: .frida/contract/docs/reference
+        policyBoundariesFile: .frida/contract/docs/policy/BOUNDARIES.md
+        policyImmutabilityFile: .frida/contract/docs/policy/IMMUTABILITY.md
+        referenceApiFile: .frida/contract/docs/reference/API_REFERENCE.md
+      artifacts:
+        rootDir: .frida/contract/artifacts
+        irFile: .frida/contract/artifacts/frida.ir.json
+        permissionsFile: .frida/contract/artifacts/frida.permissions.json
+        graphFile: .frida/contract/artifacts/frida.graph.mmd
+      visual:
+        rootDir: .frida/contract/visual
+        overlayFile: .frida/contract/visual/canon-overlay.json
+    inbox:
+      rootDir: .frida/inbox
+      appContractDir: .frida/inbox/app-contract
+      appContractIndexFile: .frida/inbox/app-contract/contract.index.yaml
+      wikiRawDir: .frida/inbox/wiki-raw
+  scripts:
+    rootDir: scripts
     verify:
-      checkAgentsContractSetScript: scripts/verify/check-agents-contract-set.mjs
-    schemas:
-      fridaContractSchema: node_modules/@frida-framework/core/schemas/frida-contract.schema.json
-  docs:
-    policyDir: .frida/contract/docs/policy
-    referenceDir: .frida/contract/docs/reference
-    policyBoundariesFile: .frida/contract/docs/policy/BOUNDARIES.md
-    policyImmutabilityFile: .frida/contract/docs/policy/IMMUTABILITY.md
-    referenceApiFile: .frida/contract/docs/reference/API_REFERENCE.md
+      rootDir: scripts/verify
+      checkAgentsContractSetFile: scripts/verify/check-agents-contract-set.mjs
+  deps:
+    fridaCore:
+      rootDir: node_modules/@frida-framework/core
+      contractSchemaFile: node_modules/@frida-framework/core/schemas/frida-contract.schema.json
   temp:
     rootDir: .temp
+
+PATH_SURFACES:
+  roots:
+    fridaRoot:
+      pathRef: PATHS.frida.rootDir
+      authority: FRIDA_CONTRACT
+      lifecycle: frida_generated
+    scriptsRoot:
+      pathRef: PATHS.scripts.rootDir
+      authority: APP_REPO
+      lifecycle: authorable
+    depsFridaCore:
+      pathRef: PATHS.deps.fridaCore.rootDir
+      authority: EXTERNAL_PACKAGE
+      lifecycle: external_package
+    tempRoot:
+      pathRef: PATHS.temp.rootDir
+      authority: APP_REPO
+      lifecycle: authorable
+  overrides:
+    rootAgentsBootloader:
+      pathRef: PATHS.agents.bootloaderFile
+      authority: FRIDA_CONTRACT
+      lifecycle: frida_generated
+    checkAgentsContractSetWrapper:
+      pathRef: PATHS.scripts.verify.checkAgentsContractSetFile
+      authority: FRIDA_CONTRACT
+      lifecycle: frida_generated
 
 FRIDA_CONFIG:
   version: "1.0"
   paths:
-    canon_inputFileRef: PATHS.fridaInbox.contractIndexFile
+    canon_inputFileRef: PATHS.frida.inbox.appContractIndexFile
     agents_bootloaderFileRef: PATHS.agents.bootloaderFile
-    specs_rootRef: PATHS.fridaContract.specsDir
-    profiles_rootRef: PATHS.fridaContract.profilesDir
-    docs_policyDirRef: PATHS.fridaContract.docsPolicyDir
-    docs_referenceDirRef: PATHS.fridaContract.docsReferenceDir
-    frida_internalRef: PATHS.frida.root
+    specs_rootRef: PATHS.frida.contract.specsDir
+    profiles_rootRef: PATHS.frida.contract.profilesDir
+    docs_policyDirRef: PATHS.frida.contract.docs.policyDir
+    docs_referenceDirRef: PATHS.frida.contract.docs.referenceDir
+    frida_internalRef: PATHS.frida.rootDir
   reporting:
     collect_in_repo: true
     repo_path: ".frida/reports"
@@ -55,16 +88,17 @@ FRIDA_CONFIG:
     filename_pattern: "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
     exists_check: false
   visual:
-    overlay_outputFileRef: PATHS.frida.visualOverlayFile
+    overlay_outputFileRef: PATHS.frida.contract.visual.overlayFile
 
 meta:
   schemaVersion: "6.0"
   mode: schema
-  contractArtifactRef: PATHS.fridaInbox.contractIndexFile
+  contractArtifactRef: PATHS.frida.inbox.appContractIndexFile
 
 core:
   contracticalSourceBlocks:
     - PATHS
+    - PATH_SURFACES
     - FRIDA_CONFIG
     - GUARDS
     - ZONES
@@ -78,14 +112,10 @@ core:
     - resolve_sources
     - generate_artifacts
   pathRefs:
-    contractArtifact: PATHS.fridaInbox.contractIndexFile
+    contractArtifact: PATHS.frida.inbox.appContractIndexFile
   outputContracts:
     - PATHS.agents.bootloaderFile
-    - PATHS.fridaContract.specsDir
-    - PATHS.fridaContract.profilesDir
-    - PATHS.docs.policyBoundariesFile
-    - PATHS.docs.referenceApiFile
-
-PATH_STATUS:
-  defaults:
-    exists: false
+    - PATHS.frida.contract.specsDir
+    - PATHS.frida.contract.profilesDir
+    - PATHS.frida.contract.docs.policyBoundariesFile
+    - PATHS.frida.contract.docs.referenceApiFile

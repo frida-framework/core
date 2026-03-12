@@ -102,7 +102,7 @@ FRIDA_ENFORCEMENT:
   version: 1.0.0
   invariants:
     - id: contract_entity_single_declaration
-      text: "Any contract entity SHOULD be declared exactly once; duplicates emit warning."
+      text: "Any active contract entity MUST be declared exactly once. Duplicate declarations and semantic aliases are forbidden."
       scope: kernel
     - id: visual_overlay_only
       text: "Visual artifacts are derived overlays and must not become source-of-truth contract state."
@@ -200,6 +200,21 @@ FRIDA_ENFORCEMENT:
     - id: strict_path_refs
       text: "Literal paths are forbidden outside the PATHS block. Keys MUST end in *Ref."
       scope: kernel
+    - id: app_paths_filesystem_facts_only
+      text: "In active app contracts, PATHS MUST store concrete filesystem facts only. Semantic roles, ownership, and lifecycle MUST live outside PATHS."
+      scope: kernel
+    - id: app_path_surfaces_required
+      text: "Active app contracts MUST declare PATH_SURFACES as the ownership/lifecycle companion to PATHS."
+      scope: kernel
+    - id: app_path_alias_zero
+      text: "Active app contracts MUST NOT declare the same concrete filesystem path under multiple active PATHS keys."
+      scope: kernel
+    - id: app_demote_or_split
+      text: "If a top-level app entity cannot maintain a stable name -> boundary -> refs coupling, it MUST be demoted to a local/shared block or split into canonical entities."
+      scope: kernel
+    - id: app_wiki_mechanics_core_owned
+      text: "App contracts MAY store wiki-specific app data, but FRIDA_WIKI_MECHANICS and APP_CONTRACT_SSOT remain core-owned and MUST NOT be re-declared in active app structured data."
+      scope: kernel
     - id: schema_version_fixed
       text: >-
         All index documents MUST declare schema_version and it MUST equal
@@ -281,6 +296,22 @@ FRIDA_ENFORCEMENT:
     - id: GUARD_CONTRACT_SOURCE_DECLARED
       kind: chain
       statement: "Contract source is limited to files declared in PATHS and contracticalSourceBlocks."
+      enforcement: hard
+    - id: GUARD_APP_PATHS_FILESYSTEM_ONLY
+      kind: chain
+      statement: "Active app PATHS must contain filesystem facts only and use canonical Dir/File/Glob/Pattern leaf names."
+      enforcement: hard
+    - id: GUARD_APP_PATH_SURFACES_REQUIRED
+      kind: chain
+      statement: "Active app contracts must declare PATH_SURFACES to separate authority/lifecycle from PATHS."
+      enforcement: hard
+    - id: GUARD_APP_PATH_ALIAS_ZERO
+      kind: ban
+      statement: "Active app contracts must not publish duplicate PATHS aliases for the same concrete filesystem path."
+      enforcement: hard
+    - id: GUARD_APP_WIKI_MECHANICS_CORE_OWNED
+      kind: ban
+      statement: "Active app contracts must not duplicate core-owned wiki/SSOT mechanics outside the permitted app wiki data surface."
       enforcement: hard
     - id: GUARD_CONTRACT_NOT_RUNTIME
       kind: ban
@@ -392,6 +423,10 @@ FRIDA_ENFORCEMENT:
     - id: GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN
       kind: ban
       statement: "Mixed legacy/new component-boundary namespace usage is forbidden in active component contract definitions."
+      enforcement: hard
+    - id: GUARD_APP_DEMOTE_OR_SPLIT
+      kind: chain
+      statement: "If a top-level app entity cannot sustain canonical name -> boundary -> refs coupling, it must be demoted or split rather than retained as an ambiguous boundary."
       enforcement: hard
     - id: GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST
       kind: drift

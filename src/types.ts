@@ -82,6 +82,19 @@ export interface MigrationIssue {
   message: string;
 }
 
+export interface ContractValidationIssue {
+  code: string;
+  message: string;
+  location?: string;
+  suggestion?: string;
+}
+
+export interface ContractValidationResult {
+  valid: boolean;
+  errors: ContractValidationIssue[];
+  warnings: ContractValidationIssue[];
+}
+
 export type BlockVisibility = 'public' | 'private';
 
 export interface ContractLayerSpec {

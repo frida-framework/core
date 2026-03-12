@@ -1,0 +1,32 @@
+frida_report: 1
+status: success_with_residuals
+model: GPT-5 Codex
+profile_id: frida_governance
+summary: "Implemented core-side canonical contract cleanup primitives (PATH_SURFACES, strict validator, template baseline normalization). Katai app-side cleanup remains blocked by current katai profile/zone restrictions."
+changes:
+  modified:
+    - contract/layers/FL01-identity.yaml
+    - contract/layers/FL05-agent-framework.yaml
+    - contract/layers/FL11-management.yaml
+    - contract/layers/FL12-wiki.yaml
+    - schemas/frida-contract.schema.json
+    - src/contract-mirror.ts
+    - src/generator.ts
+    - src/runtime.ts
+    - templates/template_app_basic/app-contract/contract.index.yaml
+    - templates/template_app_basic/app-contract/layers/AL01-shared.yaml
+    - templates/tooling/frida-contract-adapter.ts
+    - templates/tooling/lib/visual-schema-extractor.mjs
+  created:
+    - src/contract-validator.ts
+verification:
+  commands:
+    - npm run build
+    - node dist/cli.js validate --contract contract/contract.index.yaml
+    - node dist/cli.js validate --contract templates/template_app_basic/app-contract/contract.index.yaml
+    - node templates/tooling/verify/check-surface-isolation.mjs
+    - node /home/hans/project/core/dist/cli.js validate   # run in katai-planner; expected app-side failures
+  result: passed_with_expected_app_failures
+residuals:
+  - "Current katai-planner app contract intentionally fails the new validator until PATHS/PATH_SURFACES/mixed-epoch cleanup is performed."
+  - "Direct katai-planner contract edits were not performed because current katai governance profile and .frida zone rules do not permit editing .frida/inbox/app-contract/** or contract/**."

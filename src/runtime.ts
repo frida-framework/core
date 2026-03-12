@@ -4,6 +4,7 @@ import { runFridaArtifactGenerator } from './generator.ts';
 import { resolveSelectors } from './selector.ts';
 import { collectMigrationIssues, normalizeContractModel, validateFridaSchemaModel } from './schema.ts';
 import { loadContractDocument } from './contract-path.ts';
+import { validateLoadedContractDocument } from './contract-validator.ts';
 import { ensureRuntimeConfigArtifacts, getContractReportingSettings } from './reporting-contract.ts';
 import {
   APP_CONTRACT_INBOX_INDEX_REL_PATH,
@@ -98,6 +99,17 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
 
   const normalized = normalizeContractModel(loaded.parsed);
   validateFridaSchemaModel(normalized.model);
+  const validation = validateLoadedContractDocument(loaded.parsed, {
+    contractPath: loaded.contractPath,
+    rootDir: loaded.rootDir,
+  });
+
+  if (!validation.valid) {
+    const message = validation.errors
+      .map((issue) => `${issue.code}${issue.location ? ` @ ${issue.location}` : ''}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`contract validation failed: ${message}`);
+  }
 
   if (normalized.telemetry.deprecatedFieldCount > 0) {
     throw new Error(
@@ -111,6 +123,9 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
 
   for (const warning of normalized.telemetry.warnings) {
     console.warn(warning);
+  }
+  for (const warning of validation.warnings) {
+    console.warn(`${warning.code}: ${warning.message}`);
   }
   for (const warning of selectorSemantics.warnings) {
     console.warn(warning);
@@ -135,7 +150,7 @@ export async function runFridaGeneration(options: RunFridaCoreOptions = {}): Pro
     const appMirrorDir = emitAppContractSourceMirror(loaded.rootDir);
     console.log(`App contract working copy written: ${path.relative(loaded.rootDir, appMirrorDir)}`);
 
-    const projectedEntrypoints = emitCoreToolingEntrypoints(loaded.rootDir, loaded.parsed);
+    const projectedEntrypoints = emitCoreToolingEntrypoints(loaded.rootDir, ENGINE_PACKAGE_ROOT, loaded.parsed);
     for (const entrypointPath of projectedEntrypoints) {
       console.log(`Core tooling entrypoint written: ${path.relative(loaded.rootDir, entrypointPath)}`);
     }
