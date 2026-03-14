@@ -31,7 +31,7 @@ frida-core bootstrap --target <dir>                   # warm reconcile (default)
 frida-core bootstrap --target <dir> --mode zero-start # first-time onboarding for clean repos
 frida-core bootstrap --target <dir> --mode cold-engine  # engine-only first-time deploy
 frida-core visual [--check]       # build or check visual overlay schema v1 at PATHS.visual.overlayFile
-frida-core visual-viewer [--overlay <path>] [--out <path>] [--title <text>]  # generate a static proof viewer for an overlay
+frida-core visual-viewer [--overlay <path>] [--contract <path>] [--out <path>] [--title <text>]  # generate a static proof viewer for an overlay or directly from a contract
 frida-core hash --check           # verify template integrity
 frida-core init                   # normalize reporting config
 frida-core migration-report       # report deprecated contract fields
@@ -112,6 +112,7 @@ npm run clean             # remove dist/
 npm run build             # compile TypeScript
 npm run verify            # build + migration report + zone/contract checks + zero-start determinism
 npm run verify:zero-start # zero-start determinism + required-output check
+npm run frida:visual-viewer:template-app # generate a viewer from the shipped template app contract
 ```
 
 ## What's in this repository

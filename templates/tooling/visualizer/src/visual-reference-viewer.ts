@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { loadContractDocument } from '../../../../dist/contract-path.js';
-import { resolveVisualOverlayPath } from '../../../../dist/visual.js';
+import { loadEffectiveVisualContractDocument } from '../../../../dist/visual-contract.js';
+import { extractVisualSchemaOverlay, resolveVisualOverlayPath } from '../../../../dist/visual.js';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DIST_ROOT = path.resolve(MODULE_DIR);
@@ -38,8 +38,28 @@ function parseViewerArgs(args: string[]): {
 }
 
 function resolveDefaultOverlay(rootDir: string, contractPath: string | null): string {
-    const loaded = loadContractDocument(rootDir, contractPath || undefined);
+    const loaded = loadEffectiveVisualContractDocument(rootDir, contractPath || undefined);
     return resolveVisualOverlayPath(loaded.parsed);
+}
+
+function buildOverlayFromContract(rootDir: string, contractPath: string | null): {
+    overlayAbsolutePath: string;
+    overlayRaw: string;
+    overlay: Record<string, unknown>;
+} {
+    const loaded = loadEffectiveVisualContractDocument(rootDir, contractPath || undefined);
+    const overlayRelativePath = resolveVisualOverlayPath(loaded.parsed);
+    const overlay = extractVisualSchemaOverlay(loaded.parsed, loaded.raw, {
+        sourcePath: path.relative(rootDir, loaded.contractPath).replace(/\\/g, '/'),
+        outputPath: overlayRelativePath,
+        contractPath: loaded.contractPath,
+    }) as unknown as Record<string, unknown>;
+
+    return {
+        overlayAbsolutePath: toAbsolutePath(rootDir, overlayRelativePath),
+        overlayRaw: JSON.stringify(overlay, null, 2),
+        overlay,
+    };
 }
 
 function loadOverlayFile(rootDir: string, requestedOverlayPath: string | null, contractPath: string | null): {
@@ -47,6 +67,10 @@ function loadOverlayFile(rootDir: string, requestedOverlayPath: string | null, c
     overlayRaw: string;
     overlay: Record<string, unknown>;
 } {
+    if (!requestedOverlayPath && contractPath) {
+        return buildOverlayFromContract(rootDir, contractPath);
+    }
+
     const effectiveOverlayPath = requestedOverlayPath || resolveDefaultOverlay(rootDir, contractPath);
     const overlayAbsolutePath = toAbsolutePath(rootDir, effectiveOverlayPath);
     if (!fs.existsSync(overlayAbsolutePath)) {

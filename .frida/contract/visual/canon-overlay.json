@@ -2,9 +2,9 @@
   "meta": {
     "schema_id": "frida-visual-overlay",
     "schema_version": "1.0.0",
-    "generated_at": "2026-03-14T04:45:35.615Z",
-    "contract_sha256": "9690b6d3d2365ed323a5d3c2d884c6871ffcc806a8c89694e048ecac4906b354",
-    "source": "contract/contract.index.yaml",
+    "generated_at": "2026-03-14T09:22:36.384Z",
+    "contract_sha256": "aad2e49952b6f21eaf1253eef2979d1a9a9c1cf4bbf30c31ca4d170781a3baac",
+    "source": "core-contract/contract.index.yaml",
     "overlay_path": ".frida/contract/visual/canon-overlay.json",
     "builder_entrypoint": "src/visual.ts",
     "builder_command": "frida-core visual",

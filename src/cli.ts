@@ -23,7 +23,7 @@ Usage:
   ${FRIDA_CLI_NAME} bootstrap --target <dir> [--mode warm|cold-engine|demo|zero-start] [--dry-run]
   ${FRIDA_CLI_NAME} bootstrap --component <name> [--target <dir>]
   ${FRIDA_CLI_NAME} visual [--check] [args...]
-  ${FRIDA_CLI_NAME} visual-viewer [--overlay <path>] [--out <path>] [--title <text>]
+  ${FRIDA_CLI_NAME} visual-viewer [--overlay <path>] [--contract <path>] [--out <path>] [--title <text>]
   ${FRIDA_CLI_NAME} report [check|path|write] [args...]
   ${FRIDA_CLI_NAME} check contract-set [--include-frida-internal]
   ${FRIDA_CLI_NAME} check [zone args...]
