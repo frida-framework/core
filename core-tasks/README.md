@@ -10,4 +10,4 @@ Rules:
 - Every task file must declare `interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT`.
 - Task files are append-only after creation.
 - `tasks/` is forbidden in repo `frida`.
-- `frida-tasks/` must not be created or read outside repo `frida`.
+- `core-tasks/` must not be created or read outside repo `frida`.

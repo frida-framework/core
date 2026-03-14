@@ -6,6 +6,7 @@ import {
   loadEffectiveVisualContractDocument,
   resolveVisualOverlayPath,
 } from './lib/visual-schema-extractor.mjs';
+import { resolveSourceContractIndexRel } from './lib/source-contract-paths.mjs';
 
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
 function toFsPath(relativePath) {
@@ -27,7 +28,7 @@ function parseArgs() {
   const dryRun = process.argv.includes('--dry-run');
   const defaultContractPath = fs.existsSync(toFsPath('.frida/inbox/app-contract/contract.index.yaml'))
     ? '.frida/inbox/app-contract/contract.index.yaml'
-    : 'contract/contract.index.yaml';
+    : resolveSourceContractIndexRel(ROOT_DIR);
 
   return {
     contractPath: contractArg || defaultContractPath,

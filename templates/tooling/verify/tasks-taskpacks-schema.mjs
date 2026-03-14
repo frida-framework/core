@@ -3,8 +3,8 @@
  * Validate contract Task Pack schema for repo-scoped TASK-*.md files.
  *
  * Rules:
- * - In repo `frida`, only frida-tasks/TASK-<ID>.md is allowed; tasks/ is forbidden
- * - Outside repo `frida`, only tasks/TASK-<ID>.md is allowed; frida-tasks/ is forbidden
+ * - In repo `frida`, only core-tasks/TASK-<ID>.md is allowed; tasks/ is forbidden
+ * - Outside repo `frida`, only tasks/TASK-<ID>.md is allowed; core-tasks/ is forbidden
  * - YAML frontmatter is required
  * - Required fields:
  *   id, status, profile_id, interface_ref, title, summary, acceptance_criteria, verification_cmd
@@ -21,6 +21,7 @@ import path from 'node:path';
 import YAML from 'yaml';
 import { FRIDA_PACKAGE_NAME } from '@sistemado/frida';
 import { loadModularContract } from '../lib/load-contract.mjs';
+import { CORE_CONTRACT_INDEX_REL } from '../lib/source-contract-paths.mjs';
 
 const ROOT_DIR = path.resolve(process.cwd());
 const TASK_FILE_RE = /^TASK-([A-Za-z0-9._-]+)\.md$/;
@@ -39,7 +40,7 @@ const ALLOWED_STATUS = new Set(['OPEN', 'DONE', 'DRIFT']);
 function isFridaSelfRepo() {
   try {
     const packageJson = JSON.parse(requireText(path.join(ROOT_DIR, 'package.json')));
-    return packageJson?.name === FRIDA_PACKAGE_NAME && existsSync(path.join(ROOT_DIR, 'contract', 'contract.index.yaml'));
+    return packageJson?.name === FRIDA_PACKAGE_NAME && existsSync(path.join(ROOT_DIR, CORE_CONTRACT_INDEX_REL));
   } catch {
     return false;
   }
@@ -53,8 +54,8 @@ function resolveTaskSurface() {
   const selfRepo = isFridaSelfRepo();
   return {
     selfRepo,
-    tasksDir: selfRepo ? 'frida-tasks' : 'tasks',
-    forbiddenDir: selfRepo ? 'tasks' : 'frida-tasks',
+    tasksDir: selfRepo ? 'core-tasks' : 'tasks',
+    forbiddenDir: selfRepo ? 'tasks' : 'core-tasks',
     allowedInterfaces: selfRepo
       ? new Set(['FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT'])
       : new Set(['FRIDA_INTERFACE_UPDATE_APP_BY_SPEC', 'FRIDA_INTERFACE_UPDATE_APP_BY_CODE']),

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
+import { resolveSourceContractIndexRel } from '../lib/source-contract-paths.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +37,7 @@ const RUNTIME_VIEWER_INPUT_KEYS = [
 
 const HISTORICAL_MARKERS = /\b(deprecated|legacy|historical|migration|compat)\b/i;
 const RELEVANT_ROOTS = [
-  'contract',
+  resolveSourceContractIndexRel(ROOT_DIR).startsWith('core-contract/') ? 'core-contract' : 'contract',
   path.join('templates', 'management'),
   'README.md',
 ];
@@ -51,7 +52,7 @@ function isObjectLike(value) {
 }
 
 function loadContract() {
-  const indexPath = path.join(ROOT_DIR, 'contract', 'contract.index.yaml');
+  const indexPath = path.join(ROOT_DIR, resolveSourceContractIndexRel(ROOT_DIR));
   if (!fs.existsSync(indexPath)) {
     fail(`Core contract index not found: ${path.relative(ROOT_DIR, indexPath)}`);
   }

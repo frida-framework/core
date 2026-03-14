@@ -8,6 +8,7 @@ import type { ContractIndex } from './types.ts';
 
 export const CONTRACT_CANDIDATES = [
   '.frida/inbox/app-contract/contract.index.yaml',
+  'core-contract/contract.index.yaml',
   'contract/contract.index.yaml',
 ] as const;
 
@@ -34,7 +35,7 @@ export function resolveContractPath(rootDir: string, requestedPath?: string): st
     const normalizedRequestedPath = effectiveRequestedPath.replace(/\\/g, '/');
     if (normalizedRequestedPath === 'contract/contract.cbmd.yaml') {
       throw new Error(
-        'Assembled snapshot contract is no longer supported. Use contract/contract.index.yaml or .frida/inbox/app-contract/contract.index.yaml.'
+        'Assembled snapshot contract is no longer supported. Use core-contract/contract.index.yaml, contract/contract.index.yaml, or .frida/inbox/app-contract/contract.index.yaml.'
       );
     }
     const absoluteRequestedPath = path.resolve(rootDir, effectiveRequestedPath);

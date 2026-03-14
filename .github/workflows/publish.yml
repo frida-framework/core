@@ -1,4 +1,5 @@
 name: Publish @sistemado/frida
+run-name: Publish @sistemado/frida · ${{ github.ref_name }}
 
 on:
   push:
@@ -16,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -24,17 +27,55 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
 
+      - name: Detect publish requirement
+        id: publish-check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PACKAGE_NAME=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).name")
+          CURRENT_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
+          CURRENT_REF="${GITHUB_REF_NAME}"
+          EXPECTED_TAG="v${CURRENT_VERSION}"
+          DIST_TAG=latest
+          if [[ "$CURRENT_VERSION" == *-* ]]; then
+            DIST_TAG=alpha
+          fi
+
+          SHOULD_PUBLISH=true
+          REASON="publish requested for ${EXPECTED_TAG}"
+
+          if [[ "$CURRENT_REF" != v* ]]; then
+            SHOULD_PUBLISH=false
+            REASON="workflow_dispatch must target tag ${EXPECTED_TAG}; current ref is ${CURRENT_REF}"
+          elif [[ "$CURRENT_REF" != "$EXPECTED_TAG" ]]; then
+            SHOULD_PUBLISH=false
+            REASON="tag ${CURRENT_REF} does not match package.json version ${EXPECTED_TAG}"
+          fi
+
+          if npm view "${PACKAGE_NAME}@${CURRENT_VERSION}" version >/dev/null 2>&1; then
+            SHOULD_PUBLISH=false
+            REASON="version ${CURRENT_VERSION} is already published"
+          fi
+
+          echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+          echo "should_publish=$SHOULD_PUBLISH" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+
       - name: Install
+        if: steps.publish-check.outputs.should_publish == 'true'
         run: npm ci
 
       - name: Build
+        if: steps.publish-check.outputs.should_publish == 'true'
         run: npm run build
 
       - name: Publish package
+        if: steps.publish-check.outputs.should_publish == 'true'
+        run: npm publish --tag "${{ steps.publish-check.outputs.dist_tag }}"
+
+      - name: Skip publish
+        if: steps.publish-check.outputs.should_publish != 'true'
         run: |
-          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
-          if [[ "$VERSION" == *-* ]]; then
-            npm publish --tag alpha
-          else
-            npm publish
-          fi
+          echo "Skipping publish: ${{ steps.publish-check.outputs.reason }}"

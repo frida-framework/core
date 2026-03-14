@@ -1,0 +1,167 @@
+# ─── FRIDA LAYER FL13: AGENT ENTRY & ROUTING ────────────────────────────────
+
+FRIDA_AGENT_ENTRY_PROTOCOL:
+  _visibility: public
+  id: frida-agent-entry-protocol
+  version: 1.0.0
+  purpose: "Defines the only valid entry flow for agent execution in Frida-managed repositories."
+  entrypoint:
+    clause_ref: FL13:1
+    rule: "Root AGENTS.md is the single mandatory entrypoint for any agent session."
+  dispatch_chain:
+    - id: audit_dispatch
+      clause_ref: FL13:2.1
+      rule: "Audit/readiness/deployment/diagnostics intents route to FRIDA_INTERFACE_AUDIT before standard routing."
+    - id: load_router
+      clause_ref: FL13:2.2
+      rule: "Agent MUST read `.frida/contract/specs/ROUTER.xml` before interface or profile resolution."
+    - id: resolve_interface
+      clause_ref: FL13:2.3
+      rule: "Interface resolution happens before profile resolution."
+    - id: resolve_profile
+      clause_ref: FL13:2.4
+      rule: "Profile id MUST be resolved only from the repository-scoped profile block allowed for the selected interface."
+    - id: resolve_zone_antitask
+      clause_ref: FL13:2.5
+      rule: "After interface and profile selection, agent MUST resolve the repository-scoped zone block and load the contractual zone AGENTS.md."
+  execution_rules:
+    - id: repository_scoped_zone_block
+      clause_ref: FL13:3.1
+      rule: "Repo `frida` resolves zones only from its private internal zone block; target app repos resolve zones only from `ZONES`."
+    - id: repository_scoped_profile_block
+      clause_ref: FL13:3.2
+      rule: "Repo `frida` resolves profiles only from `FRIDA_TASK_PROFILES`; target app repos resolve profiles only from `TASK_PROFILES`."
+    - id: antitask_gate
+      clause_ref: FL13:3.3
+      rule: "If contractual zone AGENTS.md is missing, execution MUST HALT."
+    - id: interface_authority
+      clause_ref: FL13:3.4
+      rule: "Selected interface determines the allowed mutation scope, task output policy, and admissible profile set."
+  completion_rules:
+    - id: report_required
+      clause_ref: FL13:4.1
+      rule: "Every run MUST emit FRIDA Run Report on success and halt."
+    - id: summary_required
+      clause_ref: FL13:4.2
+      rule: "Human-readable summary MUST follow the report."
+  development_sequence:
+    clause_ref: FL13:5
+    rule: "CONTRACT -> ANTITASK -> DEVELOPMENT remains the mandatory execution sequence."
+
+FRIDA_INTERFACE_ROUTING:
+  _visibility: public
+  id: frida-interface-routing
+  version: 1.0.0
+  purpose: "Routes user intent to management interfaces before repository-scoped profile selection."
+  default_profile_source:
+    clause_ref: FL13:6.1
+    value: repository_scoped_profile_block
+  routes:
+    - id: audit
+      clause_ref: FL13:6.2
+      interface_ref: FRIDA_INTERFACE_AUDIT
+      selector_keywords:
+        - audit
+        - deployment
+        - readiness
+        - diagnostics
+        - health-check
+      allowed_profiles:
+        frida_repo:
+          - frida_readonly_observer
+        target_app_repo:
+          - app_readonly_observer
+    - id: taskset
+      clause_ref: FL13:6.3
+      interface_ref: FRIDA_INTERFACE_TASKSET
+      selector_keywords:
+        - task
+        - formulation
+        - spec
+        - task pack
+      allowed_profiles:
+        frida_repo:
+          - frida_task_setter
+        target_app_repo:
+          - app_task_setter
+    - id: update_app_by_spec
+      clause_ref: FL13:6.4
+      interface_ref: FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+      selector_keywords:
+        - spec
+        - specification
+        - update app contract
+        - extend app contract
+        - change app contract
+        - repair app contract
+      allowed_profiles:
+        target_app_repo:
+          - app_contract_editor
+    - id: update_app_by_code
+      clause_ref: FL13:6.5
+      interface_ref: FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      selector_keywords:
+        - code outpaces contract
+        - update contract by code
+        - extract contract from code
+        - sync contract from code
+      allowed_profiles:
+        target_app_repo:
+          - app_contract_editor
+
+FRIDA_INT_AGENT_ROUTING:
+  _visibility: private
+  id: frida-int-agent-routing
+  version: 1.0.0
+  purpose: "Private routing rules used only inside the Frida core repository."
+  repository_scope: frida_repo_only
+  routes:
+    - id: self_contract_management
+      clause_ref: FL13:7.1
+      interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+      selector_keywords:
+        - governance
+        - contract
+        - frida
+        - self-contract
+      allowed_profiles:
+        - frida_governance
+    - id: self_contract_task_formulation
+      clause_ref: FL13:7.2
+      interface_ref: FRIDA_INTERFACE_TASKSET
+      selector_keywords:
+        - core-tasks
+        - task
+        - formulation
+      allowed_profiles:
+        - frida_task_setter
+  non_deploy_rule:
+    clause_ref: FL13:7.3
+    rule: "Private self-routing metadata MUST NOT be projected into target repos."
+
+FRIDA_CLAUSE_INDEX:
+  _visibility: public
+  id: frida-clause-index
+  version: 1.0.0
+  purpose: "Defines stable clause reference format used by contract-backed instructions and playbooks."
+  format:
+    clause_ref: FL13:8.1
+    layer_prefixes:
+      - FL
+      - AL
+    grammar: "<layer_prefix><two_digit_number>:<n>(.<n>)*"
+    stability: explicit_only
+    note: "Clause refs are declared in contract source and must not be re-derived from file order."
+  usage_rules:
+    - id: cited_normative_lines_only
+      clause_ref: FL13:8.2
+      rule: "Every normative instruction line in engine-invariant instruction surfaces (AGENTS surfaces, router, profiles, generated contractual zone instructions) MUST cite at least one clause_ref."
+    - id: interface_instruction_surface_linking
+      clause_ref: FL13:8.2
+      rule: "User-owned interface-instruction surfaces MUST declare their backing FRIDA_INTERFACE_* authority explicitly via interface_ref or interface_refs, but their prose shape and line-by-line clause citation remain adaptable."
+    - id: legalization_before_citation
+      clause_ref: FL13:8.3
+      rule: "If a normative instruction has no backing clause, create or clarify the clause in contract before citing it."
+    - id: repository_visibility
+      clause_ref: FL13:8.4
+      rule: "Public instructions may cite only public clauses; self-repo-only instructions may cite private clauses that remain undistributed."

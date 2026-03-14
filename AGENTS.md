@@ -12,7 +12,7 @@ If your task is a **deployment audit**, **readiness check**, or **diagnostics** 
 1. **SKIP** standard interface routing only after routing to `FRIDA_INTERFACE_AUDIT`. [FL13:2.1]
 2. **READ** the audit playbook: `templates/management/AGENT-repo-audit.md`. [FL13:6.2]
 3. **READ** the contract interfaces:
-   - Core contract: `contract/contract.index.yaml`
+   - Core contract: `core-contract/contract.index.yaml`
    - Repository scope: `frida_repo`
    - Key core layers: `FL03-infrastructure.yaml`, `FL05-agent-framework.yaml`, `FL09-bootstrap.yaml`, `FL13-agent-entry.yaml`. [FL13:2.3] [FL13:3.1]
 4. **RUN** CLI diagnostics:
@@ -79,7 +79,7 @@ Otherwise, continue with standard routing below.
 
 CONTRACT → ANTITASK → DEVELOPMENT [FL13:5]
 
-1. **Contract** exists in local repo (contract/* blocks)
+1. **Contract** exists in local repo (`core-contract/*` is the source of truth; `contract/*` is the generated public projection)
 2. **Antitask** exists as AGENTS.md in target zone
 3. **Development** proceeds within boundaries
 

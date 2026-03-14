@@ -6,7 +6,9 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
-const DEFAULT_MANIFEST_REL_PATH = 'contract/template-integrity.manifest.yaml';
+const DEFAULT_MANIFEST_REL_PATH = fs.existsSync(path.resolve(ROOT_DIR, 'core-contract', 'template-integrity.manifest.yaml'))
+  ? 'core-contract/template-integrity.manifest.yaml'
+  : 'contract/template-integrity.manifest.yaml';
 const MANIFEST_SCHEMA_REL_PATH = 'schemas/template-integrity.schema.json';
 
 interface TemplateManifestEntry {

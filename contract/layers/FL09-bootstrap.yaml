@@ -1,47 +1,43 @@
-# ─── FRIDA LAYER FL09: BOOTSTRAP ────────────────────────────────────────────
-# Purpose: Bootstrap and reconcile semantics for Frida-managed surfaces.
-# Warm-first repair/redeploy rules live here; buildtime layer keeps generator/mapper only.
-
 FRIDA_CONTRACT_BOOTSTRAP:
-  _visibility: public
   id: frida-contract-bootstrap
   version: 2.1.0
-  purpose: "Warm-first bootstrap/reconcile for Frida-managed surfaces with explicit demo mode and deterministic zero-start app-template seeding."
-  command: "frida-core bootstrap"
+  purpose: Warm-first bootstrap/reconcile for Frida-managed surfaces with explicit demo mode and deterministic zero-start
+    app-template seeding.
+  command: frida-core bootstrap
   activation:
     manual_only: true
-    trigger: "Explicit CLI invocation only."
+    trigger: Explicit CLI invocation only.
     auto_invocation_forbidden_from:
-      - "frida-core gen"
-      - "frida-core build"
-      - "frida-core init"
-      - "frida-core check"
-      - "frida-core visualize"
-      - "frida-core report"
-      - "frida-core migration-report"
+      - frida-core gen
+      - frida-core build
+      - frida-core init
+      - frida-core check
+      - frida-core visualize
+      - frida-core report
+      - frida-core migration-report
   modes:
     warm:
       default: true
-      entrypoint: "frida-core bootstrap --target <dir>"
-      purpose: "Reconcile an existing Frida deployment to package-reference state and regenerate Frida artifacts."
+      entrypoint: frida-core bootstrap --target <dir>
+      purpose: Reconcile an existing Frida deployment to package-reference state and regenerate Frida artifacts.
       requires_frida_markers: true
       requires_app_contract_inbox: true
       app_contract_writes: forbidden
       prune_unknown_in_managed_scopes: true
       preserve_defaults:
-        - ".frida/config.yaml"
-        - ".frida/reports/**"
-        - ".frida/inbox/**"
+        - .frida/config.yaml
+        - .frida/reports/**
+        - .frida/inbox/**
       post_actions:
         run_generation: true
       on_missing_frida:
         action: HALT
         error_code: FRIDA_NOT_DEPLOYED
-        redirect: "Use --mode cold-engine for explicit engine onboarding or --mode demo for demo/reference seeding."
+        redirect: Use --mode cold-engine for explicit engine onboarding or --mode demo for demo/reference seeding.
     cold_engine:
       explicit_only: true
-      entrypoint: "frida-core bootstrap --target <dir> --mode cold-engine"
-      purpose: "First-time engine onboarding in an app repository without touching app-contract files."
+      entrypoint: frida-core bootstrap --target <dir> --mode cold-engine
+      purpose: First-time engine onboarding in an app repository without touching app-contract files.
       requires_frida_markers: false
       requires_app_contract_inbox: true
       app_contract_writes: forbidden
@@ -51,28 +47,26 @@ FRIDA_CONTRACT_BOOTSTRAP:
       on_existing_frida:
         action: HALT
         error_code: FRIDA_ALREADY_DEPLOYED
-        redirect: "Use warm mode (default) for reconcile/repair."
+        redirect: Use warm mode (default) for reconcile/repair.
     demo:
       explicit_only: true
       zero_deploy_only: true
-      entrypoint: "frida-core bootstrap --target <dir> --mode demo"
-      purpose: "Deploy reference demo assets (visualizer + demo seed) when package demo assets are available."
+      entrypoint: frida-core bootstrap --target <dir> --mode demo
+      purpose: Deploy reference demo assets (visualizer + demo seed) when package demo assets are available.
       app_contract_writes: allowed_demo_seed_only
       on_existing_frida_or_contract:
         action: HALT
         error_code: DEMO_MODE_ZERO_DEPLOY_REQUIRED
     zero_start:
       explicit_only: true
-      entrypoint: "frida-core bootstrap --target <dir> --mode zero-start"
-      purpose: >-
-        First-time zero-state onboarding for a clean application repository. Deploys the cold-engine FRIDA
-        infrastructure from package reference and seeds the derivative neutral `template_app_basic` files: README.md, package.json,
-        .frida/inbox/app-contract/contract.index.yaml, .frida/inbox/app-contract/layers/AL01-shared.yaml,
-        .frida/inbox/app-contract/layers/AL02-agent-framework.yaml, .frida/inbox/app-contract/layers/AL03-host-root.yaml,
-        and inactive app-extension layers under
-        .frida/inbox/app-contract/extensions/. Post-generation runs with fixed
-        generatedAt=1970-01-01T00:00:00.000Z so identical clean initial state and identical package input
-        yield identical zero-start output.
+      entrypoint: frida-core bootstrap --target <dir> --mode zero-start
+      purpose: "First-time zero-state onboarding for a clean application repository. Deploys the cold-engine FRIDA
+        infrastructure from package reference and seeds the derivative neutral `template_app_basic` files: README.md,
+        package.json, .frida/inbox/app-contract/contract.index.yaml, .frida/inbox/app-contract/layers/AL01-shared.yaml,
+        .frida/inbox/app-contract/layers/AL02-agent-framework.yaml,
+        .frida/inbox/app-contract/layers/AL03-host-root.yaml, and inactive app-extension layers under
+        .frida/inbox/app-contract/extensions/. Post-generation runs with fixed generatedAt=1970-01-01T00:00:00.000Z so
+        identical clean initial state and identical package input yield identical zero-start output."
       requires_frida_markers: false
       requires_app_contract_inbox: false
       app_contract_writes: allowed_template_seed_only
@@ -83,12 +77,12 @@ FRIDA_CONTRACT_BOOTSTRAP:
       on_existing_frida:
         action: HALT
         error_code: ZERO_START_ALREADY_DEPLOYED
-        redirect: "Use warm mode (default) for reconcile/repair."
+        redirect: Use warm mode (default) for reconcile/repair.
     component_reconcile:
       compat_aliases:
         - component_restore
-      entrypoint: "frida-core bootstrap --component <name> [--target <dir>]"
-      purpose: "Scoped reconcile/restore for selected bootstrap-managed components."
+      entrypoint: frida-core bootstrap --component <name> [--target <dir>]
+      purpose: Scoped reconcile/restore for selected bootstrap-managed components.
       idempotent: true
       default_prune_scope: false
       app_contract_writes: forbidden
@@ -101,49 +95,48 @@ FRIDA_CONTRACT_BOOTSTRAP:
         - runtime-config-template
       reset_behavior:
         interface_instructions_reset:
-          entrypoint: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
-          purpose: "Restore the shipped baseline for public app-facing interface instruction surfaces without touching engine-invariant AGENTS or generated routing artifacts."
-          overwrite_policy: "Force-copy manifest-declared app interface instruction playbooks over user-customized target files."
+          entrypoint: frida-core bootstrap --component interface-instructions-reset --target <dir>
+          purpose: Restore the shipped baseline for public app-facing interface instruction surfaces without touching
+            engine-invariant AGENTS or generated routing artifacts.
+          overwrite_policy: Force-copy manifest-declared app interface instruction playbooks over user-customized target files.
           scope:
-            - ".frida/contract/playbooks/AGENT-app-contract-update.md"
-            - ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+            - .frida/contract/playbooks/AGENT-app-contract-update.md
+            - .frida/contract/playbooks/AGENT-app-contract-repair.md
           generation_after_reset: false
   target_detection:
     model: strong_marker_any
     frida_present_when_any:
-      - ".frida/templates/config.template.yaml"
-      - ".frida/contract/specs/ROUTER.xml"
-      - ".frida/specs/ROUTER.xml (retired-path cleanup marker)"
-      - ".specs/ROUTER.xml (retired-path cleanup marker)"
-      - ".frida/contract/profiles/*"
-      - ".frida/profiles/* (retired-path cleanup marker)"
-      - ".specs/profiles/* (retired-path cleanup marker)"
-      - "AGENTS.md (FRIDA bootloader signature)"
-      - ".frida/contract/AGENTS.md (FRIDA bootloader signature, canonical internal mirror)"
-      - ".frida/AGENTS.md (Frida-managed zone AGENTS.md)"
-    note: "Retired-path markers may still be detected to support one-way cleanup during bootstrap."
+      - .frida/templates/config.template.yaml
+      - .frida/contract/specs/ROUTER.xml
+      - .frida/specs/ROUTER.xml (retired-path cleanup marker)
+      - .specs/ROUTER.xml (retired-path cleanup marker)
+      - .frida/contract/profiles/*
+      - .frida/profiles/* (retired-path cleanup marker)
+      - .specs/profiles/* (retired-path cleanup marker)
+      - AGENTS.md (FRIDA bootloader signature)
+      - .frida/contract/AGENTS.md (FRIDA bootloader signature, canonical internal mirror)
+      - .frida/AGENTS.md (Frida-managed zone AGENTS.md)
+    note: Retired-path markers may still be detected to support one-way cleanup during bootstrap.
   reconcile_policy:
     package_is_reference: true
     managed_surface_source: hybrid_contract_policy_plus_package_manifest
     mutate_only_manifest_declared_surfaces: true
-    ownership_classesRef: "FRIDA_BOOTSTRAP_SURFACE_POLICY.ownership_classes"
-    package_manifestRef: "FRIDA_BOOTSTRAP_PACKAGE_MANIFEST"
+    ownership_classesRef: FRIDA_BOOTSTRAP_SURFACE_POLICY.ownership_classes
+    package_manifestRef: FRIDA_BOOTSTRAP_PACKAGE_MANIFEST
   app_contract_policy:
-    source_of_truth: ".frida/inbox/app-contract/**"
-    rule: "Frida engine MUST NOT modify app-contract files in warm or cold-engine modes."
-    explicit_demo_exception: "Demo mode may write demo app-contract seed only."
-    postgen_contract_path: ".frida/inbox/app-contract/contract.index.yaml"
+    source_of_truth: .frida/inbox/app-contract/**
+    rule: Frida engine MUST NOT modify app-contract files in warm or cold-engine modes.
+    explicit_demo_exception: Demo mode may write demo app-contract seed only.
+    postgen_contract_path: .frida/inbox/app-contract/contract.index.yaml
     on_missing_or_invalid_inbox:
       action: HALT
       errors:
         - APP_CONTRACT_INBOX_MISSING
         - APP_CONTRACT_INBOX_INVALID
         - APP_CONTRACT_INBOX_EMPTY
-  root_layout_policyRef: "FRIDA_ROOT_LAYOUT_POLICY"
+  root_layout_policyRef: FRIDA_ROOT_LAYOUT_POLICY
   runtime_refs:
-    runtime_config_fileRef: "FRIDA_RUNTIME_CONFIG.file"
-    runtime_config_template_fileRef: "FRIDA_RUNTIME_CONFIG.template_file"
-    ssot_flag_ref: "FRIDA_WIKI_MECHANICS.config_flag"
+    ssot_flag_ref: FRIDA_WIKI_MECHANICS.config_flag
   errors:
     - FRIDA_NOT_DEPLOYED
     - FRIDA_ALREADY_DEPLOYED
@@ -159,144 +152,87 @@ FRIDA_CONTRACT_BOOTSTRAP:
     - APP_CONTRACT_INBOX_INVALID
     - APP_CONTRACT_INBOX_EMPTY
   recovery:
-    warm: "frida-core bootstrap --target <dir>"
-    cold_engine: "frida-core bootstrap --target <dir> --mode cold-engine"
-    component: "frida-core bootstrap --component <name> [--target <dir>]"
-  note: >-
-    Demo bootstrap deliverables remain package-specific. Warm/cold-engine bootstrap
-    are engine-surface reconciliation flows and must not mutate app-contract data.
-    Zero-start is defined as cold-engine surface deployment plus `template_app_basic` seeding
-    with deterministic post-generation.
-
-FRIDA_APP_TEMPLATE_MODEL:
-  _visibility: public
-  id: frida-app-template-model
-  version: 1.0.0
-  purpose: "Defines Frida-shipped derivative app templates and the link-driven activation model for optional app extensions."
-  truth_boundary:
-    source_of_truth:
-      - core contract blocks
-      - bootstrap policy
-      - generator/runtime logic
-    derivative_artifacts:
-      - template_app_basic
-    reverse_dependency_forbidden: true
-    rule: "Frida semantics flow into shipped templates; templates MUST NOT be used as normative inputs for Frida semantics."
-  default_template:
-    id: template_app_basic
-    dirRef: "PATHS.templates.appBasicDir"
-    rule: "Zero-start seeds `template_app_basic` by default."
-    neutrality_rule: "Default app template MUST remain vendor-neutral and MUST NOT introduce backend implementation surfaces."
-    derivative_rule: "`template_app_basic` is a public baseline example and shipped promise of quality, not a source of truth."
-  activation_model:
-    source_of_truth: "target app contract index links"
-    rule: "An app extension is active only if its AL## layer is present in the target app `contract.index.yaml`."
-    inactive_delivery_rule: "Frida may ship inactive extension files inside the app template package; inactive files alone MUST NOT affect the assembled contract."
-    top_level_activation_blocks_forbidden:
-      - extensions
-      - FRIDA_EXTENSIONS
-  naming:
-    template_ids:
-      rule: "`template_<scope>_<variant>`"
-      examples:
-        - template_app_basic
-    extension_ids:
-      rule: "`extension_<capability>` or `extension_<capability>_<implementation>`"
-      examples:
-        - extension_backend
-        - extension_backend_supabase
-  interface_policy:
-    applies_to:
-      - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
-      - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
-    known_inactive_extension:
-      action: HALT
-      output_requirements:
-        - required_extension_ids
-        - required_layer_paths
-        - contract_index_link_snippet
-      rule: "If a requested capability exists as a shipped but inactive extension, the interface MUST stop and instruct the user to activate it explicitly."
-    unknown_extension_need:
-      action: HALT
-      error_code: requires_new_frida_extension
-      redirect_interface: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
-      rule: "If no shipped extension covers the request, the interface MUST NOT invent a new implementation model."
-
+    warm: frida-core bootstrap --target <dir>
+    cold_engine: frida-core bootstrap --target <dir> --mode cold-engine
+    component: frida-core bootstrap --component <name> [--target <dir>]
+  note: Demo bootstrap deliverables remain package-specific. Warm/cold-engine bootstrap are engine-surface reconciliation
+    flows and must not mutate app-contract data. Zero-start is defined as cold-engine surface deployment plus
+    `template_app_basic` seeding with deterministic post-generation.
 FRIDA_BOOTSTRAP_SURFACE_POLICY:
-  _visibility: public
   id: frida-bootstrap-surface-policy
   version: 1.0.0
   threat_model:
-    drift_assumption: "Agent drift may modify any file at any time."
-    consequence: "Bootstrap reconcile cannot assume only missing files; changed and extra files must be handled explicitly."
+    drift_assumption: Agent drift may modify any file at any time.
+    consequence: Bootstrap reconcile cannot assume only missing files; changed and extra files must be handled explicitly.
   scope_boundary:
     mutate_only_manifest_declared_surfaces: true
     outside_manifest_scopes: untouched
     app_contract_writes_outside_demo_mode: forbidden
   ownership_classes:
     engine_static:
-      meaning: "Package-distributed static files copied from manifest-declared sources."
+      meaning: Package-distributed static files copied from manifest-declared sources.
       overwrite_policy: overwrite
       prune_eligible: true
     engine_generated:
-      meaning: "Artifacts generated by Frida commands from contract data."
+      meaning: Artifacts generated by Frida commands from contract data.
       overwrite_policy: regenerate
       prune_eligible: true
     user_owned:
-      meaning: "User-maintained files preserved by bootstrap after initial seed; includes runtime config and public interface-instruction surfaces seeded into target repos."
+      meaning: User-maintained files preserved by bootstrap after initial seed; includes runtime config and public
+        interface-instruction surfaces seeded into target repos.
       overwrite_policy: preserve
       prune_eligible: false
     user_data:
-      meaning: "User/runtime history or audit data kept in Frida-managed directories."
+      meaning: User/runtime history or audit data kept in Frida-managed directories.
       overwrite_policy: preserve
       prune_eligible: false
     demo_only:
-      meaning: "Assets allowed only in explicit demo bootstrap mode."
+      meaning: Assets allowed only in explicit demo bootstrap mode.
       overwrite_policy: mode_gated
       prune_eligible: true
   preserve_defaults:
     paths:
-      - ".frida/config.yaml"
-      - ".frida/reports/**"
-      - ".frida/inbox/**"
-    rationale: "Preserve user-owned runtime config, accumulated audit reports, and protected inbox SSOT/sync payloads during strict reconcile."
+      - .frida/config.yaml
+      - .frida/reports/**
+      - .frida/inbox/**
+    rationale: Preserve user-owned runtime config, accumulated audit reports, and protected inbox SSOT/sync payloads during
+      strict reconcile.
   root_layout:
-    policyRef: "FRIDA_ROOT_LAYOUT_POLICY"
+    policyRef: FRIDA_ROOT_LAYOUT_POLICY
     bootstrap_postgen_mode: fail
-    rule: "Warm/cold-engine bootstrap post-generation MUST pass strict `.frida` root allowlist validation."
+    rule: Warm/cold-engine bootstrap post-generation MUST pass strict `.frida` root allowlist validation.
   prune_semantics:
-    full_warm_and_cold_engine: "Unknown files are pruned only inside manifest-declared prune scopes."
-    component_reconcile_default: "No full-scope prune by default; component reconcile is scoped and idempotent."
+    full_warm_and_cold_engine: Unknown files are pruned only inside manifest-declared prune scopes.
+    component_reconcile_default: No full-scope prune by default; component reconcile is scoped and idempotent.
   target_markers:
     detection_mode: strong_marker_any
     markers:
-      - ".frida/templates/config.template.yaml"
-      - ".frida/contract/specs/ROUTER.xml"
-      - ".frida/specs/ROUTER.xml (retired-path cleanup marker)"
-      - ".specs/ROUTER.xml (retired-path cleanup marker)"
-      - ".frida/contract/profiles/*"
-      - ".frida/profiles/* (retired-path cleanup marker)"
-      - ".specs/profiles/* (retired-path cleanup marker)"
-      - "AGENTS.md FRIDA bootloader signature"
-      - ".frida/contract/AGENTS.md FRIDA bootloader signature"
-      - ".frida/AGENTS.md Frida-managed zone AGENTS.md"
+      - .frida/templates/config.template.yaml
+      - .frida/contract/specs/ROUTER.xml
+      - .frida/specs/ROUTER.xml (retired-path cleanup marker)
+      - .specs/ROUTER.xml (retired-path cleanup marker)
+      - .frida/contract/profiles/*
+      - .frida/profiles/* (retired-path cleanup marker)
+      - .specs/profiles/* (retired-path cleanup marker)
+      - AGENTS.md FRIDA bootloader signature
+      - .frida/contract/AGENTS.md FRIDA bootloader signature
+      - .frida/AGENTS.md Frida-managed zone AGENTS.md
   post_reconcile:
     run_generation: true
     purpose: "One-command clean Frida: reconcile package/static surfaces then regenerate engine-generated artifacts."
-
 FRIDA_BOOTSTRAP_PACKAGE_MANIFEST:
-  _visibility: public
   id: frida-bootstrap-package-manifest
   version: 1.0.0
-  manifest_pathRef: "PATHS.bootstrap.manifestFile"
-  schema_pathRef: "PATHS.bootstrap.manifestSchemaFile"
+  manifest_pathRef: PATHS.bootstrap.manifestFile
+  schema_pathRef: PATHS.bootstrap.manifestSchemaFile
   hash_algorithm: sha256
   manifest_format: yaml
   manifest_contract:
     package_is_reference: true
     cleanup_support:
       enabled: true
-      note: "Manifest may include cleanup-only retired-path scopes so bootstrap can remove pre-cutover surfaces during one-way migration."
+      note: Manifest may include cleanup-only retired-path scopes so bootstrap can remove pre-cutover surfaces during one-way
+        migration.
     entries_describe:
       - source
       - target
@@ -320,3 +256,56 @@ FRIDA_BOOTSTRAP_PACKAGE_MANIFEST:
       missing: BOOTSTRAP_PACKAGE_MANIFEST_MISSING
       invalid: BOOTSTRAP_PACKAGE_MANIFEST_INVALID
       hash_mismatch: BOOTSTRAP_PACKAGE_HASH_MISMATCH
+FRIDA_APP_TEMPLATE_MODEL:
+  id: frida-app-template-model
+  version: 1.0.0
+  purpose: Defines Frida-shipped derivative app templates and the link-driven activation model for optional app extensions.
+  truth_boundary:
+    source_of_truth:
+      - core contract blocks
+      - bootstrap policy
+      - generator/runtime logic
+    derivative_artifacts:
+      - template_app_basic
+    reverse_dependency_forbidden: true
+    rule: Frida semantics flow into shipped templates; templates MUST NOT be used as normative inputs for Frida semantics.
+  default_template:
+    id: template_app_basic
+    dirRef: PATHS.templates.appBasicDir
+    rule: Zero-start seeds `template_app_basic` by default.
+    neutrality_rule: Default app template MUST remain vendor-neutral and MUST NOT introduce backend implementation surfaces.
+    derivative_rule: "`template_app_basic` is a public baseline example and shipped promise of quality, not a source of truth."
+  activation_model:
+    source_of_truth: target app contract index links
+    rule: An app extension is active only if its AL## layer is present in the target app `contract.index.yaml`.
+    inactive_delivery_rule: Frida may ship inactive extension files inside the app template package; inactive files alone
+      MUST NOT affect the assembled contract.
+    top_level_activation_blocks_forbidden:
+      - extensions
+      - FRIDA_EXTENSIONS
+  naming:
+    template_ids:
+      rule: "`template_<scope>_<variant>`"
+      examples:
+        - template_app_basic
+    extension_ids:
+      rule: "`extension_<capability>` or `extension_<capability>_<implementation>`"
+      examples:
+        - extension_backend
+        - extension_backend_supabase
+  interface_policy:
+    applies_to:
+      - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+      - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+    known_inactive_extension:
+      action: HALT
+      output_requirements:
+        - required_extension_ids
+        - required_layer_paths
+        - contract_index_link_snippet
+      rule: If a requested capability exists as a shipped but inactive extension, the interface MUST stop and instruct the
+        user to activate it explicitly.
+    unknown_extension_need:
+      action: HALT
+      error_code: requires_new_frida_extension
+      rule: If no shipped extension covers the request, the interface MUST NOT invent a new implementation model.

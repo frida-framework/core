@@ -1,7 +1,18 @@
-# TASK-002: Formalize `service_providerRef` and Minimal Service Boundary Visual Semantics
-
-interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+---
+id: 002-service-provider-ref-and-service-boundary-style
+status: OPEN
 profile_id: frida_governance
+interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+title: Formalize service provider refs and service boundary visual semantics
+summary: Tighten service-managed component semantics by requiring service_providerRef and a minimal visual distinction for service boundaries.
+acceptance_criteria:
+  - FL11 requires service_providerRef for service-managed mount points and validates its resolution.
+  - FL06 validation checklist covers provider-ref resolution and service-boundary visual checks.
+  - FL10 includes an explicit minimal service-boundary style contract distinct from UI anchors.
+verification_cmd: npm run build && node dist/cli.js check contract-set
+---
+
+# TASK-002: Formalize `service_providerRef` and Minimal Service Boundary Visual Semantics
 
 ## Objective
 

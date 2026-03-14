@@ -30,6 +30,7 @@ Then validate contract structure, routing chain, deployed surface integrity, and
 Resolve repository scope before loading any audit canon:
 
 1. If `contract/contract.index.yaml` exists and the repository is the Frida core checkout, scope is `frida_repo`.
+   Canonical self-repo source path is `core-contract/contract.index.yaml`; `contract/contract.index.yaml` is the generated public projection.
 2. Otherwise, if `.frida/inbox/app-contract/contract.index.yaml` exists, scope is `target_app_repo`.
 3. If neither condition is satisfied, HALT with `CONTRACT.GAP`.
 
@@ -41,8 +42,8 @@ No audit step may depend on `.frida/templates/**`, `templates/frida/**`, `templa
 
 ### `frida_repo`
 
-- Core contract entry: `contract/contract.index.yaml`
-- Key layers: `contract/layers/FL03-infrastructure.yaml`, `contract/layers/FL05-agent-framework.yaml`, `contract/layers/FL09-bootstrap.yaml`, `contract/layers/FL11-management.yaml`, `contract/layers/FL13-agent-entry.yaml`
+- Core contract entry: `core-contract/contract.index.yaml`
+- Key layers: `core-contract/layers/FL03-infrastructure.yaml`, `core-contract/layers/FL05-agent-framework.yaml`, `core-contract/layers/FL09-bootstrap.yaml`, `core-contract/layers/FL11-management.yaml`, `core-contract/layers/FL13-agent-entry.yaml`
 - Repository-scoped profile block: `FRIDA_TASK_PROFILES`
 - Repository-scoped zone block: `INT_FRIDA_ZONES`
 - Invariants and guards:
@@ -99,7 +100,7 @@ Load YAML contract artifacts directly from the canonical files above. Do not req
   - `templates/frida/*`
   - `templates/docs-gen/*`
   - `templates/template_app_basic/*`
-  - `frida-tasks/*`
+  - `core-tasks/*`
   - `INT_FRIDA_ZONES`
   - `FRIDA_INT_AGENT_ROUTING`
   - `FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT`

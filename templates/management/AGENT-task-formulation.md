@@ -40,9 +40,9 @@ Every item must be completed. If not — update contract first (via the appropri
 
 ### Task output routing
 
-- [ ] In repo `frida`, task output may only be `frida-tasks/TASK-*.md`.
+- [ ] In repo `frida`, task output may only be `core-tasks/TASK-*.md`.
 - [ ] In repo `frida`, `tasks/` is forbidden and must not be read, created, or modified.
-- [ ] Outside repo `frida`, `frida-tasks/` is forbidden.
+- [ ] Outside repo `frida`, `core-tasks/` is forbidden.
 - [ ] `FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT` may output task files only inside repo `frida`.
 - [ ] `FRIDA_INTERFACE_UPDATE_APP_BY_SPEC` and `FRIDA_INTERFACE_UPDATE_APP_BY_CODE` do not write task files in repo `frida`.
 

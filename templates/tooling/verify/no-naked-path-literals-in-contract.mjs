@@ -17,12 +17,13 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 import { loadModularContract } from '../lib/load-contract.mjs';
+import { resolveSourceContractIndexRel } from '../lib/source-contract-paths.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../..');
 
-const BOOTSTRAP_CONTRACT_REL = 'contract/contract.index.yaml';
+const BOOTSTRAP_CONTRACT_REL = resolveSourceContractIndexRel(ROOT_DIR);
 const REPORT_ONLY = process.env.REPORT_ONLY === '1';
 const WARN_TEXT_SCAN = process.env.WARN_TEXT_SCAN === '1';
 

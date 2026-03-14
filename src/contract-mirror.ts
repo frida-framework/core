@@ -183,10 +183,6 @@ function walkYamlFiles(dirPath: string, files: string[] = []): string[] {
 }
 
 function sanitizeProjectedContractMirror(targetDir: string, nonDeployableBlocks: Set<string>): void {
-  if (nonDeployableBlocks.size === 0) {
-    return;
-  }
-
   for (const filePath of walkYamlFiles(targetDir)) {
     const raw = fs.readFileSync(filePath, 'utf-8');
     const parsed = yaml.parse(raw);

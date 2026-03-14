@@ -1,0 +1,104 @@
+name: Queue @sistemado/frida publish
+run-name: Queue @sistemado/frida publish · ${{ github.ref_name }} · ${{ github.sha }}
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  queue-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Detect version change
+        id: version-check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PACKAGE_NAME=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).name")
+          CURRENT_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
+          CURRENT_TAG="v${CURRENT_VERSION}"
+          BEFORE_SHA="${{ github.event.before }}"
+          PREVIOUS_VERSION=""
+
+          if [[ -n "$BEFORE_SHA" && "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            PREVIOUS_VERSION=$(git show "$BEFORE_SHA:package.json" 2>/dev/null | node -e "let raw='';process.stdin.on('data',chunk=>raw+=chunk);process.stdin.on('end',()=>{try{const pkg=JSON.parse(raw);process.stdout.write(typeof pkg.version==='string'?pkg.version:'')}catch{process.stdout.write('')}})")
+          fi
+
+          VERSION_CHANGED=false
+          TAG_EXISTS=false
+          ALREADY_PUBLISHED=false
+          SHOULD_DISPATCH=false
+          REASON="package version did not change"
+
+          if [[ "$PREVIOUS_VERSION" != "$CURRENT_VERSION" ]]; then
+            VERSION_CHANGED=true
+            SHOULD_DISPATCH=true
+            REASON="version changed from ${PREVIOUS_VERSION:-<none>} to ${CURRENT_VERSION}"
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${CURRENT_TAG}" >/dev/null 2>&1; then
+            TAG_EXISTS=true
+          fi
+
+          if npm view "${PACKAGE_NAME}@${CURRENT_VERSION}" version >/dev/null 2>&1; then
+            ALREADY_PUBLISHED=true
+            SHOULD_DISPATCH=false
+            REASON="version ${CURRENT_VERSION} is already published"
+          fi
+
+          echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "current_tag=$CURRENT_TAG" >> "$GITHUB_OUTPUT"
+          echo "version_changed=$VERSION_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "tag_exists=$TAG_EXISTS" >> "$GITHUB_OUTPUT"
+          echo "already_published=$ALREADY_PUBLISHED" >> "$GITHUB_OUTPUT"
+          echo "should_dispatch=$SHOULD_DISPATCH" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+
+      - name: Create version tag
+        if: steps.version-check.outputs.version_changed == 'true' && steps.version-check.outputs.tag_exists != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version-check.outputs.current_tag }}" -m "Release ${{ steps.version-check.outputs.current_tag }}"
+          git push origin "${{ steps.version-check.outputs.current_tag }}"
+
+      - name: Dispatch publish workflow
+        if: steps.version-check.outputs.should_dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/publish.yml/dispatches" \
+            -d "{\"ref\":\"${{ steps.version-check.outputs.current_tag }}\"}"
+
+      - name: Skip queue
+        if: steps.version-check.outputs.version_changed != 'true' || steps.version-check.outputs.should_dispatch != 'true'
+        run: |
+          echo "Skipping publish queue: ${{ steps.version-check.outputs.reason }}"

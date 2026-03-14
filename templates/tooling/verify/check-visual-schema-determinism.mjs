@@ -10,6 +10,7 @@ import {
   normalizeOverlayForComparison,
   resolveVisualOverlayPath,
 } from '../lib/visual-schema-extractor.mjs';
+import { hasCoreAuthoringSurface, resolveSourceContractIndexRel } from '../lib/source-contract-paths.mjs';
 
 const ROOT_DIR = path.resolve(process.cwd());
 
@@ -19,17 +20,7 @@ function fail(message) {
 }
 
 function isCoreSelfRepo() {
-  const packageJsonPath = path.join(ROOT_DIR, 'package.json');
-  if (!fs.existsSync(packageJsonPath)) {
-    return false;
-  }
-
-  try {
-    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    return pkg?.name === '@sistemado/frida' && fs.existsSync(path.join(ROOT_DIR, 'contract', 'contract.index.yaml'));
-  } catch {
-    return false;
-  }
+  return hasCoreAuthoringSurface(ROOT_DIR);
 }
 
 function loadContractFromIndex(indexPath) {
@@ -63,7 +54,7 @@ function loadContractFromIndex(indexPath) {
 }
 
 function loadLiveContract() {
-  const explicitContractPath = isCoreSelfRepo() ? 'contract/contract.index.yaml' : undefined;
+  const explicitContractPath = isCoreSelfRepo() ? resolveSourceContractIndexRel(ROOT_DIR) : undefined;
   const loaded = loadEffectiveVisualContractDocument(ROOT_DIR, explicitContractPath);
   const contract = loaded?.parsed;
   if (!contract || typeof contract !== 'object') {

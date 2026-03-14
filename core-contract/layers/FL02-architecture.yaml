@@ -216,7 +216,7 @@ FRIDA_FOUNDATION_PRINCIPLES:
     - id: app_contract_update_interfaces_repo_only
       text: "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC and FRIDA_INTERFACE_UPDATE_APP_BY_CODE apply only in target app repos and may mutate only the target app contract."
     - id: frida_tasks_core_only
-      text: "`frida-tasks/` is a Frida-core-only task surface. `tasks/` is forbidden in the Frida repo, and `frida-tasks/` is forbidden outside the Frida repo."
+      text: "`core-tasks/` is a Frida-core-only task surface. `tasks/` is forbidden in the Frida repo, and `core-tasks/` is forbidden outside the Frida repo."
     - id: zones_public_external_internal_private
       text: "`ZONES` names routing entities outside repo `frida`; private Frida-repo routing entities live only in `INT_FRIDA_ZONES` and MUST NOT be projected into target repos."
     - id: interface_declaration_only

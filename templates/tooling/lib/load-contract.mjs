@@ -103,6 +103,7 @@ function composeAppExtensions(contract) {
 export function loadModularContract(rootDir) {
     const candidates = [
         join(rootDir, '.frida', 'inbox', 'app-contract', 'contract.index.yaml'),
+        join(rootDir, 'core-contract', 'contract.index.yaml'),
         join(rootDir, 'contract', 'contract.index.yaml'),
     ];
     const indexAbsPath = candidates.find((candidate) => existsSync(candidate));

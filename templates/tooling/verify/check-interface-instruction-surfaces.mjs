@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
+import { resolveSourceContractLayerRel } from '../lib/source-contract-paths.mjs';
 
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
 const PACKAGE_ROOT = path.resolve(SCRIPT_DIR, '..', '..', '..');
@@ -101,7 +102,7 @@ function extractInterfaceRefs(raw) {
 }
 
 function buildRequirements(mode) {
-  const management = yaml.parse(readText(path.join(PACKAGE_ROOT, 'contract', 'layers', 'FL11-management.yaml')));
+  const management = yaml.parse(readText(path.join(PACKAGE_ROOT, resolveSourceContractLayerRel('FL11-management.yaml', PACKAGE_ROOT))));
   const interfaces = ['FRIDA_INTERFACE_UPDATE_APP_BY_SPEC', 'FRIDA_INTERFACE_UPDATE_APP_BY_CODE'];
   const perFile = new Map();
 

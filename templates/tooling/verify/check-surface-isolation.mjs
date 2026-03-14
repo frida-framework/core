@@ -2,6 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
+import {
+  resolveSourceBootstrapManifestRel,
+  resolveSourceContractLayerRel,
+} from '../lib/source-contract-paths.mjs';
 
 const ROOT_DIR = process.cwd();
 const failures = [];
@@ -51,24 +55,26 @@ if (sharedLayer?.core?.pathRefs?.templatesFrida || sharedLayer?.core?.pathRefs?.
   fail('templates/template_app_basic/app-contract/layers/AL01-shared.yaml: core.pathRefs must not expose engine template roots');
 }
 
-const managementLayer = readText('contract/layers/FL11-management.yaml');
+const managementLayerPath = resolveSourceContractLayerRel('FL11-management.yaml', ROOT_DIR);
+const managementLayer = readText(managementLayerPath);
 for (const token of ['source_playbook_ref:', 'deployed_playbook_ref:']) {
   if (!managementLayer.includes(token)) {
-    fail(`contract/layers/FL11-management.yaml: missing repo-scoped playbook metadata (${token})`);
+    fail(`${managementLayerPath}: missing repo-scoped playbook metadata (${token})`);
   }
 }
 for (const token of ['AGENT-contract-update.md', 'AGENT-contract-repair.md']) {
   if (managementLayer.includes(token)) {
-    fail(`contract/layers/FL11-management.yaml: legacy shared playbook name must be removed (${token})`);
+    fail(`${managementLayerPath}: legacy shared playbook name must be removed (${token})`);
   }
 }
 for (const token of ['instruction_contract:', 'AGENT-app-contract-update.md', 'AGENT-app-contract-repair.md']) {
   if (!managementLayer.includes(token)) {
-    fail(`contract/layers/FL11-management.yaml: missing interface-instruction contract metadata (${token})`);
+    fail(`${managementLayerPath}: missing interface-instruction contract metadata (${token})`);
   }
 }
 
-const bootstrapManifest = loadYaml('contract/bootstrap-package.manifest.yaml');
+const bootstrapManifestPath = resolveSourceBootstrapManifestRel(ROOT_DIR);
+const bootstrapManifest = loadYaml(bootstrapManifestPath);
 const entries = Array.isArray(bootstrapManifest?.entries) ? bootstrapManifest.entries : [];
 const findEntry = (id) => entries.find((entry) => entry?.id === id);
 const appUpdateEntry = findEntry('playbook_app_contract_update');
@@ -79,29 +85,38 @@ for (const [id, entry, target] of [
   ['playbook_app_contract_repair', appRepairEntry, '.frida/contract/playbooks/AGENT-app-contract-repair.md'],
 ]) {
   if (!entry) {
-    fail(`contract/bootstrap-package.manifest.yaml: missing manifest entry ${id}`);
+    fail(`${bootstrapManifestPath}: missing manifest entry ${id}`);
     continue;
   }
   if (entry.target !== target) {
-    fail(`contract/bootstrap-package.manifest.yaml: ${id} must target ${target}`);
+    fail(`${bootstrapManifestPath}: ${id} must target ${target}`);
   }
   if (entry.ownership_class !== 'user_owned') {
-    fail(`contract/bootstrap-package.manifest.yaml: ${id} must be user_owned`);
+    fail(`${bootstrapManifestPath}: ${id} must be user_owned`);
   }
   if (entry.apply_mode !== 'seed_if_absent') {
-    fail(`contract/bootstrap-package.manifest.yaml: ${id} must use seed_if_absent`);
+    fail(`${bootstrapManifestPath}: ${id} must use seed_if_absent`);
   }
 }
 
 for (const entry of entries) {
   if (typeof entry?.target !== 'string') continue;
   if (entry.target.includes('AGENT-frida-internal-contract-') && !entry.cleanup_only) {
-    fail('contract/bootstrap-package.manifest.yaml: internal Frida playbooks must not be deployed to target repos');
+    fail(`${bootstrapManifestPath}: internal Frida playbooks must not be deployed to target repos`);
   }
   if (entry.target.includes('AGENT-contract-update.md') || entry.target.includes('AGENT-contract-repair.md')) {
     if (!entry.cleanup_only) {
-      fail('contract/bootstrap-package.manifest.yaml: legacy AGENT-contract-* targets must be cleanup-only');
+      fail(`${bootstrapManifestPath}: legacy AGENT-contract-* targets must be cleanup-only`);
     }
+  }
+}
+
+for (const internalPlaybook of [
+  'templates/management/AGENT-frida-internal-contract-update.md',
+  'templates/management/AGENT-frida-internal-contract-repair.md',
+]) {
+  if (fs.existsSync(path.join(ROOT_DIR, internalPlaybook))) {
+    fail(`${internalPlaybook}: internal playbook must live under core-templates/management`);
   }
 }
 

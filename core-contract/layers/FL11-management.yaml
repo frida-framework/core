@@ -1,0 +1,1065 @@
+# ─── FRIDA LAYER FL11: MANAGEMENT ──────────────────────────────────────────
+# Purpose: Interfaces for interacting with the contract — how to read, verify,
+#          and change it. Specs, guards, antitasks, update/verify/taskset protocols.
+#          Also defines version policy for package, contract, and schema.
+
+FRIDA_VERSION_POLICY:
+  _visibility: public
+  id: frida-version-policy
+  version: 1.0.0
+  purpose: "Defines version domains, their sources of truth, and bump rules."
+  domains:
+    package:
+      source_of_truth: package.json → version
+      format: semver
+      bump_rules:
+        major: "Breaking change in public API (exports, CLI arguments, contract-mirror interface)."
+        minor: "New feature, new contract block, new CLI command, non-breaking API addition."
+        patch: "Bug fix, documentation, internal refactor with no API change."
+    contract:
+      source_of_truth: core-contract/contract.index.yaml → version
+      mirror: core-contract/layers/FL01-identity.yaml → CONTRACT_META.version
+      format: semver
+      consistency_rule: "contract.index.yaml version MUST equal CONTRACT_META.version."
+      bump_rules:
+        major: "New required top-level block, removal of existing block, structural incompatibility."
+        minor: "New optional block, new layer, new interface, new guard/invariant."
+        patch: "Wording fix, metadata update, non-structural clarification."
+    schema:
+      source_of_truth: schemas/frida-contract.schema.json → title (version suffix)
+      mirror: core-contract/contract.index.yaml → schema_version
+      mirror_2: core-contract/layers/FL01-identity.yaml → meta.schemaVersion
+      format: "MAJOR.MINOR"
+      consistency_rule: "All three locations MUST declare the same version."
+      bump_rules:
+        major: "New required property, removal of property, type change."
+        minor: "New optional property, relaxed constraint, enum extension."
+  invariants:
+    - id: version.contract_meta_sync
+      text: "CONTRACT_META.version MUST equal contract.index.yaml version at all times."
+    - id: version.schema_sync
+      text: "schema title, schema_version, and meta.schemaVersion MUST be identical."
+    - id: version.bump_on_mutation
+      text: "Any interface that mutates contract or code MUST evaluate version_impact."
+
+FRIDA_GUARD_SPEC:
+  _visibility: private
+  id: frida-guard-spec
+  version: 1.0.0
+  guard_format:
+    required_fields:
+      - id
+      - trigger
+      - action
+      - error_code
+    optional_fields:
+      - text
+      - scope
+  actions:
+    - id: HALT
+    - id: WARN
+  triggers:
+    - id: schema_version_missing
+      text: "schema_version is absent."
+    - id: schema_version_not_supported
+      text: "schema_version differs from supported version."
+    - id: schema_version_mismatch
+      text: "schema_version mismatch across required indexes."
+    - id: unknown_top_level_key
+      text: "Top-level key not allowed by schema."
+    - id: duplicate_layer_id
+      text: "layers[].id duplicates within one index or merged plan."
+    - id: duplicate_layer_path
+      text: "layers[].path duplicates within one index or merged plan."
+    - id: invalid_layer_path
+      text: "layers[].path violates path rules."
+    - id: missing_layer_exports
+      text: "layers[].exports missing."
+    - id: duplicate_export_id
+      text: "exports[].id duplicates across merged exports registry."
+    - id: missing_config_file
+      text: "configFile field is missing."
+    - id: sources_missing
+      text: "CONFIG.sources missing or empty."
+    - id: core_missing
+      text: "No source with id=core."
+    - id: app_missing
+      text: "No source with id=app."
+    - id: duplicate_source_id
+      text: "CONFIG.sources[].id duplicates."
+    - id: duplicate_source_index
+      text: "CONFIG.sources[].index duplicates."
+    - id: invalid_source_index_path
+      text: "CONFIG.sources[].index violates path rules."
+    - id: ref_value_not_string
+      text: "Ref/Refs value is not a string id."
+    - id: ref_target_not_found
+      text: "Ref/Refs target id not found in exports registry."
+    - id: ref_target_ambiguous
+      text: "Ref/Refs resolves to more than one export id."
+    - id: id_contains_profanity
+      text: "id violates neutral naming policy."
+    - id: version_not_semver
+      text: "version is not semver (MAJOR.MINOR.PATCH)."
+    - id: component_boundary_section_missing
+      text: "A required component_* boundary section is missing."
+    - id: component_boundary_ref_unresolved
+      text: "A declared mounted child boundary or continuation/return boundary ref does not resolve."
+    - id: component_output_exit_outcome_missing
+      text: "A component_output_interface exit entry is missing required outcome semantics."
+    - id: component_root_parent_rule_violation
+      text: "A component boundary violates the root/non-root parent_boundaryRef rule."
+    - id: component_mounted_child_duplicate
+      text: "mounted_child_boundaryRefs contains duplicate child boundary declarations."
+    - id: component_mounted_child_self_target
+      text: "mounted_child_boundaryRefs targets the current boundary itself."
+    - id: component_exit_target_matrix_violation
+      text: "A component_output_interface exit entry violates the continue/return/exit target matrix."
+    - id: component_parent_child_inline_violation
+      text: "Parent specification inlines mounted child internals where explicit drill-in is required."
+    - id: component_shared_refs_boundary_override
+      text: "component_shared_refs is used to smuggle ownership, hierarchy, entry, or exit semantics."
+    - id: component_runtime_state_in_authoritative_example
+      text: "Viewer/runtime state appears in an authoritative source-contract example without explicit fixture-only marking."
+    - id: component_ambiguous_child_drill_in
+      text: "Child drill-in declarations are ambiguous, duplicated, or otherwise non-deterministic."
+    - id: component_domain_block_projection_selector_invalid
+      text: "component_domain_blocks projection routing is missing, invalid, or relies on heuristics instead of explicit selectors."
+    - id: component_legacy_term_detected
+      text: "A legacy component-boundary section name appears in an active contract definition."
+    - id: component_namespace_mixed
+      text: "Old and new component-boundary namespaces coexist in an active contract definition."
+    - id: component_visual_semantics_drift
+      text: "Visualization semantics drift from the boundary-first component model."
+    - id: component_service_managed_provider_missing
+      text: "mount_kind=service-managed is declared but service_providerRef is missing."
+    - id: component_service_provider_ref_unresolved
+      text: "service_providerRef does not resolve to a declared application service provider."
+
+FRIDA_INVARIANT_SPEC:
+  _visibility: private
+  id: frida-invariant-spec
+  version: 1.0.0
+  invariant_format:
+    required_fields:
+      - id
+      - text
+    optional_fields:
+      - scope
+      - applies_to
+
+FRIDA_ANTITASK_SPEC:
+  _visibility: private
+  id: frida-antitask-spec
+  version: 1.0.0
+  antitask_term: >-
+    An antitask is any forbidden or disallowed action/pattern that MUST
+    be stopped or redirected.
+  antitask_format:
+    required_fields:
+      - id
+      - pattern
+      - reaction
+    optional_fields:
+      - text
+      - scope
+      - redirect_to
+      - source
+  reactions:
+    - id: HALT
+    - id: REDIRECT
+    - id: WARN
+  sources:
+    - id: contractical_catalog
+      source_ref: "FRIDA_ENFORCEMENT.antitasks"
+    - id: execution_protocol_forbidden_actions
+      source_ref: "FRIDA_AGENT_LIFECYCLE.forbidden_actions_ref"
+    - id: enforcement_guards
+      source_ref: "FRIDA_ENFORCEMENT.guards"
+  antitasks:
+    - id: ANTITASK_edit_contract_files_without_architect_role
+      pattern: "Edit contract files without architect role"
+      reaction: HALT
+    - id: ANTITASK_write_outside_zone_boundaries
+      pattern: "Write outside zone boundaries"
+      reaction: HALT
+    - id: ANTITASK_skip_verification_phase
+      pattern: "Skip verification phase"
+      reaction: HALT
+    - id: ANTITASK_modify_generated_artifacts
+      pattern: "Modify generated artifacts"
+      reaction: REDIRECT
+      redirect_to: "Regenerate via frida-core gen"
+  report_proof:
+    required: true
+    path: "verification.antitask"
+    required_fields:
+      - status
+      - checked_at
+      - summary
+    allowed_status:
+      - PASS
+      - FAIL
+      - SKIP
+
+FRIDA_INTERFACE_VERIFY:
+  _visibility: public
+  id: frida-interface-verify
+  version: 1.0.0
+  purpose: "Validate contract against schema, check ref consistency, report issues."
+  operations:
+    audit:
+      description: "Validate contract against schema and report issues."
+      protocol: "frida-core migration-report"
+    schema_check:
+      description: "Validate assembled contract against frida-contract.schema.json."
+    ref_check:
+      description: "Resolve all Ref/Refs and report broken references."
+    generate:
+      description: "Run full generation pipeline."
+      protocol: "frida-core gen"
+    visual_check:
+      description: "Check visual overlay freshness, boundary-first overlay contract consistency, and strict determinism after volatile-field normalization."
+      protocol: "frida-core visual check"
+    component_boundary_check:
+      description: "Check boundary-first component contract semantics, legacy-term bans, and drill-in/exit enforcement."
+      protocol: "node templates/tooling/verify/check-component-boundary-contract.mjs"
+    quality_check:
+      description: "Compute contract quality metrics per internal self-contract management policy."
+
+FRIDA_INTERFACE_AUDIT:
+  _visibility: public
+  id: frida-interface-audit
+  version: 1.0.0
+  purpose: "Deployment readiness audit: validate contract structure, routing, and Frida surface integrity."
+  playbook_ref: "templates/management/AGENT-repo-audit.md"
+  source_playbook_ref: "templates/management/AGENT-repo-audit.md"
+  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
+  requires_profile_source: repository_scoped_profile_block
+  requires_profiles:
+    frida_repo:
+      - frida_readonly_observer
+    target_app_repo:
+      - app_readonly_observer
+  repository_scoped_surfaces:
+    frida_repo:
+      playbook_ref: "templates/management/AGENT-repo-audit.md"
+      core_contract_ref: "PATHS.contract.coreCanonFile"
+    target_app_repo:
+      playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
+      core_contract_ref: "PATHS.fridaContract.fridaMirrorIndexFile"
+      app_contract_ref: "PATHS.fridaInbox.contractIndexFile"
+  operations:
+    deployment_check:
+      description: "Verify Frida deployment structure (.frida/ layout, markers, config)."
+      steps:
+        - "Resolve repository scope first: `frida_repo` uses core-contract/contract.index.yaml; `target_app_repo` uses .frida/inbox/app-contract/contract.index.yaml plus .frida/contract/frida/contract.index.yaml"
+        - "Validate index against FRIDA_SCHEMA_SUPPORT.schema_version"
+        - "Verify AGENTS.md contract-set completeness"
+    contract_consistency:
+      description: "Check app contract against core contract format invariants."
+      checks:
+        - index_format_symmetric
+        - refs_resolve_via_exports
+        - schema_version_fixed
+    routing_check:
+      description: "Verify AGENTS.md routing chain completeness and correctness."
+      steps:
+        - "Verify root AGENTS.md exists and references correct paths"
+        - "Verify ROUTER.xml exists at .frida/contract/specs/"
+        - "Verify profile XMLs exist at .frida/contract/profiles/"
+        - "Verify zone AGENTS.md files match the repository-scoped zone block (`ZONES` in target repos, private internal-zone block in repo `frida`)."
+        - "In target repos, verify the audit playbook is deployed under `.frida/contract/playbooks/` and no routing surface references undeployed management template paths."
+    cli_diagnostics:
+      description: "Run automated CLI diagnostics."
+      commands:
+        - "frida-core migration-report"
+        - "frida-core check zone --path ."
+        - "frida-core check contract-set"
+  output:
+    format: report
+    includes:
+      - deployment_status
+      - contract_issues
+      - routing_issues
+      - cli_results
+      - readiness_verdict
+  keywords:
+    - audit
+    - deployment
+    - readiness
+    - diagnostics
+    - health-check
+
+FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
+  _visibility: private
+  id: frida-interface-self-contract-management
+  version: 1.0.0
+  purpose: >-
+    Repo-local Frida self-contract management: change protocol language,
+    quality metrics, consistency checks, diagnostic framework,
+    contract fixer role, audit format, and self-task output policy.
+    Source authoring playbooks live in `core-templates/management/` and remain internal to repo `frida`.
+  repository_scope: frida_repo_only
+  mutation_scope: frida_contract_only
+  forbidden_targets:
+    - target_app_contract
+    - target_app_repo_code
+  deployment_scope: not_deployed_to_target_repo
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+    repository_scope: frida_repo_only
+    mutation_scope: frida_contract_only
+    ownership_model: engine_source_only
+    form_policy:
+      exact_markdown_shape: engine_authored
+      normative_authority: interface_semantics_authoritative
+    required_concepts:
+      - frida_contract_only
+      - frida_repo_only
+      - CONTRACT -> ANTITASK -> DEVELOPMENT
+      - contract blocks
+      - PR
+    required_rules_refs:
+      - FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+      - FRIDA_VERSION_POLICY
+      - FRIDA_TEMPLATE_HASH_TOOL
+    required_invariants:
+      - engine_instruction_surfaces_strict
+      - target_delivery_no_internal_authoring_surfaces
+    required_guard_refs: []
+    required_verification:
+      - npm run build
+      - node dist/cli.js check contract-set
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+    forbidden_claims:
+      - "This instruction authorizes mutation of target app contract."
+      - "This instruction authorizes mutation of target app repo code."
+    instruction_surfaces:
+      update:
+        source_playbook_ref: "core-templates/management/AGENT-frida-internal-contract-update.md"
+      repair:
+        source_playbook_ref: "core-templates/management/AGENT-frida-internal-contract-repair.md"
+  task_output_policy:
+    output_dir: "core-tasks"
+    file_pattern: "core-tasks/TASK-*.md"
+    rule: "This is the only interface allowed to produce task files inside the Frida repo."
+
+  contract_composition:
+    purpose: "Contract consists of two groups that must stay synchronized."
+    groups:
+      - id: contracts
+        description: "Normative data (contract blocks)."
+      - id: protocols
+        description: "Rules for working with contract: routing, interfaces, playbooks."
+    rule: "When contracts change, check if protocols need updating, and vice versa."
+
+  change_protocol:
+    purpose: "Normative language for structural contract changes."
+    operations: [ADD, UPDATE, MOVE, DEPRECATE, REFCHECK, GUARDCHECK, PROFILECHECK, FENCECHECK, DUPCHECK, RESERVED_CHECK, CONTRACT-DIFF]
+    playbook_ref: "core-templates/management/AGENT-frida-internal-contract-update.md"
+    source_playbook_ref: "core-templates/management/AGENT-frida-internal-contract-update.md"
+    maintenance_steps:
+      - id: manifest_hash_sync
+        tool_ref: "FRIDA_TEMPLATE_HASH_TOOL"
+        rule: "If a self-contract patch changes any manifest-declared static asset, run the hash tool before final verification."
+      - id: manual_hash_update
+        tool_ref: "FRIDA_TEMPLATE_HASH_TOOL"
+        rule: "The hash tool is verify-only. If it reports drift, update sha256 entries manually in the affected manifest(s) within the same patch."
+
+  quality_metrics:
+    purpose: "Definitions of contract quality measurements."
+    blocking: [NON_ABS, ISSUES, WIKI_LINK_ISSUES, AGENT_DRIFT_ISSUES]
+    issue_components: [PARSE_ERRORS, FENCE_ERRORS, DUP_BLOCKS, UNRESOLVED_REFS, PROFILE_CONFLICTS, ZONE_SCHEMA_ERRORS, BROKEN_NAV_LINKS, AGENT_DRIFT_ISSUES]
+    diagnostic: [DEPRECATED_WITHOUT_REPLACEDBY, DANGLING_REPLACEDBY, TERM_GAPS, REDUNDANT_DESCRIPTIVE, REF_STYLE_MIX, UNUSED_GUARDS, UNUSED_INVARIANTS]
+    quality_gate:
+      rule: "All blocking metrics must equal 0 before finalization."
+
+  consistency_checks:
+    purpose: "Categories of consistency verification."
+    categories: [terms, guards_invariants, profiles, zones, cross_refs, fences, uniqueness, ui_boundaries, component_boundaries, visualization_boundaries]
+    component_boundaries:
+      - id: boundary_sections_complete
+        rule: "Component-level contract files MUST declare all canonical component_* sections defined by component_contract_spec.required_sections."
+      - id: boundary_root_parent_rule
+        rule: "Root boundaries MAY omit parent_boundaryRef; non-root boundaries MUST resolve a valid parent boundary when the model requires parent placement."
+      - id: boundary_host_root_anchor
+        rule: "If local_role=host_root is present, it MUST be unique, MUST omit parent_boundaryRef, and all other boundaries in that baseline MUST resolve upward to it as the single depth=0 anchor."
+      - id: boundary_mounted_child_unique_non_self
+        rule: "mounted_child_boundaryRefs MUST be unique per boundary, MUST NOT target the current boundary, and MUST NOT create ambiguous child drill-in declarations."
+      - id: boundary_refs_resolve
+        rule: "component_mount_point.mounted_child_boundaryRefs and component_output_interface.*boundaryRef targets MUST resolve when declared."
+      - id: boundary_exit_target_matrix
+        rule: "component_output_interface outcome target matrix is strict: continue requires target_boundaryRef, return requires return_target_boundaryRef, exit forbids both."
+      - id: boundary_exit_semantics_complete
+        rule: "component_output_interface exit entries MUST declare id and outcome and remain usable as the canonical source for flow and exit semantics."
+      - id: boundary_domain_block_selector_driven
+        rule: "component_domain_blocks projection eligibility is selector-driven only through explicit projection_domains declarations on top-level child blocks."
+      - id: boundary_namespace_clean
+        rule: "Legacy section names and mixed old/new namespace use are forbidden in active component-boundary definitions."
+      - id: boundary_non_duplication
+        rule: "Parent component contracts MUST NOT inline mounted child internals when drill-in is required, and component_shared_refs MUST remain dependency-only."
+      - id: boundary_runtime_example_clean
+        rule: "Authoritative source-contract examples MUST NOT place viewer/runtime session state in component_input_interface or other general teaching surfaces unless the data is explicitly marked fixture-only."
+    visualization_boundaries:
+      - id: boundary_first_projection
+        rule: "Visualization interprets topology, flow, and specification relative to the current component boundary before using YAML depth."
+      - id: overlay_authority_chain_strict
+        rule: "Authority MUST flow source contract semantics -> FRIDA_VISUAL.component_projection -> FRIDA_VISUAL.overlay_entity_model_v1 -> FRIDA_VISUAL.viewer_runtime_v1, and reference viewer scope MUST remain delivery-only."
+      - id: overlay_entity_inventory_declared
+        rule: "Runtime/viewer may consume only overlay entity families normatively declared in FRIDA_VISUAL.overlay_entity_model_v1."
+      - id: child_drill_in_explicit
+        rule: "Cross-component drill-in MUST use explicit mounted child boundaries from component_mount_point.mounted_child_boundaryRefs."
+      - id: child_non_auto_expand
+        rule: "Parent specification view MUST NOT auto-expand mounted child internals."
+      - id: exit_projection_canonical
+        rule: "Flow projection reads canonical exits, outcomes, and continuation/return targeting only from component_output_interface."
+      - id: typed_relation_precedence
+        rule: "Mounted-child, continuation, and return refs MUST first materialize typed overlay relations and MUST NOT collapse directly into generic edges."
+      - id: domain_block_projection_selector_only
+        rule: "Topology, flow, and specification projection of component_domain_blocks MUST route only through explicit projection_domains selectors on top-level child blocks."
+      - id: domain_block_projection_fallback_strict
+        rule: "A component_domain_blocks child block without projection_domains remains collapsed source detail only and MUST NOT be heuristically promoted into topology, flow, or expanded specification detail."
+      - id: reference_fixture_runtime_leakage_blocked
+        rule: "Optional visualizer/demo state MUST remain fixture-only and MUST NOT appear as normative component_input_interface teaching material."
+      - id: host_anchor_depth_zero
+        rule: "When a host_root boundary is present, viewer/runtime depth is measured from that anchor and MUST NOT become negative."
+      - id: overlay_determinism_strict
+        rule: "Visual overlay output MUST be byte-stable after normalization of explicitly declared volatile fields only."
+    playbook_ref: "core-templates/management/AGENT-frida-internal-contract-update.md"
+    source_playbook_ref: "core-templates/management/AGENT-frida-internal-contract-update.md"
+
+  diagnostic_framework:
+    purpose: "Pattern for contract issue diagnosis and repair."
+    pattern: "symptom -> cause -> algorithm"
+    categories: [missing_artifacts, metadata_mismatch, contract_drift, routing_error, guard_violation, generator_failure]
+    playbook_ref: "core-templates/management/AGENT-frida-internal-contract-repair.md"
+    source_playbook_ref: "core-templates/management/AGENT-frida-internal-contract-repair.md"
+
+  contract_fixer_role:
+    purpose: "Only role with write access to contract blocks."
+    constraint: "Application only via PR and manual workflow."
+
+  audit_format:
+    purpose: "Structure for audit task packs generated per profile."
+    sections: [scope, embedded_contract, checklist, undocumented, scoring, report]
+    scoring_weights:
+      surface: 25
+      invariants: 30
+      guards: 25
+      undocumented: 10
+      reproducibility: 10
+    threshold:
+      pass: 70
+      rule: "Any COMPLIANCE.FAIL -> FAIL regardless of score."
+    finding_tags: [COMPLIANCE.FAIL, COMPLIANCE.PARTIAL, UNVERIFIABLE, CONTRACT.GAP, RISK.NDETERMINISM, RISK.SCOPE]
+    playbook_ref: "templates/management/AGENT-repo-audit.md"
+    source_playbook_ref: "templates/management/AGENT-repo-audit.md"
+    deployed_playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
+
+  component_contract_spec:
+    purpose: "Normative structure for component-level contract files that define component boundary semantics."
+    authoritative_rule: "This block is the authoritative source for component-level contract section names, field requirements, and source-contract semantics. Derived visual semantics are authoritative only through FRIDA_VISUAL.component_projection -> FRIDA_VISUAL.overlay_entity_model_v1 -> FRIDA_VISUAL.viewer_runtime_v1."
+    visual_projection_authorityRef: "FRIDA_VISUAL.component_projection"
+    overlay_entity_model_authorityRef: "FRIDA_VISUAL.overlay_entity_model_v1"
+    viewer_runtime_authorityRef: "FRIDA_VISUAL.viewer_runtime_v1"
+    required_sections:
+      - id: component_hierarchy_position
+        description: >-
+          Topology placement of this component within the component-boundary
+          model: host/page parent, sibling relation, and local nesting. This
+          section MUST describe component placement only; it MUST NOT be read as
+          global hierarchy, file hierarchy, scope hierarchy, or graph hierarchy.
+      - id: component_mount_point
+        description: >-
+          Component entry boundary: slot reference and mount kind
+          (mapper-managed | host-static). This section defines the component
+          contract mount boundary only; it MUST NOT be read as a filesystem
+          mount, a generic runtime mount, or portal semantics outside the
+          component-boundary model. When present,
+          mounted_child_boundaryRefs declare explicit mounted child component
+          boundaries available for boundary-aware drill-in.
+      - id: component_input_interface
+        description: >-
+          Typed inbound contract interface from host/caller into the component
+          boundary. It covers data and state supplied through the component
+          contract, not arbitrary runtime props outside the contract surface.
+      - id: component_output_interface
+        description: >-
+          Typed outbound contract interface from the component boundary to the
+          host/caller. It defines callbacks, emitted events, and canonical
+          exits, and is the canonical source for exit semantics in visualization
+          and flow projection. Exit entries MUST support stable outcome
+          classification and may declare continuation or return targeting.
+      - id: component_domain_blocks
+        description: >-
+          Internal projection content for the component boundary (UI structure,
+          behavior, data schema) used after entry and exit interfaces are
+          defined.
+      - id: component_shared_refs
+        description: >-
+          Refs to shared contract blocks (GLOSSARY, DATABASE_SCHEMA, RESOURCES)
+          for dependency reuse only. These refs MUST NOT override ownership
+          boundaries or duplicate shared source-of-truth content.
+    component_classification:
+      purpose: "Defines what qualifies as a component boundary vs. what remains a domain block or shared ref."
+      boundary_qualifying_criteria:
+        - id: independent_lifecycle
+          rule: >-
+            The entity can be added, removed, or replaced without structurally
+            breaking any other declared component boundary.
+        - id: typed_interface
+          rule: >-
+            The entity has a typed inbound contract interface (data it
+            receives) and a typed outbound contract interface (exits, events,
+            callbacks it produces).
+        - id: mount_surface
+          rule: >-
+            The entity attaches to a declared mount surface — a UI slot, a
+            service endpoint, or a host container — through which it becomes
+            reachable.
+        - id: internal_domain
+          rule: >-
+            The entity contains internal domain blocks (structure, behavior,
+            data schema, algorithms) that are opaque to its parent until
+            explicit drill-in.
+      boundary_disqualifying_criteria:
+        - id: no_independent_lifecycle
+          rule: >-
+            If removing the entity necessarily breaks the internal structure of
+            another boundary, it is a domain block of that boundary, not a
+            separate boundary.
+        - id: pure_data_reference
+          rule: >-
+            If the entity only provides shared data (glossary, schema,
+            resources) consumed by multiple boundaries, it is a shared ref
+            target, not a boundary.
+        - id: internal_substructure_only
+          rule: >-
+            If the entity exists only as nested detail inside another
+            boundary's domain blocks and has no independent mount surface, it
+            remains a domain block.
+        - id: identity_coupling_failure
+          rule: >-
+            If the entity cannot sustain a stable canonical identity across its
+            declaration name, boundary placement, and typed refs, it MUST NOT
+            remain a top-level boundary in active contract data.
+      resolution_rule:
+        rule: >-
+          Classification failures are resolved only by demoting the entity into
+          boundary-local/shared contract data or by splitting it into multiple
+          canonical entities. Exception registries are forbidden.
+      endpoint_validation:
+        purpose: "Endpoints as boundary correctness check."
+        rule: >-
+          A correctly identified component boundary MUST have at least one
+          addressable endpoint — a mount surface through which the boundary is
+          entered. If an entity has no addressable endpoint, it cannot be a
+          component boundary. The endpoint type determines mount_kind.
+        endpoint_types:
+          ui_slot:
+            mount_kind:
+              - mapper-managed
+              - host-static
+            endpoint_example: "DOM element, route slot, portal target"
+          service_endpoint:
+            mount_kind:
+              - service-managed
+            endpoint_example: "Supabase project functions, API gateway route, service mesh endpoint"
+        cross_check_rule: >-
+          If every qualifying criterion is met but no endpoint can be
+          identified, the entity is likely a domain block with misleading
+          independence characteristics, not a true component boundary.
+    section_field_rules:
+      component_hierarchy_position:
+        optional_fields:
+          - parent_boundaryRef
+          - local_role
+        root_parent_rule: "Root boundaries MAY omit parent_boundaryRef."
+        non_root_parent_rule: "Non-root boundaries MUST resolve a valid parent_boundaryRef when the model requires parent placement."
+        host_root_rule: "If local_role=host_root is declared, parent_boundaryRef MUST be absent and the boundary becomes the unique depth=0 anchor for that app baseline."
+      component_mount_point:
+        required_fields:
+          - slotRef
+          - mount_kind
+        optional_fields:
+          - mounted_child_boundaryRefs
+          - service_providerRef
+        allowed_mount_kinds:
+          - mapper-managed
+          - host-static
+          - service-managed
+        mount_kind_semantics:
+          mapper-managed:
+            description: "Component is structurally adapted and mounted into a UI slot by the mapper build pipeline."
+            slotRef_semantics: "References a UI slot defined in PATHS.slots.* or UI_STRUCTURE.*"
+            applicable_to: "Frontend components transformed and injected by the mapper."
+          host-static:
+            description: "Component is statically hosted in a UI container (page, layout) without mapper transformation."
+            slotRef_semantics: "References a host container defined in PATHS.slots.* or UI_STRUCTURE.*"
+            applicable_to: "Pages, layout containers, static host shells."
+          service-managed:
+            description: "Component operates as a backend service boundary, attached to an infrastructure endpoint rather than a UI slot."
+            slotRef_semantics: "References a service endpoint defined in PATHS.services.*, RESOURCES.*, or environment configuration."
+            applicable_to: "Backend pipelines, serverless function groups, service layers, API handler bundles."
+            required_fields:
+              - service_providerRef
+            service_provider_rule: >-
+              When mount_kind=service-managed, service_providerRef MUST resolve
+              to SERVICE_PROVIDERS.* in the application contract.
+            provider_registry_rule: >-
+              SERVICE_PROVIDERS is application-owned. Core MAY require that a
+              referenced provider is declared exactly once and reached only via
+              service_providerRef, but core MUST NOT prescribe provider ids,
+              provider catalogs, or provider-specific semantics.
+        rule: >-
+          mounted_child_boundaryRefs declare explicit mounted child component
+          boundaries. Cross-component drill-in is allowed only through those
+          refs; absent refs mean no child boundary drill-in target is declared
+          at this mount boundary.
+        uniqueness_rule: "mounted_child_boundaryRefs entries MUST be unique within the current boundary."
+        self_target_rule: "mounted_child_boundaryRefs MUST NOT include the current boundary id."
+        ambiguity_rule: "mounted_child_boundaryRefs MUST NOT declare ambiguous child drill-in targets for the same boundary transition."
+        example:
+          mounted_child_boundaryRefs:
+            - "route_details_panel"
+      component_output_interface:
+        required_exit_entry_fields:
+          - id
+          - outcome
+        optional_exit_entry_fields:
+          - target_boundaryRef
+          - return_target_boundaryRef
+        allowed_outcomes:
+          - continue
+          - return
+          - exit
+        outcome_target_rules:
+          continue: "Requires target_boundaryRef and forbids return_target_boundaryRef."
+          return: "Requires return_target_boundaryRef and forbids target_boundaryRef."
+          exit: "Forbids target_boundaryRef and return_target_boundaryRef."
+        rule: >-
+          outcome classifies the canonical exit. target_boundaryRef and
+          return_target_boundaryRef define continuation and return targeting for
+          boundary-aware flow projection when present.
+        target_matrix_rule: "continue requires target_boundaryRef, return requires return_target_boundaryRef, and exit forbids both."
+        example_exit:
+          id: "open_details"
+          outcome: "continue"
+          target_boundaryRef: "route_details_panel"
+      component_domain_blocks:
+        projection_unit: "Top-level child block under component_domain_blocks"
+        optional_block_fields:
+          - projection_domains
+          - fixture_only
+        projection_selector_field: "projection_domains"
+        projection_selector_allowed_values:
+          - topology
+          - flow
+          - specification
+        rule: >-
+          Only top-level child blocks that explicitly declare projection_domains
+          are eligible for individual topology/flow/specification projection.
+          Projection routing MUST NOT guess from block shape, key names, or UI
+          heuristics.
+        fallback_rule: >-
+          A top-level child block without projection_domains remains opaque
+          boundary-local source detail and MUST NOT be promoted into topology,
+          flow, or expanded nested specification detail.
+        nested_rule: >-
+          Nested grandchildren inside component_domain_blocks are not
+          independently projectable. They remain source detail unless a future
+          contract extension declares explicit selectors.
+        fixture_only_rule: >-
+          Viewer/runtime demo state MUST NOT appear in authoritative source
+          examples or ordinary component_input_interface surfaces. If retained
+          for optional visualizer module fixtures or app-baseline demos, it
+          MUST live only inside component_domain_blocks child blocks marked
+          fixture_only: true.
+        example:
+          summary_stack:
+            projection_domains:
+              - specification
+            purpose: "Boundary-local source detail projected explicitly into specification."
+      component_shared_refs:
+        optional_fields:
+          - refs
+        rule: >-
+          Dependency projection reads shared targets from refs and any nested
+          *Ref/*Refs leaves under component_shared_refs only as shared
+          dependencies. component_shared_refs MUST NOT target component
+          boundaries or smuggle ownership, hierarchy, entry, exit, or mount
+          semantics.
+    example_component_contract:
+      note: "Illustrative source-contract snippet. Visual projection is derived by FRIDA_VISUAL.component_projection."
+      component_hierarchy_position:
+        parent_boundaryRef: "dashboard_root"
+        local_role: "screen_fragment"
+      component_mount_point:
+        slotRef: "example_ui.dashboard.root.summary_slot"
+        mount_kind: "mapper-managed"
+        mounted_child_boundaryRefs:
+          - "route_details_panel"
+      component_input_interface:
+        selected_route_id: "string"
+        selected_day: "date"
+      component_output_interface:
+        exits:
+          - id: "open_details"
+            outcome: "continue"
+            target_boundaryRef: "route_details_panel"
+          - id: "return_to_dashboard"
+            outcome: "return"
+            return_target_boundaryRef: "dashboard_root"
+      component_domain_blocks:
+        layout_anchor:
+          projection_domains:
+            - topology
+          purpose: "Explicit topology-visible domain block for local layout anchoring."
+        route_resolution:
+          projection_domains:
+            - flow
+          purpose: "Explicit flow-visible domain block for continuation evaluation."
+        summary_stack:
+          projection_domains:
+            - specification
+          purpose: "Explicit specification-visible domain block for local detail."
+      component_shared_refs:
+        refs:
+          - "GLOSSARY.route"
+          - "RESOURCES.maps_api"
+    service_managed_example:
+      component_hierarchy_position:
+        parent_boundaryRef: "example_app_host_root"
+        local_role: "service_backend"
+      component_mount_point:
+        slotRef: "example_resources.supabase.project_endpoint"
+        mount_kind: "service-managed"
+        service_providerRef: "example_service_providers.supabase_main"
+      component_input_interface:
+        route_id: "string (UUID)"
+        skeleton_raw: "object"
+      component_output_interface:
+        exits:
+          - id: "pipeline_complete"
+            outcome: "exit"
+          - id: "pipeline_error"
+            outcome: "exit"
+      component_domain_blocks:
+        route_generation:
+          projection_domains:
+            - flow
+          purpose: "Route generation pipeline stages"
+      component_shared_refs:
+        refs:
+          - "DATABASE_SCHEMA.routes"
+          - "RESOURCES.mapboxDirections"
+          - "GLOSSARY.skeleton"
+    consistency_rule: >-
+      Component contract files MUST use only the canonical section ids listed
+      here. Legacy aliases are forbidden unless an explicit versioned migration
+      block declares a temporary deprecation window.
+    authoritative_example_rule: >-
+      Authoritative source-contract examples MUST stay runtime-free. Viewer or
+      session demo inputs are allowed only in explicit fixture-only reference
+      surfaces and MUST NOT be taught as general component_input_interface
+      semantics.
+    constraint: >-
+      Total file size MUST fit in agent context window for task formulation.
+      Required sections are interpreted by component boundary semantics first;
+      YAML depth and incidental key order are secondary.
+
+FRIDA_INTERFACE_UPDATE_APP_BY_SPEC:
+  _visibility: public
+  id: frida-interface-update-app-by-spec
+  version: 1.0.0
+  purpose: "Extend or modify the target application contract based on specification / task description, using only baseline template semantics and already-designed app extensions."
+  repository_scope: target_app_repo_only
+  mutation_scope: target_app_contract_only
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - frida_tasks_directory
+  deployment_scope: public
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+    repository_scope: target_app_repo_only
+    mutation_scope: target_app_contract_only
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - target_app_contract_only
+      - interface-scoped contract editor profile
+      - shipped but inactive extension
+      - requires_new_frida_extension
+      - FRIDA_VERSION_POLICY
+      - frida-core check contract-set
+    required_rules_refs:
+      - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+      - FRIDA_VERSION_POLICY
+    required_invariants:
+      - app_update_interfaces_non_inventive
+      - interface_instruction_surfaces_seed_then_user_owned
+      - target_delivery_no_internal_authoring_surfaces
+    required_guard_refs: []
+    required_verification:
+      - frida-core check contract-set
+      - frida-core check zone --path .frida/inbox/app-contract
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - "This instruction authorizes mutation of the Frida core contract."
+      - "This instruction authorizes changes under templates/management."
+    baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    authoring_surface:
+      source_of_truth: ".frida/inbox/app-contract/**"
+      read_context:
+        - ".frida/**"
+      edit_scope:
+        - ".frida/inbox/app-contract/**"
+        - ".temp/**"
+      derived_mirror: ".frida/contract/app/**"
+      required_profile_id: app_contract_editor
+    instruction_surfaces:
+      update:
+        source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-update.md"
+      repair:
+        source_playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+  input:
+    format: natural_language
+    context:
+      - current_app_contract
+      - target_block
+      - schema_ref
+  output:
+    format: yaml
+    requires_approval: true
+  extension_resolution:
+    source_of_truth: "target app contract index links plus Frida-shipped extension layers"
+    known_inactive_extension:
+      action: HALT
+      rule: "If the requested capability is covered by a shipped but inactive extension, do not invent its structure. Return the exact extension ids and layer links required for activation."
+    unknown_extension_need:
+      action: HALT
+      error_code: requires_new_frida_extension
+      rule: "If no shipped extension covers the requested capability or implementation, stop instead of synthesizing new backend/vendor structures."
+    invention_forbidden:
+      - vendor_specific_zones
+      - vendor_specific_profiles
+      - backend_path_models
+      - implementation_specific_tooling_bindings
+  version_impact:
+    evaluate: always
+    rule: "After applying changes, determine affected version domains (contract, schema, package) and bump per FRIDA_VERSION_POLICY."
+    ref: FRIDA_VERSION_POLICY
+  protocols:
+    update:
+      description: "Apply changes to the target app contract via structured patch."
+      playbook_ref: "templates/management/AGENT-app-contract-update.md"
+      source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
+      deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-update.md"
+      requires_role: ARCHITECT_AGENT
+    repair:
+      description: "Fix target app contract inconsistencies (broken refs, missing blocks)."
+      playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+      source_playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+      deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+      requires_role: ARCHITECT_AGENT
+
+FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
+  _visibility: public
+  id: frida-interface-update-app-by-code
+  version: 1.0.0
+  purpose: "Extend or repair the target application contract from implemented target application code when code outpaces contract, using only baseline template semantics and already-designed app extensions."
+  repository_scope: target_app_repo_only
+  mutation_scope: target_app_contract_only
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - frida_tasks_directory
+  deployment_scope: public
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+    repository_scope: target_app_repo_only
+    mutation_scope: target_app_contract_only
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - target_app_contract_only
+      - interface-scoped contract editor profile
+      - shipped but inactive extension
+      - requires_new_frida_extension
+      - FRIDA_VERSION_POLICY
+      - frida-core check contract-set
+    required_rules_refs:
+      - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      - FRIDA_VERSION_POLICY
+    required_invariants:
+      - app_update_interfaces_non_inventive
+      - interface_instruction_surfaces_seed_then_user_owned
+      - target_delivery_no_internal_authoring_surfaces
+    required_guard_refs: []
+    required_verification:
+      - frida-core check contract-set
+      - frida-core check zone --path .frida/inbox/app-contract
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - "This instruction authorizes mutation of the Frida core contract."
+      - "This instruction authorizes changes under templates/management."
+    baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    authoring_surface:
+      source_of_truth: ".frida/inbox/app-contract/**"
+      read_context:
+        - ".frida/**"
+      edit_scope:
+        - ".frida/inbox/app-contract/**"
+        - ".temp/**"
+      derived_mirror: ".frida/contract/app/**"
+      required_profile_id: app_contract_editor
+    instruction_surfaces:
+      update:
+        source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-update.md"
+      repair:
+        source_playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+  input:
+    format: source_code
+    supported_languages:
+      - TypeScript
+      - JavaScript
+      - HTML
+      - CSS
+  output:
+    format: yaml
+    requires_approval: true
+  extension_resolution:
+    source_of_truth: "target app contract index links plus Frida-shipped extension layers"
+    known_inactive_extension:
+      action: HALT
+      rule: "If code implies a shipped but inactive extension, stop and require explicit extension activation instead of inventing a parallel contract structure."
+    unknown_extension_need:
+      action: HALT
+      error_code: requires_new_frida_extension
+      rule: "If code implies a capability with no shipped extension, stop and escalate to Frida self-contract management."
+    invention_forbidden:
+      - vendor_specific_zones
+      - vendor_specific_profiles
+      - backend_path_models
+      - implementation_specific_tooling_bindings
+  version_impact:
+    evaluate: always
+    rule: "After extracting app contract from code, compare with declared app contract. If new blocks/fields added, bump contract version per FRIDA_VERSION_POLICY."
+    ref: FRIDA_VERSION_POLICY
+  use_cases:
+    - "Onboard existing project to Frida."
+    - "Background consistency loop: re-extract app contract from code, diff against declared app contract."
+  protocols:
+    update:
+      description: "Bring the target app contract in sync with implemented code while staying inside shipped Frida semantics."
+      playbook_ref: "templates/management/AGENT-app-contract-update.md"
+      source_playbook_ref: "templates/management/AGENT-app-contract-update.md"
+      deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-update.md"
+      requires_role: ARCHITECT_AGENT
+    repair:
+      description: "Fix target app contract inconsistencies found during code-to-contract extraction."
+      playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+      source_playbook_ref: "templates/management/AGENT-app-contract-repair.md"
+      deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+      requires_role: ARCHITECT_AGENT
+
+FRIDA_INTERFACE_TASKSET:
+  _visibility: public
+  id: frida-interface-taskset
+  version: 1.0.0
+  purpose: "Prepare self-contained task packs from contract for agent execution."
+  playbook_ref: "templates/management/AGENT-task-formulation.md"
+  source_playbook_ref: "templates/management/AGENT-task-formulation.md"
+  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-formulation.md"
+  task_pack_definition:
+    term: >-
+      A Task Pack is a self-contained instruction set for an agent-developer.
+      It transfers contract requirements into an actionable scope without
+      requiring the agent to interpret the wiki or contract directly.
+    principle: "CONTRACT → ANTITASK → DEVELOPMENT"
+    required_fields:
+      - action: "What to do — concrete, unambiguous."
+      - files: "Paths or zones affected."
+      - interface_ref: "Source interface that authorizes the task output."
+      - profile_id: "Id from the repository-scoped profile block."
+      - contract_requirements: "Guards/invariants/terms embedded explicitly."
+      - verification_command: "Usually 'npm run verify', may differ by zone."
+    optional_fields:
+      - specific_invariants: "Task-specific invariant checks."
+    forbidden: "Referencing wiki or contract by link instead of embedding requirements."
+  output_bindings:
+    frida_core:
+      interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+      repository_scope: frida_repo_only
+      file_pattern: "core-tasks/TASK-*.md"
+      rule: "This is the only allowed task output surface inside the Frida repo."
+    target_app:
+      interface_refs:
+        - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+        - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      repository_scope: target_app_repo_only
+      frida_repo_output: forbidden
+  readiness_checklist:
+    contract_ready:
+      - "Feature described in the appropriate contract:* block."
+      - "All terms used in the task defined in contract:GLOSSARY."
+    frida_ready:
+      - "Zone for target files exists in the repository-scoped zone block (`ZONES` in target repos, private internal-zone block in repo `frida`)."
+      - "Antitask generated after last contract update."
+      - "Repository-scoped profile covers target paths via edit_allow/edit_allowGlobRefs."
+      - "Profile invariants are current for the task."
+    version_check:
+      - "Contract version matches CONTRACT_META.version (FRIDA_VERSION_POLICY.invariants.version.contract_meta_sync)."
+      - "Schema version consistent across all sources (FRIDA_VERSION_POLICY.invariants.version.schema_sync)."
+    scope_check:
+      - "Task does not add functionality beyond what is described in contract."
+      - "If new functionality needed — update contract first."
+      - "If task semantics require a shipped but inactive app extension, task formulation MUST HALT and require explicit extension activation."
+      - "Task output path matches the repository scope of interface_ref."
+  audit_task_format:
+    playbook_ref: "templates/management/AGENT-repo-audit.md"
+    source_playbook_ref: "templates/management/AGENT-repo-audit.md"
+    deployed_playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
+    determinism:
+      - "Profiles sorted by name."
+      - "Invariants within task sorted by id."
+      - "Guards within task sorted by id."
+      - "Zones within task sorted by zone name."
+  halt_conditions:
+    - "Contract does not describe the feature being tasked."
+    - "Zone or profile does not cover target files."
+    - "Antitask not regenerated after last contract update."
+    - "Task requires agent to write outside edit_allowGlobRefs."
+
+

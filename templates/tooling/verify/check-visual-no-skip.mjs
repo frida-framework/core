@@ -4,6 +4,7 @@ import {
   extractVisualSchemaOverlay,
   loadEffectiveVisualContractDocument,
 } from '../lib/visual-schema-extractor.mjs';
+import { PUBLIC_CONTRACT_INDEX_REL } from '../lib/source-contract-paths.mjs';
 
 const ROOT_DIR = path.resolve(process.cwd());
 
@@ -40,8 +41,8 @@ function main() {
   try {
     extractVisualSchemaOverlay({}, '{}', {
       generatedAt: '1970-01-01T00:00:00.000Z',
-      sourcePath: 'contract/contract.index.yaml',
-      contractPath: path.join(ROOT_DIR, 'contract', 'contract.index.yaml'),
+      sourcePath: PUBLIC_CONTRACT_INDEX_REL,
+      contractPath: path.join(ROOT_DIR, PUBLIC_CONTRACT_INDEX_REL),
     });
   } catch {
     failedHard = true;

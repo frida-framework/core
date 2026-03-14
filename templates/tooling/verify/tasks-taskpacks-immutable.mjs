@@ -2,8 +2,8 @@
 /**
  * Enforce immutability of repo-scoped TASK-*.md files.
  *
- * In repo `frida`, only frida-tasks/TASK-*.md is allowed and tasks/ is forbidden.
- * Outside repo `frida`, only tasks/TASK-*.md is allowed and frida-tasks/ is forbidden.
+ * In repo `frida`, only core-tasks/TASK-*.md is allowed and tasks/ is forbidden.
+ * Outside repo `frida`, only tasks/TASK-*.md is allowed and core-tasks/ is forbidden.
  *
  * This script fails if any existing file matching the repo task surface is
  * modified or deleted.
@@ -23,21 +23,22 @@
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { FRIDA_PACKAGE_NAME } from '@sistemado/frida';
+import { CORE_CONTRACT_INDEX_REL } from '../lib/source-contract-paths.mjs';
 
 const BASE_REF = process.env.BASE_REF || 'origin/main...HEAD';
 
 function isFridaSelfRepo() {
   try {
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
-    return packageJson?.name === FRIDA_PACKAGE_NAME && existsSync('contract/contract.index.yaml');
+    return packageJson?.name === FRIDA_PACKAGE_NAME && existsSync(CORE_CONTRACT_INDEX_REL);
   } catch {
     return false;
   }
 }
 
 const SELF_REPO = isFridaSelfRepo();
-const TASKS_DIR = SELF_REPO ? 'frida-tasks' : 'tasks';
-const FORBIDDEN_DIR = SELF_REPO ? 'tasks' : 'frida-tasks';
+const TASKS_DIR = SELF_REPO ? 'core-tasks' : 'tasks';
+const FORBIDDEN_DIR = SELF_REPO ? 'tasks' : 'core-tasks';
 const TASK_FILE_PATTERN = new RegExp(`^${TASKS_DIR}\\/.*\\/TASK-.*\\.md$`);
 const TASK_FILE_ROOT_PATTERN = new RegExp(`^${TASKS_DIR}\\/TASK-.*\\.md$`);
 

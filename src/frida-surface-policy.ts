@@ -7,14 +7,17 @@ export const DEPLOYED_MANAGEMENT_PLAYBOOK_PREFIX = '.frida/contract/playbooks/';
 export const PROJECTED_INTERNAL_ONLY_KEYS = ['source_playbook_ref'] as const;
 
 export const PROJECTED_SOURCE_ONLY_PREFIXES = [
+  'core-contract/',
+  'core-templates/management/',
+  'core-tasks/',
   SOURCE_MANAGEMENT_PLAYBOOK_PREFIX,
   'templates/frida/',
   'templates/docs-gen/',
   'templates/template_app_basic/',
-  'frida-tasks/',
 ] as const;
 
 export const PROJECTED_STRING_REPLACEMENTS: ReadonlyArray<readonly [string, string]> = [
+  ['core-contract/', 'contract/'],
   ['.frida/templates/management/', 'undeployed management template paths'],
   ['INT_FRIDA_ZONES', 'the private internal zone block'],
   ['FRIDA_INT_AGENT_ROUTING', 'private self-routing metadata'],

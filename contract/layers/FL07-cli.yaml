@@ -1,82 +1,54 @@
-# ─── FRIDA LAYER FL07: CLI & INTEGRITY ───────────────────────────────────────
-
 FRIDA_TEMPLATE_INTEGRITY:
-  _visibility: public
   id: frida-template-integrity
   version: 1.0.0
   hash_algorithm: sha256
   manifest_format: yaml
-  manifest_path: "contract/template-integrity.manifest.yaml"
-  manifest_schema: "schemas/template-integrity.schema.json"
-  template_source_dir: "templates/"
+  manifest_path: contract/template-integrity.manifest.yaml
+  manifest_schema: schemas/template-integrity.schema.json
+  template_source_dir: templates/
   checks:
     - id: hash_match
-      rule: "Hash of template file content MUST match manifest entry."
+      rule: Hash of template file content MUST match manifest entry.
       on_failure: fail_hard
   enforcement:
     kind: nail
-    check_command: "frida-core check-templates"
+    check_command: frida-core check-templates
     exit_code_on_drift: 1
-
-FRIDA_TEMPLATE_HASH_TOOL:
-  _visibility: private
-  id: frida-template-hash-tool
-  version: 1.0.0
-  repository_scope: frida_repo_only
-  purpose: "Repo-local maintenance tool for checking manifest-declared template hashes."
-  invocation:
-    command: "frida-core hash"
-    default_manifest: "contract/template-integrity.manifest.yaml"
-    flags:
-      - "--manifest <path>"
-      - "--contract <path>"
-  behavior:
-    mode: verify_only
-    manifest_rewrite_support: false
-    bootstrap_package_manifest_support: false
-    checks:
-      - "Validate the target manifest against its schema."
-      - "Compare declared sha256 values against current file contents."
-      - "Return non-zero when files are missing or hashes differ."
-  followup_rule:
-    on_mismatch: "Update sha256 values manually in the affected manifest and rerun the tool."
-    note: "This tool does not regenerate `contract/template-integrity.manifest.yaml` and does not rewrite `contract/bootstrap-package.manifest.yaml`."
-
 FRIDA_CLI:
-  _visibility: public
   id: frida-cli
   version: 1.0.0
-  binary: "frida-core"
+  binary: frida-core
   commands:
     build:
-      purpose: "Assemble contract from sources."
-      description: "Assemble contract from sources."
+      purpose: Assemble contract from sources.
+      description: Assemble contract from sources.
       flags:
-        - "--public"
-        - "--strict"
+        - --public
+        - --strict
     gen:
-      purpose: "Run full generation pipeline."
-      description: "Run full generation pipeline."
+      purpose: Run full generation pipeline.
+      description: Run full generation pipeline.
     check_templates:
-      purpose: "Verify template integrity (hash drift)."
-      description: "Verify template integrity (hash drift)."
+      purpose: Verify template integrity (hash drift).
+      description: Verify template integrity (hash drift).
     migration_report:
-      purpose: "Generate migration report."
-      description: "Generate migration report."
+      purpose: Generate migration report.
+      description: Generate migration report.
     bootstrap:
-      purpose: "Warm-first reconcile of Frida-managed surfaces with explicit cold-engine and demo modes."
-      description: "Manual-only bootstrap/reconcile command. Default mode is warm; demo seeding is explicit-only; app-side post-generation reads contract from `.frida/inbox/app-contract/**` only."
+      purpose: Warm-first reconcile of Frida-managed surfaces with explicit cold-engine and demo modes.
+      description: Manual-only bootstrap/reconcile command. Default mode is warm; demo seeding is explicit-only; app-side
+        post-generation reads contract from `.frida/inbox/app-contract/**` only.
       flags:
-        - "--target <dir>"
-        - "--mode <warm|cold-engine|demo>"
-        - "--component <name>"
-        - "--dry-run"
+        - --target <dir>
+        - --mode <warm|cold-engine|demo>
+        - --component <name>
+        - --dry-run
     visual:
       subcommands:
         build:
-          description: "Build visual overlay from contract."
+          description: Build visual overlay from contract.
         check:
-          description: "Validate visual overlay freshness."
+          description: Validate visual overlay freshness.
   command_separation:
     core_commands:
       - build
@@ -89,25 +61,24 @@ FRIDA_CLI:
     manual_only_commands:
       - bootstrap
     auto_invocation_forbidden:
-      - "bootstrap MUST NOT be called transitively by build/gen/init/check/visual/report/migration-report."
+      - bootstrap MUST NOT be called transitively by build/gen/init/check/visual/report/migration-report.
   exit_codes:
-    0: "Success."
-    1: "Failure."
-  determinism: "All commands MUST produce deterministic output for identical input."
+    "0": Success.
+    "1": Failure.
+  determinism: All commands MUST produce deterministic output for identical input.
   integration:
     rules:
-      - "Template generation relies on Handlebars engine only."
-      - "Contract YAML uses js-yaml compatible parsing."
-      - "Output file encoding is always UTF-8."
-      - "No shell commands in templates."
-      - "Template partials MUST be registered before rendering."
-      - "Adapter functions receive resolved selector data and contract context."
+      - Template generation relies on Handlebars engine only.
+      - Contract YAML uses js-yaml compatible parsing.
+      - Output file encoding is always UTF-8.
+      - No shell commands in templates.
+      - Template partials MUST be registered before rendering.
+      - Adapter functions receive resolved selector data and contract context.
     adapter_contract:
-      description: "All custom generation adapters MUST implement FridaAdapter interface."
+      description: All custom generation adapters MUST implement FridaAdapter interface.
       interface:
         name: FridaAdapter
         methods:
           - "selectors(): SelectorDef[]"
           - "generate(context: GeneratorContext): void"
           - "guards?(): Guard[]"
-

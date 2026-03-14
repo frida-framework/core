@@ -1,86 +1,51 @@
-# ─── FRIDA LAYER FL08: BUILDTIME ─────────────────────────────────────────────
-# Purpose: Build-time mechanisms — how contract data is transformed into
-#          application artifacts (agent context, component surgery).
-
 FRIDA_GENERATOR:
-  _visibility: public
   id: frida-generator
   version: 1.0.0
-  purpose: "Generate agent context artifacts (AGENTS.md, profiles, policy docs) from contract."
-  command: "frida-core gen"
+  purpose: Generate agent context artifacts (AGENTS.md, profiles, policy docs) from contract.
+  command: frida-core gen
   inputs:
-    - "Assembled contract (engine + app merged)."
-    - "Handlebars templates from FRIDA_TEMPLATE_INTEGRITY."
+    - Assembled contract (engine + app merged).
+    - Handlebars templates from FRIDA_TEMPLATE_INTEGRITY.
   outputs:
-    bootloader: "AGENTS.md — root agent entry point."
-    router: "Profile router (maps keywords → profile files)."
-    profiles: "Per-agent permission and constraint files."
-    zone_agents: "Zone-specific AGENTS.md files."
-    policy_docs: "Human-readable policy documentation."
+    bootloader: AGENTS.md — root agent entry point.
+    router: Profile router (maps keywords → profile files).
+    profiles: Per-agent permission and constraint files.
+    zone_agents: Zone-specific AGENTS.md files.
+    policy_docs: Human-readable policy documentation.
   algorithm:
     - step: LOAD
-      action: "Read assembled contract, validate required blocks."
+      action: Read assembled contract, validate required blocks.
     - step: NORMALIZE
-      action: "Apply path normalization (aliases, deprecated names)."
+      action: Apply path normalization (aliases, deprecated names).
     - step: RESOLVE
-      action: "Expand invariant/guard references in profiles."
+      action: Expand invariant/guard references in profiles.
     - step: GENERATE
-      action: "Apply Handlebars templates in dependency order."
+      action: Apply Handlebars templates in dependency order.
     - step: WRITE
-      action: "Atomic writes with AUTO-GENERATED header."
-  note: >-
-    Detailed generator spec (classes, functions, main_sequence, handlebars_helpers)
-    belongs in the app contract annex as an implementation reference.
-
-FRIDA_CONTRACT_VALIDATOR:
-  _visibility: public
-  id: frida-contract-validator
-  version: 1.0.0
-  purpose: "Version-bound validator for schema-native Frida contracts."
-  command: "frida-core validate"
-  principles:
-    - "Validator coverage MUST track all known positive correctness signs and their negative counterparts."
-    - "If a correctness rule can be expressed in schema, it SHOULD live in schema and remain duplicated in validator only when better diagnostics are needed."
-    - "A FRIDA version X application contract for FRIDA version X MUST be green in validator X."
-    - "If validator X is not green for a contract intended for version X, investigation MUST cover the contract, the validator, and the schema together."
-    - "Core MUST validate service_providerRef structurally, but MUST NOT hardcode an engine-owned catalog of service providers."
-  required_checks:
-    - "schema validity for current core version"
-    - "declared index blocks assemble into real blocks"
-    - "typed contract refs resolve"
-    - "service_providerRef points to exactly one app-declared SERVICE_PROVIDERS entry"
-  delivery_rule: >-
-    Deployed validator scripts in target repositories MUST delegate to the
-    version-matched validator shipped by the installed @sistemado/frida
-    package rather than carrying a divergent local ruleset.
-
+      action: Atomic writes with AUTO-GENERATED header.
+  note: Detailed generator spec (classes, functions, main_sequence, handlebars_helpers) belongs in the app contract annex
+    as an implementation reference.
 FRIDA_MAPPER_MODEL:
-  _visibility: public
   id: frida-mapper-model
   version: 1.0.0
-  purpose: "Engine-level description of the Mapper mechanism for component surgery."
-  concept: >-
-    Mapper is a build-time transformation pipeline that takes external source
-    components and adapts them for the target application. It operates through
-    surgeon scripts (structural changes) and styler scripts (visual changes).
+  purpose: Engine-level description of the Mapper mechanism for component surgery.
+  concept: Mapper is a build-time transformation pipeline that takes external source components and adapts them for the
+    target application. It operates through surgeon scripts (structural changes) and styler scripts (visual changes).
   principles:
-    - "Source components are read-only. Mapper writes to output slots."
-    - "Surgeon scripts handle structural changes (imports, exports, props, state)."
-    - "Styler scripts handle visual changes (CSS, layout adaptation)."
+    - Source components are read-only. Mapper writes to output slots.
+    - Surgeon scripts handle structural changes (imports, exports, props, state).
+    - Styler scripts handle visual changes (CSS, layout adaptation).
     - "Output is idempotent: same input → same output."
-    - "Forbidden tokens (mock data, direct API imports) must be stripped."
+    - Forbidden tokens (mock data, direct API imports) must be stripped.
   component_contract:
     required_fields:
-      - sourceRef: "Input component path (from external source)."
-      - outputRef: "Output mount path in the application."
-      - exportName: "Named export from the processed component."
+      - sourceRef: Input component path (from external source).
+      - outputRef: Output mount path in the application.
+      - exportName: Named export from the processed component.
     optional_fields:
-      - styleRef: "Separate style source if not co-located."
-      - slotRef: "Target slot file where component is mounted."
+      - styleRef: Separate style source if not co-located.
+      - slotRef: Target slot file where component is mounted.
     surgery_spec:
-      forbidden: "List of mock data, imports, and state to strip."
-      required: "List of required props and exports after surgery."
-  note: >-
-    Concrete mapper configuration (components, forbidden/required lists)
-    belongs in the app contract, not engine.
-
+      forbidden: List of mock data, imports, and state to strip.
+      required: List of required props and exports after surgery.
+  note: Concrete mapper configuration (components, forbidden/required lists) belongs in the app contract, not engine.

@@ -23,9 +23,6 @@ PATHS:
         irFile: .frida/contract/artifacts/frida.ir.json
         permissionsFile: .frida/contract/artifacts/frida.permissions.json
         graphFile: .frida/contract/artifacts/frida.graph.mmd
-      visual:
-        rootDir: .frida/contract/visual
-        overlayFile: .frida/contract/visual/canon-overlay.json
     inbox:
       rootDir: .frida/inbox
       appContractDir: .frida/inbox/app-contract

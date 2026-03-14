@@ -320,6 +320,10 @@ function resolveContractPathString(contract: Contract, ref: string | string[], f
     return fallback;
 }
 
+function resolveArtifactFilePath(contract: Contract, refs: string[], fallbackPath: string): string {
+    return fromRepoRoot(resolveContractPathString(contract, refs, fallbackPath));
+}
+
 function emitCanonicalMirrors(contract: Contract, runtimePaths: GeneratorRuntimePaths): void {
     // Root AGENTS.md remains the human/agent entrypoint. This internal mirror is engine-managed canonical state.
     const fridaContractBootloaderPath = fromRepoRoot(
@@ -1877,16 +1881,33 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
 
     // Build and emit machine-readable IR artifacts to canonical `.frida/contract/artifacts` (via PATHS).
     console.log('\n📋 Generating internal IR artifacts...\n');
-    const fridaPaths = contract.PATHS?.frida;
-    const irPath = fridaPaths?.ir
-        ? fromRepoRoot(fridaPaths.ir)
-        : path.join(runtimePaths.fridaInternalDir, 'frida.ir.json');
-    const permissionsPath = fridaPaths?.permissions
-        ? fromRepoRoot(fridaPaths.permissions)
-        : path.join(runtimePaths.fridaInternalDir, 'frida.permissions.json');
-    const graphPath = fridaPaths?.graph
-        ? fromRepoRoot(fridaPaths.graph)
-        : path.join(runtimePaths.fridaInternalDir, 'frida.graph.mmd');
+    const irPath = resolveArtifactFilePath(
+        contract,
+        [
+            'PATHS.frida.contract.artifacts.irFile',
+            'PATHS.fridaContract.irFile',
+            'PATHS.frida.ir',
+        ],
+        path.relative(ROOT_DIR, path.join(runtimePaths.fridaInternalDir, 'frida.ir.json'))
+    );
+    const permissionsPath = resolveArtifactFilePath(
+        contract,
+        [
+            'PATHS.frida.contract.artifacts.permissionsFile',
+            'PATHS.fridaContract.permissionsFile',
+            'PATHS.frida.permissions',
+        ],
+        path.relative(ROOT_DIR, path.join(runtimePaths.fridaInternalDir, 'frida.permissions.json'))
+    );
+    const graphPath = resolveArtifactFilePath(
+        contract,
+        [
+            'PATHS.frida.contract.artifacts.graphFile',
+            'PATHS.fridaContract.graphFile',
+            'PATHS.frida.graph',
+        ],
+        path.relative(ROOT_DIR, path.join(runtimePaths.fridaInternalDir, 'frida.graph.mmd'))
+    );
     const ir = buildFridaIR(contract, contractRaw, zones, profiles, normalizer, effectiveGuards);
     emitMachineReadableExports(ir, zones, profiles, irPath, permissionsPath, graphPath);
 

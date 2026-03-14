@@ -1,7 +1,18 @@
-# TASK-001: Extend Component Boundary Model with `service-managed` Mount Kind
-
-interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+---
+id: 001-extend-boundary-model-service-managed
+status: OPEN
 profile_id: frida_governance
+interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+title: Extend component boundary model with service-managed mount kind
+summary: Add a service-managed mount kind and the missing classification/guard semantics needed for backend-style component boundaries.
+acceptance_criteria:
+  - FL11 defines boundary classification criteria and a service-managed mount kind with endpoint semantics.
+  - Guard and validation surfaces cover service-managed mount metadata and endpoint/provider validation.
+  - FL10 and runtime-facing constants accept service-managed boundaries without UI-slot assumptions.
+verification_cmd: npm run build && node dist/cli.js check contract-set
+---
+
+# TASK-001: Extend Component Boundary Model with `service-managed` Mount Kind
 
 ## Background
 

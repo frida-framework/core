@@ -1,0 +1,765 @@
+# ─── FRIDA LAYER FL04: CORE-CONFIGURATION ───────────────────────────────────
+# Purpose: Single core-configuration layer for engine contract configuration details.
+# All concrete settings live here; other contract layers should use dry references only.
+
+PATHS:
+  _visibility: public
+  id: frida-paths
+  version: 1.0.0
+  contract:
+    coreCanonFile: "core-contract/contract.index.yaml"
+    publicProjectionFile: "contract/contract.index.yaml"
+  agents:
+    bootloaderFile: "AGENTS.md"
+  specs:
+    rootDir: ".frida/contract/specs"
+  profiles:
+    rootDir: ".frida/contract/profiles"
+  docs:
+    policyDir: ".frida/contract/docs/policy"
+    referenceDir: ".frida/contract/docs/reference"
+  frida:
+    contractDir: ".frida/contract"
+    internalDir: ".frida/contract/internal"
+    inboxDir: ".frida/inbox"
+    reportsDir: ".frida/reports"
+    configFile: ".frida/config.yaml"
+    configTemplateFile: ".frida/templates/config.template.yaml"
+    ir: ".frida/contract/artifacts/frida.ir.json"
+    permissions: ".frida/contract/artifacts/frida.permissions.json"
+    graph: ".frida/contract/artifacts/frida.graph.mmd"
+    visualOverlayFile: ".frida/contract/visual/canon-overlay.json"
+  fridaContract:
+    rootDir: ".frida/contract"
+    appMirrorDir: ".frida/contract/app"
+    fridaMirrorDir: ".frida/contract/frida"
+    fridaMirrorIndexFile: ".frida/contract/frida/contract.index.yaml"
+    specsDir: ".frida/contract/specs"
+    profilesDir: ".frida/contract/profiles"
+    docsDir: ".frida/contract/docs"
+    docsPolicyDir: ".frida/contract/docs/policy"
+    docsReferenceDir: ".frida/contract/docs/reference"
+    internalDir: ".frida/contract/internal"
+    playbooksDir: ".frida/contract/playbooks"
+    cacheDir: ".frida/contract/cache"
+    visualDir: ".frida/contract/visual"
+    visualOverlayFile: ".frida/contract/visual/canon-overlay.json"
+    artifactsDir: ".frida/contract/artifacts"
+    irFile: ".frida/contract/artifacts/frida.ir.json"
+    permissionsFile: ".frida/contract/artifacts/frida.permissions.json"
+    graphFile: ".frida/contract/artifacts/frida.graph.mmd"
+    bootloaderFile: ".frida/contract/AGENTS.md"
+  fridaInbox:
+    rootDir: ".frida/inbox"
+    appContractDir: ".frida/inbox/app-contract"
+    contractIndexFile: ".frida/inbox/app-contract/contract.index.yaml"
+    wikiRawDir: ".frida/inbox/wiki-raw"
+    metaDir: ".frida/inbox/meta"
+  templates:
+    fridaDir: "templates/frida"
+    docsDir: "templates/docs-gen"
+    appBasicDir: "templates/template_app_basic"
+  tooling:
+    visualizerDir: "templates/tooling/visualizer"
+  bootstrap:
+    assetsRootDir: "templates/template_app_basic"
+    manifestFile: "core-contract/bootstrap-package.manifest.yaml"
+    manifestSchemaFile: "schemas/frida-bootstrap-package-manifest.schema.json"
+    stateFile: ".frida/contract/internal/bootstrap-state.yaml"
+  visual:
+    overlayDir: ".frida/contract/visual"
+    overlayFile: ".frida/contract/visual/canon-overlay.json"
+  scopes:
+    fridaManagedAll: ".frida/**"
+    templatesAll: "templates/**"
+    nonTemplatesAll: "**"
+  normalization:
+    rules:
+      - id: posix_format
+        text: "All paths in contract MUST use POSIX separators (forward slash)."
+      - id: no_leading_slash
+        text: "Paths are relative to repository root; no leading slash."
+      - id: glob_wildcards
+        text: "Glob wildcards use POSIX grammar only. No regex."
+        grammar: "POSIX glob"
+        supported_patterns:
+          - "**"
+          - "*"
+          - "?"
+      - id: ref_dominance
+        text: "If both literal path and Ref-suffixed key exist, Ref takes precedence."
+      - id: typed_suffix_mapping
+        text: "Keys MUST use typed suffixes to indicate path semantics."
+        suffixes:
+          Dir: "directory path"
+          File: "exact file path"
+          All: "glob pattern"
+          Ref: "reference to PATHS block"
+      - id: status_model
+        text: "PATH entries MAY carry status. Default is ACTIVE."
+        statuses:
+          - ACTIVE
+          - DEPRECATED
+          - PLANNED
+
+FRIDA_CONFIG_SPEC:
+  _visibility: private
+  id: frida-config-spec
+  version: 1.0.0
+  config_shape:
+    root_key: CONFIG
+    required_fields:
+      - sources
+  source_item_shape:
+    required_fields:
+      - id
+      - index
+    optional_fields:
+      - text
+  invariants:
+    - id: sources_not_empty
+      text: "CONFIG.sources MUST be non-empty."
+    - id: core_present_once
+      text: "CONFIG.sources MUST contain exactly one item with id=core."
+    - id: app_present_once
+      text: "CONFIG.sources MUST contain exactly one item with id=app."
+    - id: source_ids_unique
+      text: "All CONFIG.sources[].id MUST be unique."
+    - id: source_indexes_unique
+      text: "All CONFIG.sources[].index MUST be unique."
+    - id: source_index_path_valid
+      text: "All CONFIG.sources[].index MUST pass FRIDA_SCHEMA_SUPPORT.path_rules."
+  guards:
+    - id: sources_missing
+      trigger: sources_missing
+      action: HALT
+      error_code: SOURCES_MISSING
+    - id: core_missing
+      trigger: core_missing
+      action: HALT
+      error_code: CORE_MISSING
+    - id: app_missing
+      trigger: app_missing
+      action: HALT
+      error_code: APP_MISSING
+    - id: duplicate_source_id
+      trigger: duplicate_source_id
+      action: HALT
+      error_code: DUPLICATE_SOURCE_ID
+    - id: duplicate_source_index
+      trigger: duplicate_source_index
+      action: HALT
+      error_code: DUPLICATE_SOURCE_INDEX
+    - id: invalid_source_index_path
+      trigger: invalid_source_index_path
+      action: HALT
+      error_code: INVALID_SOURCE_INDEX_PATH
+
+FRIDA_CONFIG:
+  _visibility: private
+  id: frida-frida-config
+  version: 1.0.0
+  paths:
+    canon_inputFileRef: "PATHS.contract.coreCanonFile"
+    agents_bootloaderFileRef: "PATHS.agents.bootloaderFile"
+    specs_rootRef: "PATHS.fridaContract.specsDir"
+    profiles_rootRef: "PATHS.fridaContract.profilesDir"
+    docs_policyDirRef: "PATHS.fridaContract.docsPolicyDir"
+    docs_referenceDirRef: "PATHS.fridaContract.docsReferenceDir"
+    frida_internalRef: "PATHS.fridaContract.internalDir"
+    templates_fridaRef: "PATHS.templates.fridaDir"
+    templates_docsRef: "PATHS.templates.docsDir"
+  reporting:
+    collect_in_repo: true
+    repo_path: ".frida/reports"
+    file_ext: ".yaml"
+    filename_pattern: "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
+    exists_check: false
+    access_validation:
+      enabled: true
+      on_disabled: warn_only_skip_fail
+      repo_policies:
+        frida_core:
+          read_allow_required: []
+          read_allow_governance_required:
+            - "core-tasks/**"
+            - "core-contract/**"
+            - "schemas/**"
+            - "src/**"
+            - "templates/**"
+            - "core-templates/**"
+            - "README.md"
+            - "package.json"
+            - ".frida/AGENTS.md"
+            - ".frida/config.yaml"
+            - ".frida/templates/config.template.yaml"
+            - ".frida/contract/**"
+            - ".frida/reports/*.yaml"
+          read_allow_task_setter_required:
+            - "core-tasks/**"
+            - "core-contract/**"
+            - "schemas/**"
+            - "templates/management/**"
+          edit_allow_architect_required:
+            - "core-contract/**"
+            - "schemas/**"
+            - "src/**"
+            - "templates/**"
+            - "core-templates/**"
+            - "README.md"
+            - "package.json"
+          edit_allow_architect_allowed_only:
+            - "core-contract/**"
+            - "schemas/**"
+            - "src/**"
+            - "templates/**"
+            - "core-templates/**"
+            - "README.md"
+            - "package.json"
+            - "core-tasks/README.md"
+          edit_allow_non_architect_required: []
+          edit_forbid_required:
+            - "core-tasks/TASK-*.md"
+            - "core-tasks/**/TASK-*.md"
+            - ".frida/reports/*.yaml"
+          forbid_must_include:
+            - ".frida/inbox/**"
+            - "tasks/**"
+          forbid_must_not_include:
+            - "core-tasks/**"
+            - "core-tasks/TASK-*.md"
+            - "core-tasks/**/TASK-*.md"
+          create_allow_required_all_profiles:
+            - ".frida/reports/*.yaml"
+          create_allow_non_task_setter_allowed_only:
+            - ".frida/reports/*.yaml"
+          create_allow_task_setter_required:
+            - "core-tasks/TASK-*.md"
+          create_allow_task_setter_forbidden:
+            - "core-tasks/**"
+            - "tasks/**"
+        target_app:
+          read_allow_required:
+            - "tasks/**"
+          read_allow_governance_required:
+            - ".frida/AGENTS.md"
+            - ".frida/config.yaml"
+            - ".frida/templates/config.template.yaml"
+            - ".frida/contract/**"
+            - ".frida/reports/*.yaml"
+          contract_editor_profile_ids:
+            - "app_contract_editor"
+          read_allow_contract_editor_required:
+            - ".frida/**"
+          edit_allow_architect_required:
+            - "tasks/inbox/**"
+          edit_allow_architect_allowed_only:
+            - "tasks/inbox/**"
+            - "tasks/inbox/README.md"
+          edit_allow_contract_editor_required:
+            - ".frida/inbox/app-contract/**"
+            - ".temp/**"
+          edit_allow_contract_editor_allowed_only:
+            - ".frida/inbox/app-contract/**"
+            - ".temp/**"
+          edit_allow_non_architect_required:
+            - "tasks/README.md"
+            - "tasks/**/README.md"
+          edit_forbid_required:
+            - "tasks/TASK-*.md"
+            - "tasks/**/TASK-*.md"
+            - ".frida/reports/*.yaml"
+          forbid_must_include: []
+          forbid_must_not_include:
+            - "tasks/**"
+            - "tasks/README.md"
+            - "tasks/**/README.md"
+            - "tasks/TASK-*.md"
+            - "tasks/**/TASK-*.md"
+          create_allow_required_all_profiles:
+            - ".frida/reports/*.yaml"
+          create_allow_non_task_setter_allowed_only:
+            - "tasks/sessions/*.md"
+            - "tasks/sessions/[0-9]*-*.md"
+            - ".frida/reports/*.yaml"
+          create_allow_task_setter_required:
+            - "tasks/TASK-*.md"
+          create_allow_task_setter_forbidden:
+            - "tasks/**"
+  visual:
+    overlay_pathRef: "PATHS.visual.overlayFile"
+    generation_mode: on_demand
+    determinism: required
+  naming:
+    convention: snake_case
+    ref_suffix: "Ref"
+    list_ref_suffix: "Refs"
+    path_typed_suffixes:
+      - Dir
+      - File
+      - All
+
+FRIDA_RUNTIME_CONFIG:
+  _visibility: private
+  id: frida-frida-runtime-config
+  version: 1.0.0
+  file: ".frida/config.yaml"
+  template_file: ".frida/templates/config.template.yaml"
+  source_of_truth: contract
+  generated_from: "FRIDA_CONFIG.reporting"
+  ownership:
+    runtime_config_file: user_owned
+    template_file: engine_owned
+  update_policy:
+    mode: template_only_plus_warnings
+    rule: "Engine writes/updates .frida/templates/config.template.yaml and creates .frida/config.yaml only when missing. Existing runtime config file values MUST NOT be overwritten."
+
+FRIDA_ROOT_LAYOUT_POLICY:
+  _visibility: public
+  id: frida-root-layout-policy
+  version: 1.0.0
+  scope: ".frida root directory only"
+  exact_files:
+    - "AGENTS.md"
+    - "config.yaml"
+
+  allowed_dirs:
+    - "contract"
+    - "reports"
+    - "inbox"
+    - "templates"
+    - "cache"
+  validation_modes:
+    warn: "Used by gen/init during rollout to report violations without stopping."
+    fail: "Used by warm/cold-engine bootstrap post-gen to guarantee clean Frida layout in one command."
+  inbox_access_policy:
+    path: ".frida/inbox/**"
+    agent_access: profile_gated
+    authoring_exception:
+      path: ".frida/inbox/app-contract/**"
+      interface_refs:
+        - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+        - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      required_profile: "app_contract_editor"
+      read_allow:
+        - ".frida/**"
+      edit_allow:
+        - ".frida/inbox/app-contract/**"
+        - ".temp/**"
+    work_surface_redirect: ".frida/contract/app/**"
+    note: "Inbox stores inbound/SSOT app-contract material and raw sync payloads. General agents stay out; app-contract mutation interfaces author in `.frida/inbox/app-contract/**`, while mirror consumers may read `.frida/contract/app/**`."
+
+FRIDA_CONFIG_FIELD_DOCS:
+  _visibility: public
+  id: frida-config-field-docs
+  version: 1.0.0
+  purpose: "Line-level documentation for core contract configuration blocks in the core-configuration layer (not the runtime config file)."
+  scope:
+    blocks:
+      - PATHS
+      - FRIDA_CONFIG_SPEC
+      - FRIDA_CONFIG
+      - FRIDA_RUNTIME_CONFIG
+      - FRIDA_ROOT_LAYOUT_POLICY
+    self_described_exceptions:
+      - "PATHS.normalization.rules[*].text already explains the rule."
+      - "PATHS.normalization.rules[*].supported_patterns, suffixes, and statuses are literal enumerations for the parent rule."
+      - "FRIDA_CONFIG_SPEC.invariants[*].text and guards[*] entries are self-describing."
+      - "Glob list items under FRIDA_CONFIG.reporting.access_validation.repo_policies.*.* are literal patterns described by the parent key."
+  entries:
+    - path: "PATHS.contract"
+      what: "Namespace for contract artifact locations."
+      purpose: "Groups paths used to locate canonical assembled contract files."
+    - path: "PATHS.contract.coreCanonFile"
+      what: "Relative file path to the canonical contract artifact."
+      purpose: "Provides the contract index path used by generators and validators."
+    - path: "PATHS.agents"
+      what: "Namespace for agent bootstrapping files."
+      purpose: "Keeps agent entry-point paths centralized."
+    - path: "PATHS.agents.bootloaderFile"
+      what: "Root AGENTS bootloader file path."
+      purpose: "Defines where the generated primary agent instructions are written."
+    - path: "PATHS.specs"
+      what: "Namespace for generated specs outputs."
+      purpose: "Groups router/spec artifact locations used by generation and routing."
+    - path: "PATHS.specs.rootDir"
+      what: "Root directory for generated routing specs."
+      purpose: "Defines the canonical router output location under `.frida/contract/specs`."
+    - path: "PATHS.profiles"
+      what: "Namespace for generated profile outputs."
+      purpose: "Groups profile artifact locations in one contract-defined section."
+    - path: "PATHS.profiles.rootDir"
+      what: "Root directory for generated profile XML files."
+      purpose: "Defines the canonical profile XML output location under `.frida/contract/profiles`."
+    - path: "PATHS.docs"
+      what: "Namespace for generated documentation outputs."
+      purpose: "Groups policy/reference doc destinations."
+    - path: "PATHS.docs.policyDir"
+      what: "Directory for generated policy docs."
+      purpose: "Defines the canonical policy-doc output location under `.frida/contract/docs/policy`."
+    - path: "PATHS.docs.referenceDir"
+      what: "Directory for generated reference docs."
+      purpose: "Defines the canonical reference-doc output location under `.frida/contract/docs/reference`."
+    - path: "PATHS.frida"
+      what: "Namespace for `.frida` runtime/service artifacts."
+      purpose: "Splits `.frida` root into runtime config, reports, and canonical engine-managed contract bucket paths."
+    - path: "PATHS.frida.contractDir"
+      what: "Canonical root directory for engine-managed Frida artifacts."
+      purpose: "Keeps generated Frida artifacts under `.frida/contract` instead of scattering them in `.frida/` root."
+    - path: "PATHS.frida.internalDir"
+      what: "Internal Frida working directory."
+      purpose: "Stores engine-owned internal artifacts under the canonical `.frida/contract/internal` subtree."
+    - path: "PATHS.frida.inboxDir"
+      what: "Protected inbox root directory for inbound/SSOT application contract data."
+      purpose: "Reserves `.frida/inbox` as the single inbound container for app-contract SSOT and sync payloads."
+    - path: "PATHS.frida.reportsDir"
+      what: "Directory for FRIDA run/job reports."
+      purpose: "Defines the default runtime report/audit history path (`.frida/reports`)."
+    - path: "PATHS.frida.configFile"
+      what: "Runtime config file produced by the engine."
+      purpose: "Defines the canonical location for generated `.frida/config.yaml`."
+    - path: "PATHS.frida.configTemplateFile"
+      what: "Engine-managed runtime config template/reference file."
+      purpose: "Defines the canonical location for `.frida/templates/config.template.yaml` in the strict `.frida` root layout."
+    - path: "PATHS.frida.ir"
+      what: "Canonical FRIDA IR artifact file path."
+      purpose: "Pins machine-readable IR export under `.frida/contract/artifacts`."
+    - path: "PATHS.frida.permissions"
+      what: "Canonical FRIDA permissions snapshot artifact path."
+      purpose: "Pins permissions export under `.frida/contract/artifacts`."
+    - path: "PATHS.frida.graph"
+      what: "Canonical FRIDA graph (Mermaid) artifact path."
+      purpose: "Pins graph export under `.frida/contract/artifacts`."
+    - path: "PATHS.frida.visualOverlayFile"
+      what: "Compatibility alias for the visual overlay output file path."
+      purpose: "Keeps older consumers working while canonical visual output stays under `.frida/contract/visual`."
+    - path: "PATHS.fridaContract"
+      what: "Canonical engine-managed Frida artifact namespace."
+      purpose: "Enumerates `.frida/contract/*` destinations by ownership domain and artifact type."
+    - path: "PATHS.fridaContract.rootDir"
+      what: "Canonical `.frida/contract` root directory."
+      purpose: "Defines the engine-managed artifact bucket used by generator and bootstrap."
+    - path: "PATHS.fridaContract.appMirrorDir"
+      what: "Working-copy mirror directory for the application contract."
+      purpose: "Stores the agent/tooling-facing app-contract copy derived from `.frida/inbox/app-contract/**`."
+    - path: "PATHS.fridaContract.fridaMirrorDir"
+      what: "Source mirror directory for the Frida engine contract."
+      purpose: "Stores a deterministic copy of package `contract/**` under the target repo for inspection and tooling."
+    - path: "PATHS.fridaContract.fridaMirrorIndexFile"
+      what: "Canonical Frida engine contract mirror index file path."
+      purpose: "Provides the deployed target-repo entrypoint to the projected Frida core contract mirror."
+    - path: "PATHS.fridaContract.specsDir"
+      what: "Canonical specs directory under `.frida/contract`."
+      purpose: "Stores router XML and related canonical spec artifacts."
+    - path: "PATHS.fridaContract.profilesDir"
+      what: "Canonical profiles directory under `.frida/contract`."
+      purpose: "Stores generated profile XML files in the canonical `.frida/contract/profiles` surface."
+    - path: "PATHS.fridaContract.docsDir"
+      what: "Canonical docs root directory under `.frida/contract`."
+      purpose: "Groups engine-generated policy/reference docs in the canonical `.frida/contract/docs` surface."
+    - path: "PATHS.fridaContract.docsPolicyDir"
+      what: "Canonical policy docs directory under `.frida/contract/docs`."
+      purpose: "Stores engine-generated policy docs in the canonical `.frida/contract/docs/policy` surface."
+    - path: "PATHS.fridaContract.docsReferenceDir"
+      what: "Canonical reference docs directory under `.frida/contract/docs`."
+      purpose: "Stores engine-generated reference docs in the canonical `.frida/contract/docs/reference` surface."
+    - path: "PATHS.fridaContract.internalDir"
+      what: "Canonical internal working directory under `.frida/contract`."
+      purpose: "Stores engine-managed internal state and generated internal files."
+    - path: "PATHS.fridaContract.playbooksDir"
+      what: "Canonical playbooks directory under `.frida/contract`."
+      purpose: "Stores engine-managed static playbooks deployed by bootstrap."
+    - path: "PATHS.fridaContract.cacheDir"
+      what: "Canonical cache directory under `.frida/contract`."
+      purpose: "Reserves a single cache subtree for engine-managed cache files."
+    - path: "PATHS.fridaContract.visualDir"
+      what: "Canonical visual artifacts directory under `.frida/contract`."
+      purpose: "Groups visual overlay and related generated visualization artifacts."
+    - path: "PATHS.fridaContract.visualOverlayFile"
+      what: "Canonical visual overlay JSON file path."
+      purpose: "Defines the primary visual overlay export location under `.frida/contract/visual`."
+    - path: "PATHS.fridaContract.artifactsDir"
+      what: "Canonical machine artifacts directory under `.frida/contract`."
+      purpose: "Groups IR/permissions/graph exports."
+    - path: "PATHS.fridaContract.irFile"
+      what: "Canonical IR JSON export file path."
+      purpose: "Defines the machine-readable graph/contract IR export location."
+    - path: "PATHS.fridaContract.permissionsFile"
+      what: "Canonical permissions snapshot export file path."
+      purpose: "Defines the permissions projection export location."
+    - path: "PATHS.fridaContract.graphFile"
+      what: "Canonical Mermaid graph export file path."
+      purpose: "Defines the human-readable graph export location."
+    - path: "PATHS.fridaContract.bootloaderFile"
+      what: "Canonical internal bootloader mirror file path."
+      purpose: "Stores the engine-managed `.frida/contract/AGENTS.md` bootloader mirror."
+    - path: "PATHS.fridaInbox"
+      what: "Namespace for protected inbox directories under `.frida/inbox`."
+      purpose: "Declares SSOT and sync-payload inbox locations without exposing runtime logic in other layers."
+    - path: "PATHS.fridaInbox.rootDir"
+      what: "Protected inbox root directory."
+      purpose: "Defines the root of the no-agent-access inbound/SSOT surface."
+    - path: "PATHS.fridaInbox.appContractDir"
+      what: "Application-contract SSOT source tree inside inbox."
+      purpose: "Declares the only app-contract source path read by Frida generation/bootstrap on app-side repos."
+    - path: "PATHS.fridaInbox.contractIndexFile"
+      what: "Application-contract SSOT index file inside inbox."
+      purpose: "Provides the canonical app-side entrypoint to the protected app-contract source tree."
+    - path: "PATHS.fridaInbox.wikiRawDir"
+      what: "Raw wiki synchronization payload directory."
+      purpose: "Provides a staging area for REPO.WIKI sync payloads before normalization into app-contract SSOT tree."
+    - path: "PATHS.fridaInbox.metaDir"
+      what: "Inbox metadata directory."
+      purpose: "Reserves a stable location for sync stamps, checksums, and other inbox control metadata."
+    - path: "PATHS.templates.fridaDir"
+      what: "Directory containing Frida generator templates."
+      purpose: "Lets integrity checks and generation resolve template sources."
+    - path: "PATHS.templates"
+      what: "Namespace for template source directories."
+      purpose: "Groups generator and docs template path settings."
+    - path: "PATHS.templates.docsDir"
+      what: "Directory containing docs-generation templates."
+      purpose: "Separates docs templates from core Frida templates."
+    - path: "PATHS.templates.appBasicDir"
+      what: "Directory containing the neutral `template_app_basic` zero-start seed."
+      purpose: "Defines the canonical package-local source for baseline app-template files and inactive app-extension layers."
+    - path: "PATHS.bootstrap"
+      what: "Namespace for bootstrap reconcile/package-manifest paths."
+      purpose: "Centralizes bootstrap package reference assets and manifest metadata paths."
+    - path: "PATHS.bootstrap.assetsRootDir"
+      what: "Root directory containing package demo/bootstrap assets."
+      purpose: "Provides the package-local root used by explicit demo bootstrap asset deployment."
+    - path: "PATHS.bootstrap.manifestFile"
+      what: "Bootstrap package manifest file path."
+      purpose: "Declares the package-shipped manifest that enumerates Frida-managed bootstrap surfaces."
+    - path: "PATHS.bootstrap.manifestSchemaFile"
+      what: "Bootstrap package manifest schema path."
+      purpose: "Declares the schema used to validate bootstrap package manifest structure before writes."
+    - path: "PATHS.bootstrap.stateFile"
+      what: "Advisory bootstrap state file path under `.frida/contract/internal`."
+      purpose: "Reserves a stable state/telemetry location inside the canonical engine-managed contract bucket."
+    - path: "PATHS.visual"
+      what: "Namespace for visualization output paths."
+      purpose: "Groups overlay artifact directory and file paths."
+    - path: "PATHS.visual.overlayDir"
+      what: "Directory for generated visual overlay artifacts."
+      purpose: "Points the visual path namespace to the canonical `.frida/contract/visual` location."
+    - path: "PATHS.visual.overlayFile"
+      what: "Contract overlay JSON output path."
+      purpose: "Points the visual path namespace to the canonical visual overlay file in `.frida/contract/visual`."
+    - path: "PATHS.scopes.templatesAll"
+      what: "Glob matching all template-zone files."
+      purpose: "Feeds zone resolution and enforcement for template scope."
+    - path: "PATHS.scopes"
+      what: "Namespace for zone scope glob definitions."
+      purpose: "Centralizes reusable scope globs for routing and enforcement."
+    - path: "PATHS.scopes.fridaManagedAll"
+      what: "Glob matching all Frida-managed runtime and generated surfaces."
+      purpose: "Lets zone routing attach `.frida/**` work to the dedicated Frida-managed antitask surface."
+    - path: "PATHS.scopes.nonTemplatesAll"
+      what: "Fallback glob matching all repository files."
+      purpose: "Supports non-template zone routing baseline."
+    - path: "PATHS.normalization"
+      what: "Path normalization and typing policy namespace."
+      purpose: "Stores path-format rules used across the contract."
+    - path: "PATHS.normalization.rules"
+      what: "Ordered list of normalization rules and typing conventions."
+      purpose: "Defines how path literals and path refs must be written."
+    - path: "FRIDA_CONFIG_SPEC.config_shape"
+      what: "Shape declaration for the root assembly config object."
+      purpose: "Defines the contract-level schema expectations for `CONFIG`."
+    - path: "FRIDA_CONFIG_SPEC.config_shape.root_key"
+      what: "Top-level key name for assembly config documents."
+      purpose: "Ensures assembly loader reads the same root object (`CONFIG`)."
+    - path: "FRIDA_CONFIG_SPEC.config_shape.required_fields[]"
+      what: "Required root fields in the assembly config."
+      purpose: "Makes assembly input validation deterministic."
+    - path: "FRIDA_CONFIG_SPEC.config_shape.required_fields[0]=sources"
+      what: "List of contract sources to assemble."
+      purpose: "Declares the only allowed source list consumed by assembly."
+    - path: "FRIDA_CONFIG_SPEC.source_item_shape"
+      what: "Shape declaration for each source descriptor in `CONFIG.sources[]`."
+      purpose: "Keeps source records consistent across core/app assembly inputs."
+    - path: "FRIDA_CONFIG_SPEC.source_item_shape.required_fields[]"
+      what: "Required fields for each `CONFIG.sources[]` item."
+      purpose: "Defines the minimum source descriptor shape."
+    - path: "FRIDA_CONFIG_SPEC.source_item_shape.required_fields[id]"
+      what: "Stable source identifier (for example `core`, `app`)."
+      purpose: "Supports uniqueness checks and source-specific guards."
+    - path: "FRIDA_CONFIG_SPEC.source_item_shape.required_fields[index]"
+      what: "Path to the source contract index file."
+      purpose: "Tells the assembly protocol which index document to load."
+    - path: "FRIDA_CONFIG_SPEC.source_item_shape.optional_fields[]"
+      what: "Optional fields allowed on a source item."
+      purpose: "Allows descriptive metadata without affecting assembly logic."
+    - path: "FRIDA_CONFIG_SPEC.source_item_shape.optional_fields[text]"
+      what: "Human-readable source description field."
+      purpose: "Supports readable source manifests and diagnostics."
+    - path: "FRIDA_CONFIG.paths"
+      what: "Resolved path-reference map used by the generator/runtime."
+      purpose: "Centralizes engine path dependencies as typed refs to `PATHS`."
+    - path: "FRIDA_CONFIG.paths.canon_inputFileRef"
+      what: "Ref to the canonical assembled contract artifact path."
+      purpose: "Allows generator to reload the assembled contract from the canonical location."
+    - path: "FRIDA_CONFIG.paths.agents_bootloaderFileRef"
+      what: "Ref to root AGENTS bootloader path."
+      purpose: "Ensures generator writes bootloader to the contract-defined location."
+    - path: "FRIDA_CONFIG.paths.specs_rootRef"
+      what: "Ref to specs output directory."
+      purpose: "Keeps router/spec generation paths centralized."
+    - path: "FRIDA_CONFIG.paths.profiles_rootRef"
+      what: "Ref to profile output directory."
+      purpose: "Keeps profile generation paths centralized."
+    - path: "FRIDA_CONFIG.paths.docs_policyDirRef"
+      what: "Ref to policy docs output directory."
+      purpose: "Prevents duplicated policy-doc path literals in generators."
+    - path: "FRIDA_CONFIG.paths.docs_referenceDirRef"
+      what: "Ref to reference docs output directory."
+      purpose: "Prevents duplicated reference-doc path literals in generators."
+    - path: "FRIDA_CONFIG.paths.frida_internalRef"
+      what: "Ref to internal Frida working directory."
+      purpose: "Provides a stable pointer for internal runtime artifacts."
+    - path: "FRIDA_CONFIG.paths.templates_fridaRef"
+      what: "Ref to Frida templates directory."
+      purpose: "Lets generator resolve template sources through PATHS only."
+    - path: "FRIDA_CONFIG.paths.templates_docsRef"
+      what: "Ref to docs templates directory."
+      purpose: "Lets docs generation resolve template sources through PATHS only."
+    - path: "FRIDA_CONFIG.reporting"
+      what: "Reporting runtime settings block."
+      purpose: "Stores fixed report output contract and access-validation toggles."
+    - path: "FRIDA_CONFIG.reporting.collect_in_repo"
+      what: "Flag indicating reports are stored inside the repository."
+      purpose: "Locks reporting behavior to repo-local audit storage."
+    - path: "FRIDA_CONFIG.reporting.repo_path"
+      what: "Directory path for generated run reports."
+      purpose: "Defines the canonical report storage path used by runtime."
+    - path: "FRIDA_CONFIG.reporting.file_ext"
+      what: "Report filename extension."
+      purpose: "Keeps report serialization format fixed and predictable."
+    - path: "FRIDA_CONFIG.reporting.filename_pattern"
+      what: "Deterministic report filename template."
+      purpose: "Standardizes report naming for audit tooling and lookup."
+    - path: "FRIDA_CONFIG.reporting.exists_check"
+      what: "Flag controlling pre-write existence checks."
+      purpose: "Keeps reporting write behavior aligned with immutable filename strategy."
+    - path: "FRIDA_CONFIG.reporting.access_validation"
+      what: "Access-validation settings for path-policy checks."
+      purpose: "Controls whether and how profile path access rules are enforced during checks."
+    - path: "FRIDA_CONFIG.reporting.access_validation.enabled"
+      what: "Switch for task path-access validation checks."
+      purpose: "Allows staged rollout of stricter report access enforcement."
+    - path: "FRIDA_CONFIG.reporting.access_validation.on_disabled"
+      what: "Behavior when access validation is disabled."
+      purpose: "Defines explicit non-fail behavior for disabled validation mode."
+    - path: "FRIDA_CONFIG.reporting.access_validation.repo_policies"
+      what: "Repository-scoped glob policy sets used by access validation."
+      purpose: "Centralizes allowed/forbidden path patterns separately for `frida_core` and `target_app` repositories."
+    - path: "FRIDA_CONFIG.reporting.access_validation.repo_policies.frida_core"
+      what: "Access-validation policy set for the Frida self-repo."
+      purpose: "Defines the required read/edit/create/forbid globs for governance and task-setting inside repo `frida`."
+    - path: "FRIDA_CONFIG.reporting.access_validation.repo_policies.target_app"
+      what: "Access-validation policy set for target application repositories."
+      purpose: "Defines the required read/edit/create/forbid globs for app-facing profiles in deployed repos."
+    - path: "FRIDA_CONFIG.visual"
+      what: "Visualization generation settings block."
+      purpose: "Declares output ref and generation semantics for overlay artifacts."
+    - path: "FRIDA_CONFIG.visual.overlay_pathRef"
+      what: "Ref to the visual overlay output file."
+      purpose: "Connects visual generation output to the central PATHS registry."
+    - path: "FRIDA_CONFIG.visual.generation_mode"
+      what: "Overlay generation trigger mode."
+      purpose: "Defines when visual overlay artifacts are produced."
+    - path: "FRIDA_CONFIG.visual.determinism"
+      what: "Determinism requirement for overlay generation."
+      purpose: "Enforces reproducible visual outputs from identical contracts."
+    - path: "FRIDA_CONFIG.naming"
+      what: "Naming conventions settings block."
+      purpose: "Defines suffix and convention rules consumed by contract tooling."
+    - path: "FRIDA_CONFIG.naming.convention"
+      what: "Global naming convention for contract keys/ids."
+      purpose: "Keeps generated and hand-edited contract naming consistent."
+    - path: "FRIDA_CONFIG.naming.ref_suffix"
+      what: "Suffix used for singular references."
+      purpose: "Defines the canonical typed suffix used by ref resolution rules."
+    - path: "FRIDA_CONFIG.naming.list_ref_suffix"
+      what: "Suffix used for list references."
+      purpose: "Defines the canonical typed suffix for reference lists."
+    - path: "FRIDA_CONFIG.naming.path_typed_suffixes"
+      what: "Allowed suffixes for path-typed fields."
+      purpose: "Standardizes path semantics in contract key names."
+    - path: "FRIDA_RUNTIME_CONFIG"
+      what: "Declaration of the generated runtime config artifact."
+      purpose: "Makes runtime config location and provenance explicit in the contract."
+    - path: "FRIDA_RUNTIME_CONFIG.file"
+      what: "Path to generated runtime config file."
+      purpose: "Declares the on-repo artifact written from contract config."
+    - path: "FRIDA_RUNTIME_CONFIG.template_file"
+      what: "Path to engine-managed runtime config template/reference file."
+      purpose: "Provides an always-updated template users compare against the user-owned runtime config file during upgrades."
+    - path: "FRIDA_RUNTIME_CONFIG.source_of_truth"
+      what: "Authority marker for runtime config ownership."
+      purpose: "Prevents manual edits by declaring contract-managed ownership."
+    - path: "FRIDA_RUNTIME_CONFIG.generated_from"
+      what: "Source contract path used to generate runtime config."
+      purpose: "Makes generation provenance explicit for validation and debugging."
+    - path: "FRIDA_RUNTIME_CONFIG.ownership"
+      what: "Ownership policy for runtime config artifacts."
+      purpose: "Distinguishes user-owned runtime config file from engine-owned template/reference file."
+    - path: "FRIDA_RUNTIME_CONFIG.update_policy"
+      what: "Runtime config upgrade/update behavior."
+      purpose: "Declares non-destructive template-only update policy and warning-based compatibility flow."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY"
+      what: "Strict allowlist policy for the `.frida` root directory."
+      purpose: "Defines the ownership split (`config*`, `reports/`, `contract/`, `inbox/`) enforced by bootstrap and observed by gen/init."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.scope"
+      what: "Scope boundary for root layout validation."
+      purpose: "Makes clear the policy applies only to top-level entries under `.frida/`, not nested subtree contents."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.exact_files"
+      what: "Exact required file set in `.frida/` root."
+      purpose: "Enforces that the `.frida` root exposes only the protected zone antitask and runtime config as root files."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.allowed_dirs"
+      what: "Allowed directory names in `.frida/` root."
+      purpose: "Restricts root directories to ownership domains (`contract`, `reports`, `inbox`, `templates`)."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.validation_modes"
+      what: "Validation severity modes for root layout checks."
+      purpose: "Allows warn-mode rollout in gen/init and fail-mode enforcement in bootstrap."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.validation_modes.warn"
+      what: "Non-blocking root-layout validation mode."
+      purpose: "Surfaces layout drift during migration without interrupting `gen`/`init`."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.validation_modes.fail"
+      what: "Blocking root-layout validation mode."
+      purpose: "Guarantees a clean `.frida` root after warm/cold-engine bootstrap post-generation."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy"
+      what: "Protection policy for `.frida/inbox/**`."
+      purpose: "Declares inbox as a profile-gated inbound/SSOT surface and documents the narrow authoring exception for target app contract mutation."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.path"
+      what: "Protected inbox path glob."
+      purpose: "Pins the bounded inbox surface to `.frida/inbox/**`."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.agent_access"
+      what: "Agent access rule for inbox."
+      purpose: "Declares that inbox access is not general-purpose and must be granted only through explicit profile-gated exceptions."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception"
+      what: "Exception block for direct app-contract authoring in inbox."
+      purpose: "Names the only deployed direct-write exception under `.frida/inbox/**`."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.path"
+      what: "Writable app-contract subtree inside inbox."
+      purpose: "Constrains direct authoring to `.frida/inbox/app-contract/**`."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.interface_refs"
+      what: "Interfaces allowed to use the inbox authoring exception."
+      purpose: "Binds the writable inbox exception to the public app-contract mutation interfaces only."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.required_profile"
+      what: "Canonical profile id required for direct inbox authoring."
+      purpose: "Makes the deployed app-contract editor profile explicit."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.read_allow"
+      what: "Read permissions required by the inbox authoring exception."
+      purpose: "Documents that the editor reads the full Frida deployment surface for context."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.edit_allow"
+      what: "Edit permissions required by the inbox authoring exception."
+      purpose: "Documents that authoring is limited to app-contract inbox files plus `.temp/**` scratch space."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.work_surface_redirect"
+      what: "Preferred working-copy path for agent/tooling operations."
+      purpose: "Directs non-authoring consumers to `.frida/contract/app/**` instead of the source inbox."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.note"
+      what: "Explanatory note for inbox usage."
+      purpose: "Documents the split between inbox SSOT authoring and mirrored consumer surfaces."
