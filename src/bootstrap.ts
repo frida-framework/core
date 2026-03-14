@@ -12,6 +12,7 @@ import {
 import { buildBootstrapPlan, BootstrapPlanBuildError } from './bootstrap-plan.ts';
 import { APP_CONTRACT_INBOX_INDEX_REL_PATH, assertAppContractInboxSource, ContractMirrorError } from './contract-mirror.ts';
 import { validateFridaRootLayout } from './frida-layout.ts';
+import { FRIDA_CLI_NAME } from './identity.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(MODULE_DIR, '..');
@@ -104,18 +105,18 @@ function parseArgs(args: string[]): BootstrapArgs {
 }
 
 function showHelp(): void {
-  console.log(`frida-core bootstrap
+  console.log(`${FRIDA_CLI_NAME} bootstrap
 
 Usage:
-  frida-core bootstrap --target <dir>
-  frida-core bootstrap --target <dir> --mode warm
-  frida-core bootstrap --target <dir> --mode cold-engine
-  frida-core bootstrap --target <dir> --mode demo
-  frida-core bootstrap --target <dir> --mode zero-start
-  frida-core bootstrap --component <name> [--target <dir>]
-  frida-core bootstrap --component interface-instructions-reset --target <dir>
-  frida-core bootstrap --dry-run --target <dir> [--mode warm|cold-engine|demo|zero-start]
-  frida-core bootstrap --help
+  ${FRIDA_CLI_NAME} bootstrap --target <dir>
+  ${FRIDA_CLI_NAME} bootstrap --target <dir> --mode warm
+  ${FRIDA_CLI_NAME} bootstrap --target <dir> --mode cold-engine
+  ${FRIDA_CLI_NAME} bootstrap --target <dir> --mode demo
+  ${FRIDA_CLI_NAME} bootstrap --target <dir> --mode zero-start
+  ${FRIDA_CLI_NAME} bootstrap --component <name> [--target <dir>]
+  ${FRIDA_CLI_NAME} bootstrap --component interface-instructions-reset --target <dir>
+  ${FRIDA_CLI_NAME} bootstrap --dry-run --target <dir> [--mode warm|cold-engine|demo|zero-start]
+  ${FRIDA_CLI_NAME} bootstrap --help
 
 Modes:
   - warm (default): reconcile Frida-managed surfaces to package reference, prune managed drift, then run generation.

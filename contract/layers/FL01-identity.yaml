@@ -8,7 +8,7 @@ CONTRACT_META:
   updated_at: "2026-03-09"
   scope:
     repository: hanszel/frida
-    package: "@frida-framework/core"
+    package: "@sistemado/frida"
     purpose: >-
       Schema-driven generation engine, zone enforcement, visual overlay extraction,
       agent session control, and warm-first Frida bootstrap/reconcile with explicit demo seeding mode.

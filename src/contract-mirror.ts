@@ -8,6 +8,7 @@ import {
   PROJECTED_STRING_REPLACEMENTS,
   SOURCE_MANAGEMENT_PLAYBOOK_PREFIX,
 } from './frida-surface-policy.ts';
+import { FRIDA_PACKAGE_NAME } from './identity.ts';
 
 export const APP_CONTRACT_SOURCE_DIR_REL_PATH = '.frida/inbox/app-contract';
 export const APP_CONTRACT_SOURCE_INDEX_REL_PATH = `${APP_CONTRACT_SOURCE_DIR_REL_PATH}/contract.index.yaml`;
@@ -269,31 +270,13 @@ function buildContractSetVerifierWrapper(): string {
  * This wrapper keeps the executable app entrypoint stable while the verifier
  * semantics remain owned by the Frida core package.
  */
+import { runFridaAgentsContractSetCheck } from ${JSON.stringify(FRIDA_PACKAGE_NAME)};
 
-const CORE_PACKAGE_CANDIDATES = ['@frida-framework/core', '@frida-framework/core'];
-
-async function loadCore() {
-  const failures = [];
-
-  for (const candidate of CORE_PACKAGE_CANDIDATES) {
-    try {
-      return await import(candidate);
-    } catch (error) {
-      failures.push(\`\${candidate}: \${error instanceof Error ? error.message : String(error)}\`);
-    }
-  }
-
-  throw new Error(\`Unable to load FRIDA core package. Tried: \${failures.join('; ')}\`);
-}
-
-const core = await loadCore();
-const runVerifier = core.runFridaAgentsContractSetCheck;
-
-if (typeof runVerifier !== 'function') {
+if (typeof runFridaAgentsContractSetCheck !== 'function') {
   throw new Error('FRIDA core export "runFridaAgentsContractSetCheck" is missing');
 }
 
-const exitCode = runVerifier({ rootDir: process.cwd() });
+const exitCode = runFridaAgentsContractSetCheck({ rootDir: process.cwd() });
 process.exit(typeof exitCode === 'number' ? exitCode : 2);
 `;
 }

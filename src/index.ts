@@ -1,5 +1,13 @@
 export { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
 export {
+  FRIDA_CLI_NAME,
+  FRIDA_CONTRACT_SCHEMA_REF,
+  FRIDA_PACKAGE_NAME,
+  FRIDA_PACKAGE_VERSION,
+  FRIDA_VISUAL_OVERLAY_SCHEMA_REF,
+  FRIDA_VISUAL_VIEWER_RUNTIME_SCHEMA_REF,
+} from './identity.ts';
+export {
   runFridaValidateCli,
   validateContractSemantics,
   validateLoadedContractDocument,

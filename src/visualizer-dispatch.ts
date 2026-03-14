@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { loadContractDocument } from './contract-path.ts';
+import { FRIDA_CLI_NAME } from './identity.ts';
 
 interface VisualizerModuleConfig {
   enabled: boolean;
@@ -9,6 +10,8 @@ interface VisualizerModuleConfig {
   moduleRootAbs: string | null;
   moduleDistAbs: string | null;
 }
+
+const VISUAL_VIEWER_COMMAND = `${FRIDA_CLI_NAME} visual-viewer`;
 
 function isObjectLike(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -62,26 +65,26 @@ export async function runFridaVisualViewerCli(args: string[] = []): Promise<numb
   try {
     const config = loadVisualizerModuleConfig();
     if (!config.enabled || !config.moduleRootAbs || !config.moduleDistAbs || !fs.existsSync(config.moduleRootAbs)) {
-      console.error('❌ frida-core visual-viewer failed: VISUALIZER_MODULE_DISABLED');
+      console.error(`❌ ${VISUAL_VIEWER_COMMAND} failed: VISUALIZER_MODULE_DISABLED`);
       return 1;
     }
 
     const entryFile = path.join(config.moduleDistAbs, 'visual-reference-viewer.js');
     if (!fs.existsSync(entryFile)) {
       console.error(
-        `❌ frida-core visual-viewer failed: VISUALIZER_MODULE_BUILD_MISSING (${path.relative(process.cwd(), entryFile)})`
+        `❌ ${VISUAL_VIEWER_COMMAND} failed: VISUALIZER_MODULE_BUILD_MISSING (${path.relative(process.cwd(), entryFile)})`
       );
       return 1;
     }
 
     const runtime = await import(pathToFileURL(entryFile).href);
     if (typeof runtime.runFridaVisualViewerCli !== 'function') {
-      console.error('❌ frida-core visual-viewer failed: VISUALIZER_MODULE_INVALID');
+      console.error(`❌ ${VISUAL_VIEWER_COMMAND} failed: VISUALIZER_MODULE_INVALID`);
       return 1;
     }
     return runtime.runFridaVisualViewerCli(args);
   } catch (error) {
-    console.error(`❌ frida-core visual-viewer failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`❌ ${VISUAL_VIEWER_COMMAND} failed: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
 }

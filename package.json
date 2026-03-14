@@ -46,9 +46,9 @@
     "README.md"
   ],
   "scripts": {
-    "build": "npm run clean && tsc -p tsconfig.build.json && node templates/tooling/lib/build-optional-visualizer.mjs",
+    "build": "npm run clean && node templates/tooling/lib/generate-identity.mjs && tsc -p tsconfig.build.json && node -e \"import('node:fs').then(fs=>fs.chmodSync('dist/cli.js',0o755))\" && node templates/tooling/lib/build-optional-visualizer.mjs",
     "clean": "node -e \"import('node:fs').then(fs=>{fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('templates/tooling/visualizer/dist',{recursive:true,force:true});})\"",
-    "verify": "npm run build && node dist/cli.js migration-report && node templates/tooling/verify/check-component-boundary-contract.mjs && node templates/tooling/verify/check-surface-isolation.mjs && node templates/tooling/verify/check-interface-instruction-surfaces.mjs && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs && npm run verify:task-packs && npm run verify:zero-start",
+    "verify": "npm run build && node templates/tooling/verify/check-package-identity-sync.mjs && node dist/cli.js migration-report && node templates/tooling/verify/check-component-boundary-contract.mjs && node templates/tooling/verify/check-surface-isolation.mjs && node templates/tooling/verify/check-interface-instruction-surfaces.mjs && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs && npm run verify:task-packs && npm run verify:zero-start",
     "frida:visual": "node dist/cli.js visual",
     "frida:visual-viewer": "node dist/cli.js visual-viewer",
     "frida:visual-viewer:demo": "node dist/cli.js visual-viewer --overlay templates/tooling/verify/fixtures/visual-overlay/mounted_child_boundary.overlay.json --out dist/reference-viewer/demo/index.html --title \"Mounted Child Demo\"",

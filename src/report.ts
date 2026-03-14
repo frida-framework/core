@@ -13,12 +13,14 @@ import {
   RUNTIME_CONFIG_REL_PATH,
   toRuntimeConfig,
 } from './reporting-contract.ts';
+import { FRIDA_CLI_NAME } from './identity.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const JOB_REPORT_SCHEMA_PATH = path.resolve(MODULE_DIR, '../schemas/frida-job-report.schema.json');
 const RUNTIME_CONFIG_SCHEMA_PATH = path.resolve(MODULE_DIR, '../schemas/frida-runtime-config.schema.json');
 
 type ReportStatus = 'SUCCESS' | 'HALTED';
+const REPORT_WRITE_SUMMARY = `Job report created by ${FRIDA_CLI_NAME} report write`;
 
 interface ReportArgs {
   command: 'check' | 'path' | 'write' | 'help';
@@ -51,7 +53,7 @@ function parseArgs(args: string[]): ReportArgs {
       profileId: 'unknown_profile',
       taskOrRun: 'run',
       status: 'SUCCESS',
-      summary: 'Job report created by frida-core report write',
+      summary: REPORT_WRITE_SUMMARY,
     };
   }
 
@@ -62,7 +64,7 @@ function parseArgs(args: string[]): ReportArgs {
     profileId: readFlag('--profile') || 'unknown_profile',
     taskOrRun: readFlag('--task') || 'run',
     status,
-    summary: readFlag('--summary') || 'Job report created by frida-core report write',
+    summary: readFlag('--summary') || REPORT_WRITE_SUMMARY,
   };
 }
 
@@ -146,7 +148,7 @@ function buildJobReportPayload(
       notes: 'auto-generated job report',
     },
     summary: {
-      what_done: ['Job report file created by frida-core report write'],
+      what_done: [`Job report file created by ${FRIDA_CLI_NAME} report write`],
       risks_or_debt: [],
       followups: [],
     },
@@ -162,13 +164,13 @@ function buildJobReportPayload(
 }
 
 function showHelp(): void {
-  console.log(`frida-core report
+  console.log(`${FRIDA_CLI_NAME} report
 
 Usage:
-  frida-core report check --file <path>
-  frida-core report path [--contract <path>]
-  frida-core report write [--contract <path>] [--profile <id>] [--task <name>] [--status SUCCESS|HALTED] [--summary <text>]
-  frida-core report help
+  ${FRIDA_CLI_NAME} report check --file <path>
+  ${FRIDA_CLI_NAME} report path [--contract <path>]
+  ${FRIDA_CLI_NAME} report write [--contract <path>] [--profile <id>] [--task <name>] [--status SUCCESS|HALTED] [--summary <text>]
+  ${FRIDA_CLI_NAME} report help
 `);
 }
 

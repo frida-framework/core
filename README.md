@@ -1,4 +1,4 @@
-# @frida-framework/core — Frida Core
+# @sistemado/frida — Frida Core
 
 > **Contract-driven code generation and agent orchestration kernel.**
 
@@ -66,7 +66,7 @@ frida-core bootstrap --target <repo-dir> --mode zero-start
 ### Prerequisites
 
 - Node.js ≥ 20.
-- Run the first bootstrap from a built `@frida-framework/core` package checkout (`node dist/cli.js ...`) before `npm install` exists in the target repo.
+- Run the first bootstrap from a built `@sistemado/frida` package checkout (`node dist/cli.js ...`) before `npm install` exists in the target repo.
 - Target repository must not contain existing Frida markers (`.frida/**`, `.frida/inbox/app-contract/**`, or FRIDA bootloader `AGENTS.md`).
 
 ### What it creates
@@ -91,7 +91,7 @@ After bootstrap:
 
 ```sh
 cd <repo-dir>
-npm install              # installs @frida-framework/core
+npm install              # installs @sistemado/frida
 npm run frida:check      # verify zone resolution + contract-set alignment
 # Edit .frida/inbox/app-contract/contract.index.yaml and layers/* — replace placeholders and expand the app contract
 npm run frida:gen        # regenerate after contract edits
@@ -101,7 +101,7 @@ npm run frida:bootstrap  # subsequent reconcile/repair (warm mode)
 ### Determinism and repeatability
 
 - Zero-start post-generation runs with fixed `generatedAt=1970-01-01T00:00:00.000Z`.
-- Identical clean input tree + identical `@frida-framework/core` package contents yield byte-identical zero-start output.
+- Identical clean input tree + identical `@sistemado/frida` package contents yield byte-identical zero-start output.
 - Re-running zero-start on an already-deployed repository fails immediately with `ZERO_START_ALREADY_DEPLOYED`.
 - After onboarding, use `frida-core bootstrap --target <dir>` (warm mode) for subsequent reconcile/repair.
 
@@ -132,7 +132,7 @@ Assembled snapshot `contract/contract.cbmd.yaml` references are compatibility-on
 ## Package API
 
 ```ts
-import { runFridaGeneration, runFridaMigrationReport, loadContractDocument } from '@frida-framework/core';
+import { runFridaGeneration, runFridaMigrationReport, loadContractDocument } from '@sistemado/frida';
 ```
 
 ## Development

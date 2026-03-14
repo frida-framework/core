@@ -22,7 +22,7 @@ It is not a source of truth for Frida semantics.
 2. Install dependencies in the target repository.
 3. Verify the deployment with `npm run frida:check`.
 
-Zero-start is deterministic for the same clean input state and the same `@frida-framework/core` package build. Post-generation runs with fixed `generatedAt=1970-01-01T00:00:00.000Z`.
+Zero-start is deterministic for the same clean input state and the same `@sistemado/frida` package build. Post-generation runs with fixed `generatedAt=1970-01-01T00:00:00.000Z`.
 
 ## Public Frida surfaces kept in the app repo
 

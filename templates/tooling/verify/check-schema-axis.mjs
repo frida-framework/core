@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runFridaMigrationReport } from '@frida-framework/core';
+import { runFridaMigrationReport } from '@sistemado/frida';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,4 +29,3 @@ try {
 } catch (error) {
   fail(`check-schema-axis failed: ${error instanceof Error ? error.message : String(error)}`);
 }
-

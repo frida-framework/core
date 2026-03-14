@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { runFridaHashCli } from './frida-core-bridge.ts';
+import { runFridaHashCli } from '@sistemado/frida';
 
 process.exit(runFridaHashCli());
 

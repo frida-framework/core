@@ -2,12 +2,13 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadContractDocument } from './contract-path.ts';
+import { FRIDA_CLI_NAME } from './identity.ts';
 
 const FIXED_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const OVERLAY_SCHEMA_ID = 'frida-visual-overlay';
 const OVERLAY_SCHEMA_VERSION = '1.0.0';
 const OVERLAY_BUILDER_ENTRYPOINT = 'src/visual.ts';
-const OVERLAY_BUILDER_COMMAND = 'frida-core visual';
+const OVERLAY_BUILDER_COMMAND = `${FRIDA_CLI_NAME} visual`;
 const OVERLAY_PROJECTION_AUTHORITY = 'FRIDA_VISUAL.component_projection';
 const CANONICAL_COMPONENT_SECTIONS = [
     'component_hierarchy_position',
@@ -1520,7 +1521,7 @@ function runVisualCheck(rootDir: string, parsedArgs: ReturnType<typeof parseVisu
             `Visual overlay artifact missing at ${path.relative(
                 rootDir,
                 overlayPath
-            )}. Run 'frida-core visual' to materialize the canonical overlay artifact first.`
+            )}. Run '${OVERLAY_BUILDER_COMMAND}' to materialize the canonical overlay artifact first.`
         );
     }
 
@@ -1532,7 +1533,7 @@ function runVisualCheck(rootDir: string, parsedArgs: ReturnType<typeof parseVisu
             `Visual overlay drift detected in ${path.relative(
                 rootDir,
                 overlayPath
-            )}. Run 'frida-core visual' to regenerate.`
+            )}. Run '${OVERLAY_BUILDER_COMMAND}' to regenerate.`
         );
     }
 
@@ -1551,7 +1552,7 @@ export async function runFridaVisualCli(args: string[] = []): Promise<number> {
         }
         return runVisualBuild(rootDir, parsedArgs);
     } catch (error) {
-        console.error(`❌ frida-core visual failed: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(`❌ ${OVERLAY_BUILDER_COMMAND} failed: ${error instanceof Error ? error.message : String(error)}`);
         return 1;
     }
 }

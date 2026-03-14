@@ -38,8 +38,8 @@ PATHS:
       checkAgentsContractSetFile: scripts/verify/check-agents-contract-set.mjs
   deps:
     fridaCore:
-      rootDir: node_modules/@frida-framework/core
-      contractSchemaFile: node_modules/@frida-framework/core/schemas/frida-contract.schema.json
+      rootDir: node_modules/@sistemado/frida
+      contractSchemaFile: node_modules/@sistemado/frida/schemas/frida-contract.schema.json
   temp:
     rootDir: .temp
 

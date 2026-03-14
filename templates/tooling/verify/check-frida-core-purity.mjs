@@ -24,7 +24,7 @@ for (const file of sourceFiles) {
 }
 
 if (importViolations.length > 0) {
-  console.error('❌ Found legacy local core imports. Use @frida-framework/core package instead:');
+  console.error('❌ Found legacy local core imports. Use @sistemado/frida package instead:');
   for (const rel of importViolations) {
     console.error(`   - ${rel}`);
   }

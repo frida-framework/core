@@ -22,13 +22,14 @@
 
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { FRIDA_PACKAGE_NAME } from '@sistemado/frida';
 
 const BASE_REF = process.env.BASE_REF || 'origin/main...HEAD';
 
 function isFridaSelfRepo() {
   try {
     const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
-    return packageJson?.name === '@frida-framework/core' && existsSync('contract/contract.index.yaml');
+    return packageJson?.name === FRIDA_PACKAGE_NAME && existsSync('contract/contract.index.yaml');
   } catch {
     return false;
   }

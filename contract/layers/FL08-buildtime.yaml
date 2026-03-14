@@ -51,7 +51,7 @@ FRIDA_CONTRACT_VALIDATOR:
     - "service_providerRef points to exactly one app-declared SERVICE_PROVIDERS entry"
   delivery_rule: >-
     Deployed validator scripts in target repositories MUST delegate to the
-    version-matched validator shipped by the installed @frida-framework/core
+    version-matched validator shipped by the installed @sistemado/frida
     package rather than carrying a divergent local ruleset.
 
 FRIDA_MAPPER_MODEL:

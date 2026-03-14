@@ -1,12 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import { fridaContractSchemaRef, type FridaAdapter } from './frida-core-bridge.ts';
+import { FRIDA_CONTRACT_SCHEMA_REF } from '@sistemado/frida';
 
 interface AdapterOptions {
   rootDir?: string;
   contractPath?: string;
 }
+
+type FridaAdapter = {
+  id: string;
+  schemaRef: string;
+  registerGenerators: (registry: any) => void;
+  registerSelectors: () => unknown[];
+  registerGuards: () => unknown[];
+};
 
 interface AdapterConfig {
   boundariesTemplateAbs: string;
@@ -105,7 +113,7 @@ export function createContractDrivenAdapter(options: AdapterOptions = {}): Frida
 
   return {
     id: 'contract-driven-host',
-    schemaRef: fridaContractSchemaRef,
+    schemaRef: FRIDA_CONTRACT_SCHEMA_REF,
     registerGenerators(registry) {
       registry.register({
         id: 'contract.docs.boundaries',

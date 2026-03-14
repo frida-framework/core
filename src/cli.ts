@@ -10,25 +10,26 @@ import { runFridaReportCli } from './report.ts';
 import { runFridaBuildCli } from './build.ts';
 import { runFridaBootstrapCli } from './bootstrap.ts';
 import { runFridaValidateCli } from './contract-validator.ts';
+import { FRIDA_CLI_NAME } from './identity.ts';
 
 function printHelp(): void {
-  console.log(`frida-core
+  console.log(`${FRIDA_CLI_NAME}
 
 Usage:
-  frida-core gen
-  frida-core validate [--contract <path>]
-  frida-core migration-report
-  frida-core init [--contract <path>] [--dry-run]
-  frida-core bootstrap --target <dir> [--mode warm|cold-engine|demo|zero-start] [--dry-run]
-  frida-core bootstrap --component <name> [--target <dir>]
-  frida-core visual [--check] [args...]
-  frida-core visual-viewer [--overlay <path>] [--out <path>] [--title <text>]
-  frida-core report [check|path|write] [args...]
-  frida-core check contract-set [--include-frida-internal]
-  frida-core check [zone args...]
-  frida-core hash [--manifest <path>] [--contract <path>]
-  frida-core build [--public] [--output <path>] [--contract <path>]
-  frida-core help
+  ${FRIDA_CLI_NAME} gen
+  ${FRIDA_CLI_NAME} validate [--contract <path>]
+  ${FRIDA_CLI_NAME} migration-report
+  ${FRIDA_CLI_NAME} init [--contract <path>] [--dry-run]
+  ${FRIDA_CLI_NAME} bootstrap --target <dir> [--mode warm|cold-engine|demo|zero-start] [--dry-run]
+  ${FRIDA_CLI_NAME} bootstrap --component <name> [--target <dir>]
+  ${FRIDA_CLI_NAME} visual [--check] [args...]
+  ${FRIDA_CLI_NAME} visual-viewer [--overlay <path>] [--out <path>] [--title <text>]
+  ${FRIDA_CLI_NAME} report [check|path|write] [args...]
+  ${FRIDA_CLI_NAME} check contract-set [--include-frida-internal]
+  ${FRIDA_CLI_NAME} check [zone args...]
+  ${FRIDA_CLI_NAME} hash [--manifest <path>] [--contract <path>]
+  ${FRIDA_CLI_NAME} build [--public] [--output <path>] [--contract <path>]
+  ${FRIDA_CLI_NAME} help
 `);
 }
 

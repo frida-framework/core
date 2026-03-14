@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { runFridaMigrationReport } from './frida-core-bridge.ts';
+import { runFridaMigrationReport } from '@sistemado/frida';
 
 process.exit(
   runFridaMigrationReport({

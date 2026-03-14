@@ -19,6 +19,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import process from 'node:process';
 import path from 'node:path';
 import YAML from 'yaml';
+import { FRIDA_PACKAGE_NAME } from '@sistemado/frida';
 import { loadModularContract } from '../lib/load-contract.mjs';
 
 const ROOT_DIR = path.resolve(process.cwd());
@@ -38,7 +39,7 @@ const ALLOWED_STATUS = new Set(['OPEN', 'DONE', 'DRIFT']);
 function isFridaSelfRepo() {
   try {
     const packageJson = JSON.parse(requireText(path.join(ROOT_DIR, 'package.json')));
-    return packageJson?.name === '@frida-framework/core' && existsSync(path.join(ROOT_DIR, 'contract', 'contract.index.yaml'));
+    return packageJson?.name === FRIDA_PACKAGE_NAME && existsSync(path.join(ROOT_DIR, 'contract', 'contract.index.yaml'));
   } catch {
     return false;
   }

@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { runFridaGeneration } from './frida-core-bridge.ts';
+import { runFridaGeneration } from '@sistemado/frida';
 import { createContractDrivenAdapter } from './frida-contract-adapter.ts';
 
 const APP_CONTRACT_INDEX = '.frida/inbox/app-contract/contract.index.yaml';

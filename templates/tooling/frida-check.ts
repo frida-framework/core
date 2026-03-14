@@ -1,15 +1,15 @@
 #!/usr/bin/env tsx
 import {
-  runFridaCheckCli,
+  getExpectedAgentsMd,
   loadZones,
   resolveZone,
-  getExpectedAgentsMd,
+  runFridaCheckCli,
   validateZoneAgentsMd,
-  type Zone,
-  type ZoneCandidate,
   type DecisionStep,
   type ValidationResult,
-} from './frida-core-bridge.ts';
+  type Zone,
+  type ZoneCandidate,
+} from '@sistemado/frida';
 import { spawnSync } from 'child_process';
 import { existsSync } from 'fs';
 import * as path from 'path';
@@ -20,10 +20,10 @@ export {
   resolveZone,
   getExpectedAgentsMd,
   validateZoneAgentsMd,
-  type Zone,
-  type ZoneCandidate,
   type DecisionStep,
   type ValidationResult,
+  type Zone,
+  type ZoneCandidate,
 };
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -99,4 +99,3 @@ if (isExecutedDirectly(import.meta.url)) {
       process.exit(2);
     });
 }
-
