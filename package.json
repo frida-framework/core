@@ -1,6 +1,6 @@
 {
   "name": "@sistemado/frida",
-  "version": "3.3.3",
+  "version": "3.3.4",
   "description": "Schema-driven Frida Core generation engine",
   "private": false,
   "repository": {
