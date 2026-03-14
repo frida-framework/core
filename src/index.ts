@@ -13,6 +13,10 @@ export {
   validateLoadedContractDocument,
 } from './contract-validator.ts';
 export { runFridaVisualCli } from './visual.ts';
+export {
+  composeEffectiveVisualContract,
+  loadEffectiveVisualContractDocument,
+} from './visual-contract.ts';
 export { runFridaVisualViewerCli } from './visualizer-dispatch.ts';
 export { runFridaInitCli } from './init.ts';
 export { runFridaBootstrapCli } from './bootstrap.ts';
@@ -28,6 +32,12 @@ export {
 export { runFridaHashCli } from './template-hash.ts';
 export { runFridaBuildCli } from './build.ts';
 export { loadContractDocument, resolveContractPath } from './contract-path.ts';
+export {
+  FIXED_TIMESTAMP,
+  extractVisualSchemaOverlay,
+  normalizeOverlayForComparison,
+  resolveVisualOverlayPath,
+} from './visual.ts';
 export type {
   ContractNormalizationResult,
   ContractLayerSpec,

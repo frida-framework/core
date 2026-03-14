@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   extractVisualSchemaOverlay,
+  loadEffectiveVisualContractDocument,
   resolveVisualOverlayPath,
 } from './lib/visual-schema-extractor.mjs';
-import { loadModularContract } from './lib/load-contract.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
 function toFsPath(relativePath) {
   return path.join(ROOT_DIR, relativePath.replace(/^\.\//, '').replace(/^\/+/, ''));
@@ -41,21 +38,27 @@ function parseArgs() {
 }
 
 function readContract(contractFilePath) {
-  const contract = loadModularContract(ROOT_DIR);
+  const loaded = loadEffectiveVisualContractDocument(ROOT_DIR, contractFilePath);
+  const contract = loaded?.parsed;
   if (!contract || typeof contract !== 'object') {
     throw new Error('Contract artifact parsed to empty or non-object value.');
   }
-  return { contract, raw: JSON.stringify(contract, null, 2), contractFilePath };
+  return {
+    contract,
+    raw: loaded.raw,
+    contractFilePath: loaded.contractPath,
+    sourcePath: path.relative(ROOT_DIR, loaded.contractPath).replace(/\\/g, '/'),
+  };
 }
 
 function main() {
   const args = parseArgs();
   const contractFilePath = toFsPath(args.contractPath);
-  const { contract, raw } = readContract(contractFilePath);
+  const { contract, raw, sourcePath, contractFilePath: resolvedContractPath } = readContract(contractFilePath);
   const outputRelativePath = args.outputPath || resolveVisualOverlayPath(contract);
   const overlay = extractVisualSchemaOverlay(contract, raw, {
-    sourcePath: args.contractPath,
-    contractPath: contractFilePath,
+    sourcePath,
+    contractPath: resolvedContractPath,
     outputPath: outputRelativePath,
   });
 

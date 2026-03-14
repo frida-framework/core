@@ -36,6 +36,11 @@ PATHS:
     verify:
       rootDir: scripts/verify
       checkAgentsContractSetFile: scripts/verify/check-agents-contract-set.mjs
+  tooling:
+    visualizerDir: templates/tooling/visualizer
+  visual:
+    overlayDir: .frida/contract/visual
+    overlayFile: .frida/contract/visual/canon-overlay.json
   deps:
     fridaCore:
       rootDir: node_modules/@sistemado/frida
@@ -88,7 +93,7 @@ FRIDA_CONFIG:
     filename_pattern: "<unixtime_ms>_<profile_id>_<task_or_run>.yaml"
     exists_check: false
   visual:
-    overlay_outputFileRef: PATHS.frida.contract.visual.overlayFile
+    overlay_pathRef: PATHS.visual.overlayFile
 
 meta:
   schemaVersion: "6.0"

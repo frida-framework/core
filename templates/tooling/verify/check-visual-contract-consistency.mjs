@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from 'node:path';
-import { loadModularContract } from '../lib/load-contract.mjs';
+import { loadEffectiveVisualContractDocument } from '@sistemado/frida';
 
 const ROOT_DIR = path.resolve(process.cwd());
 
@@ -10,11 +10,12 @@ function fail(message) {
 }
 
 function loadContract() {
-  const contract = loadModularContract(ROOT_DIR);
+  const loaded = loadEffectiveVisualContractDocument(ROOT_DIR);
+  const contract = loaded?.parsed;
   if (!contract || typeof contract !== 'object') {
     fail('Contract artifact parsed to empty or non-object value.');
   }
-  return { raw: '', contract };
+  return { raw: loaded.raw, contract };
 }
 
 function isObjectLike(value) {

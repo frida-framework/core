@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
 import {
+  composeEffectiveVisualContract,
   extractVisualSchemaOverlay,
   FIXED_TIMESTAMP,
+  loadEffectiveVisualContractDocument,
   normalizeOverlayForComparison,
   resolveVisualOverlayPath,
 } from '../lib/visual-schema-extractor.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(process.cwd());
 
 function fail(message) {
@@ -19,21 +18,18 @@ function fail(message) {
   process.exit(1);
 }
 
-function loadContract() {
-  const contractPath = path.join(ROOT_DIR, 'contract', 'contract.index.yaml');
-  if (!fs.existsSync(contractPath)) {
-    fail(`Core contract index not found: ${path.relative(ROOT_DIR, contractPath)}`);
+function isCoreSelfRepo() {
+  const packageJsonPath = path.join(ROOT_DIR, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    return false;
   }
-  const contract = loadContractFromIndex(contractPath);
-  if (!contract || typeof contract !== 'object') {
-    fail('Contract artifact parsed to empty or non-object value.');
+
+  try {
+    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    return pkg?.name === '@sistemado/frida' && fs.existsSync(path.join(ROOT_DIR, 'contract', 'contract.index.yaml'));
+  } catch {
+    return false;
   }
-  return {
-    contract,
-    raw: yaml.stringify(contract),
-    contractPath,
-    sourcePath: path.relative(ROOT_DIR, contractPath).replace(/\\/g, '/'),
-  };
 }
 
 function loadContractFromIndex(indexPath) {
@@ -66,24 +62,20 @@ function loadContractFromIndex(indexPath) {
   return contract;
 }
 
-function isObjectLike(value) {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function mergeContracts(base, incoming) {
-  if (!isObjectLike(base) || !isObjectLike(incoming)) {
-    return incoming;
+function loadLiveContract() {
+  const explicitContractPath = isCoreSelfRepo() ? 'contract/contract.index.yaml' : undefined;
+  const loaded = loadEffectiveVisualContractDocument(ROOT_DIR, explicitContractPath);
+  const contract = loaded?.parsed;
+  if (!contract || typeof contract !== 'object') {
+    fail('Contract artifact parsed to empty or non-object value.');
   }
 
-  const out = { ...base };
-  for (const [key, value] of Object.entries(incoming)) {
-    if (key in out && isObjectLike(out[key]) && isObjectLike(value)) {
-      out[key] = mergeContracts(out[key], value);
-      continue;
-    }
-    out[key] = value;
-  }
-  return out;
+  return {
+    contract,
+    raw: loaded.raw,
+    contractPath: loaded.contractPath,
+    sourcePath: path.relative(ROOT_DIR, loaded.contractPath).replace(/\\/g, '/'),
+  };
 }
 
 function toAbsolutePath(relativeOrAbsolute) {
@@ -105,9 +97,7 @@ function compareDeterminism(contract, raw, sourcePath, contractPath) {
     contractPath,
   });
 
-  const firstJson = JSON.stringify(first);
-  const secondJson = JSON.stringify(second);
-  if (firstJson !== secondJson) {
+  if (JSON.stringify(first) !== JSON.stringify(second)) {
     fail('Visual overlay compilation is not deterministic (same input produced different overlays).');
   }
   return first;
@@ -170,32 +160,46 @@ function assertOverlayVocabulary(overlay) {
   }
 }
 
-function main() {
-  console.log('🔍 Checking visual overlay determinism...');
-  const { contract, raw, sourcePath, contractPath } = loadContract();
-  const expectedOverlay = compareDeterminism(contract, raw, sourcePath, contractPath);
-  assertOverlayVocabulary(expectedOverlay);
-  compareGeneratedArtifact(contract, expectedOverlay);
-
+function runSeededCoreSmoke(coreContract) {
   const templateContractPath = path.join(ROOT_DIR, 'templates', 'template_app_basic', 'app-contract', 'contract.index.yaml');
   if (!fs.existsSync(templateContractPath)) {
     fail(`Template app contract index not found: ${path.relative(ROOT_DIR, templateContractPath)}`);
   }
+
   const templateContract = loadContractFromIndex(templateContractPath);
-  const seededSmokeContract = mergeContracts(contract, templateContract);
-  const seededRaw = yaml.stringify(seededSmokeContract);
+  const seededContract = composeEffectiveVisualContract(templateContract, coreContract);
+  const seededRaw = yaml.stringify(seededContract);
   const seededOverlay = compareDeterminism(
-    seededSmokeContract,
+    seededContract,
     seededRaw,
-    'contract/contract.index.yaml + templates/template_app_basic/app-contract/contract.index.yaml',
+    'templates/template_app_basic/app-contract/contract.index.yaml',
     templateContractPath,
   );
   assertNonEmptyLiveOverlay(seededOverlay);
   assertOverlayVocabulary(seededOverlay);
 
-  console.log(
-    `✅ Visual overlay determinism OK (core_units=${expectedOverlay.projection_units.length}, core_boundaries=${expectedOverlay.component_boundaries.length}, seeded_units=${seededOverlay.projection_units.length}, seeded_boundaries=${seededOverlay.component_boundaries.length})`
-  );
+  return seededOverlay;
+}
+
+function main() {
+  console.log('🔍 Checking visual overlay determinism...');
+  const { contract, raw, sourcePath, contractPath } = loadLiveContract();
+  const expectedOverlay = compareDeterminism(contract, raw, sourcePath, contractPath);
+  assertOverlayVocabulary(expectedOverlay);
+  compareGeneratedArtifact(contract, expectedOverlay);
+
+  const stats = [
+    `units=${expectedOverlay.projection_units.length}`,
+    `boundaries=${expectedOverlay.component_boundaries.length}`,
+  ];
+
+  if (isCoreSelfRepo()) {
+    const seededOverlay = runSeededCoreSmoke(contract);
+    stats.push(`seeded_units=${seededOverlay.projection_units.length}`);
+    stats.push(`seeded_boundaries=${seededOverlay.component_boundaries.length}`);
+  }
+
+  console.log(`✅ Visual overlay determinism OK (${stats.join(', ')})`);
 }
 
 try {

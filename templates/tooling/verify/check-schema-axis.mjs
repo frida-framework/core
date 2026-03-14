@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { runFridaMigrationReport } from '@sistemado/frida';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, '..', '..');
+const ROOT_DIR = path.resolve(process.cwd());
 
 function fail(message) {
   console.error(`❌ ${message}`);

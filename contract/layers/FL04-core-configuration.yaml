@@ -283,7 +283,7 @@ FRIDA_CONFIG:
           create_allow_task_setter_forbidden:
             - "tasks/**"
   visual:
-    overlay_pathRef: "PATHS.fridaContract.visualOverlayFile"
+    overlay_pathRef: "PATHS.visual.overlayFile"
     generation_mode: on_demand
     determinism: required
   naming:

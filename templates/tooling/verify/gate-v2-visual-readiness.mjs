@@ -1,41 +1,57 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, '..', '..');
+const ROOT_DIR = path.resolve(process.cwd());
+
+function isCoreSelfRepo() {
+  const packageJsonPath = path.join(ROOT_DIR, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    return false;
+  }
+
+  try {
+    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    return pkg?.name === '@sistemado/frida';
+  } catch {
+    return false;
+  }
+}
+
+function resolveCheckPath(appPath, corePath) {
+  return isCoreSelfRepo() ? corePath : appPath;
+}
 
 const checks = [
   {
     id: 'schema_axis',
-    command: ['node', 'scripts/verify/check-schema-axis.mjs'],
+    command: ['node', resolveCheckPath('scripts/verify/check-schema-axis.mjs', 'templates/tooling/verify/check-schema-axis.mjs')],
     description: 'Contract passes strict schema axis checks',
   },
   {
     id: 'contract_consistency',
-    command: ['node', 'scripts/verify/check-visual-contract-consistency.mjs'],
+    command: ['node', resolveCheckPath('scripts/verify/check-visual-contract-consistency.mjs', 'templates/tooling/verify/check-visual-contract-consistency.mjs')],
     description: 'No dangling visual contract references',
   },
   {
     id: 'visual_on_demand',
-    command: ['node', 'scripts/visual-schema-extract.mjs'],
+    command: ['node', resolveCheckPath('scripts/visual-schema-extract.mjs', 'templates/tooling/visual-schema-extract.mjs')],
     description: 'Visual artifacts can be generated on demand',
   },
   {
     id: 'no_skip_visual',
-    command: ['node', 'scripts/verify/check-visual-no-skip.mjs'],
+    command: ['node', resolveCheckPath('scripts/verify/check-visual-no-skip.mjs', 'templates/tooling/verify/check-visual-no-skip.mjs')],
     description: 'Visual pipeline is fail-hard (no silent skip)',
   },
   {
     id: 'determinism',
-    command: ['node', 'scripts/verify/check-visual-schema-determinism.mjs'],
+    command: ['node', resolveCheckPath('scripts/verify/check-visual-schema-determinism.mjs', 'templates/tooling/verify/check-visual-schema-determinism.mjs')],
     description: 'Visual determinism check passes for overlay-only extraction',
   },
   {
     id: 'verify_separation',
-    command: ['node', 'scripts/verify/check-verify-visual-separation.mjs'],
+    command: ['node', resolveCheckPath('scripts/verify/check-verify-visual-separation.mjs', 'templates/tooling/verify/check-verify-visual-separation.mjs')],
     description: 'verify and verify:visual pipelines are separated',
   },
 ];

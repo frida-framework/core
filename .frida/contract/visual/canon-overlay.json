@@ -2,8 +2,8 @@
   "meta": {
     "schema_id": "frida-visual-overlay",
     "schema_version": "1.0.0",
-    "generated_at": "2026-03-11T01:28:23.013Z",
-    "contract_sha256": "118946fd47765ea88ba830717db6e3cac04f1189af1abd2ad238cbc83f7ec10a",
+    "generated_at": "2026-03-14T04:45:35.615Z",
+    "contract_sha256": "9690b6d3d2365ed323a5d3c2d884c6871ffcc806a8c89694e048ecac4906b354",
     "source": "contract/contract.index.yaml",
     "overlay_path": ".frida/contract/visual/canon-overlay.json",
     "builder_entrypoint": "src/visual.ts",

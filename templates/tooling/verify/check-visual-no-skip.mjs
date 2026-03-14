@@ -1,12 +1,10 @@
 #!/usr/bin/env node
-import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { extractVisualSchemaOverlay } from '../lib/visual-schema-extractor.mjs';
-import { loadModularContract } from '../lib/load-contract.mjs';
+import {
+  extractVisualSchemaOverlay,
+  loadEffectiveVisualContractDocument,
+} from '../lib/visual-schema-extractor.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(process.cwd());
 
 function fail(message) {
@@ -15,21 +13,27 @@ function fail(message) {
 }
 
 function loadContract() {
-  const contract = loadModularContract(ROOT_DIR);
+  const loaded = loadEffectiveVisualContractDocument(ROOT_DIR);
+  const contract = loaded?.parsed;
   if (!contract || typeof contract !== 'object') {
     fail('Contract artifact parsed to empty or non-object value.');
   }
-  return { raw: '', contract };
+  return {
+    raw: loaded.raw,
+    contract,
+    contractPath: loaded.contractPath,
+    sourcePath: path.relative(ROOT_DIR, loaded.contractPath).replace(/\\/g, '/'),
+  };
 }
 
 function main() {
   console.log('🔍 Checking visual fail-hard no-skip behavior...');
-  const { raw, contract } = loadContract();
+  const { raw, contract, contractPath, sourcePath } = loadContract();
 
   extractVisualSchemaOverlay(contract, raw, {
     generatedAt: '1970-01-01T00:00:00.000Z',
-    sourcePath: 'contract/contract.index.yaml',
-    contractPath: path.join(ROOT_DIR, 'contract', 'contract.index.yaml'),
+    sourcePath,
+    contractPath,
   });
 
   let failedHard = false;

@@ -1,10 +1,10 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadContractDocument } from './contract-path.ts';
 import { FRIDA_CLI_NAME } from './identity.ts';
+import { loadEffectiveVisualContractDocument } from './visual-contract.ts';
 
-const FIXED_TIMESTAMP = '1970-01-01T00:00:00.000Z';
+export const FIXED_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const OVERLAY_SCHEMA_ID = 'frida-visual-overlay';
 const OVERLAY_SCHEMA_VERSION = '1.0.0';
 const OVERLAY_BUILDER_ENTRYPOINT = 'src/visual.ts';
@@ -1458,7 +1458,7 @@ function loadContract(rootDir: string, contractPath: string | null): {
     contract: AnyObject;
     contractPath: string;
 } {
-    const loaded = loadContractDocument(rootDir, contractPath || undefined);
+    const loaded = loadEffectiveVisualContractDocument(rootDir, contractPath || undefined);
     return {
         raw: loaded.raw,
         contract: loaded.parsed as AnyObject,
