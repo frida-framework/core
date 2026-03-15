@@ -376,7 +376,7 @@ FRIDA_VERSION_POLICY:
         patch: Bug fix, documentation, internal refactor with no API change.
     contract:
       source_of_truth: contract/contract.index.yaml → version
-      mirror: contract/layers/FL01-identity.yaml → CONTRACT_META.version
+      mirror: contract/public-layers/FL01-identity.public.yaml → CONTRACT_META.version
       format: semver
       consistency_rule: contract.index.yaml version MUST equal CONTRACT_META.version.
       bump_rules:
@@ -386,7 +386,7 @@ FRIDA_VERSION_POLICY:
     schema:
       source_of_truth: schemas/frida-contract.schema.json → title (version suffix)
       mirror: contract/contract.index.yaml → schema_version
-      mirror_2: contract/layers/FL01-identity.yaml → meta.schemaVersion
+      mirror_2: contract/public-layers/FL01-identity.public.yaml → meta.schemaVersion
       format: MAJOR.MINOR
       consistency_rule: All three locations MUST declare the same version.
       bump_rules:

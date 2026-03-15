@@ -4,7 +4,7 @@ import { runFridaAgentsContractSetCheck } from './agents-contract-set.ts';
 import { runFridaCheckCli } from './zone-check.ts';
 import { runFridaHashCli } from './template-hash.ts';
 import { runFridaVisualCli } from './visual.ts';
-import { runFridaVisualViewerCli } from './visualizer-dispatch.ts';
+import { runFridaVisualViewerCli, runFridaVisualizerCli } from './visualizer-dispatch.ts';
 import { runFridaInitCli } from './init.ts';
 import { runFridaReportCli } from './report.ts';
 import { runFridaBuildCli } from './build.ts';
@@ -23,7 +23,8 @@ Usage:
   ${FRIDA_CLI_NAME} bootstrap --target <dir> [--mode warm|cold-engine|demo|zero-start] [--dry-run]
   ${FRIDA_CLI_NAME} bootstrap --component <name> [--target <dir>]
   ${FRIDA_CLI_NAME} visual [--check] [args...]
-  ${FRIDA_CLI_NAME} visual-viewer [--overlay <path>] [--contract <path>] [--out <path>] [--title <text>]
+  ${FRIDA_CLI_NAME} visualizer                     (target-repo only — illegal in Frida repo)
+  ${FRIDA_CLI_NAME} visual-viewer [args...]         (DEPRECATED — use visualizer instead)
   ${FRIDA_CLI_NAME} report [check|path|write] [args...]
   ${FRIDA_CLI_NAME} check contract-set [--include-frida-internal]
   ${FRIDA_CLI_NAME} check [zone args...]
@@ -66,6 +67,8 @@ async function run(): Promise<number> {
     case 'visual-viewer':
     case 'viewer':
       return runFridaVisualViewerCli(args);
+    case 'visualizer':
+      return runFridaVisualizerCli(args);
     case 'report':
       return runFridaReportCli(args);
     case 'check':

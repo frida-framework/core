@@ -6,6 +6,28 @@ FRIDA_VISUAL:
   version: 1.0.0
   overlay_format: json
   overlay_pathRef: "PATHS.visual.overlayFile"
+  target_function:
+    statement: "Represent the architecture of the target application as an interactive diagram."
+    primary_surface_rule: "Visualizer delivery MUST treat the interactive diagram as the primary product surface. Textual lists, inspectors, and proof-oriented summaries are secondary support surfaces only."
+    semantic_scope_rule: "The visualizer presents architecture derived from overlay semantics only and MUST NOT redefine source-contract truth."
+  execution_legality:
+    allowed_repository_scope: "target_app_repo_only"
+    forbidden_repository_scope: "frida_repo"
+    required_contract_root: ".frida/inbox/app-contract/contract.index.yaml"
+    target_repo_rule: "Visualizer generation and execution are legal only inside a target application repository that contains the required app-contract inbox root."
+    frida_repo_rule: "The Frida repository MAY ship visualizer source and delivery metadata, but it MUST NOT be treated as a legal visualizer generation or execution environment."
+    template_seed_rule: "`templates/template_app_basic/app-contract/**` in the Frida repository is a derivative zero-start seed and MUST NOT be treated as a legal application contract for visualizer invocation."
+    forbidden_inputs:
+      - "templates/template_app_basic/app-contract/contract.index.yaml"
+      - "templates/tooling/verify/fixtures/visual-overlay/**"
+      - "core-contract/**"
+      - "contract/** in repo frida"
+  bootstrap_relation:
+    zero_start_order:
+      - "zero-start seeds the derivative app contract into the target repository first"
+      - "only after that seeded contract exists does visualizer invocation become legal in that target repository"
+    zero_start_auto_run_rule: "zero-start MUST NOT generate or run the visualizer automatically."
+    legality_transition_rule: "zero-start enables later legal visualizer invocation in a target repository; it is not itself a visualizer execution path."
   authority_chain:
     purpose: "Authority split for boundary-first visualization."
     source_contract_semantics:
@@ -25,8 +47,8 @@ FRIDA_VISUAL:
       scope: "Runtime/viewer state, actions, and legal overlay consumption."
     reference_viewer_scope:
       authorityRef: "FRIDA_VISUAL.reference_viewer"
-      scope: "Reference-viewer delivery and demo-fixture scope only."
-    rule: "Authority MUST flow only source contract semantics -> derived overlay semantics -> runtime/viewer contract. Reference viewer scope MUST NOT redefine upstream semantics."
+      scope: "Visualizer delivery metadata only; execution legality is target-repo-only and defined separately."
+    rule: "Authority MUST flow only source contract semantics -> derived overlay semantics -> runtime/viewer contract. Delivery metadata MUST NOT redefine upstream semantics, and legality remains target-repo-only."
   component_projection:
     authoritative_rule: "This block is the authoritative source for deterministic source-contract-to-overlay projection semantics for component-boundary contracts. It defines projection only and MUST NOT redefine source-contract semantics or runtime/viewer state."
     primary_unit: "component-level contract file"
@@ -525,13 +547,13 @@ FRIDA_VISUAL:
       - "illegal child inline expansion into parent specification overlay"
       - "typed relation collapsed into generic edge only"
       - "dependency edge misuse"
-      - "viewer/session fixture state taught as authoritative source-contract input"
+      - "visualizer fixture or demo state taught as authoritative source-contract input"
       - "invalid outcome semantics in exits"
   viewer_runtime_v1:
     id: "frida-visual-viewer-runtime"
     version: "1.0.0"
     schema_file: "schemas/frida-visual-viewer-runtime.schema.json"
-    authority_rule: "This block is the authoritative runtime/viewer contract for UI state that consumes visual overlay output. It MUST NOT redefine source-contract or overlay semantics. Runtime implementation MAY be absent when the optional visualizer module is disabled."
+    authority_rule: "This block is the authoritative runtime/viewer contract for UI state that consumes visual overlay output. It MUST NOT redefine source-contract or overlay semantics. Delivery implementations remain subject to FRIDA_VISUAL.target_function, FRIDA_VISUAL.execution_legality, and FRIDA_VISUAL.bootstrap_relation."
     runtime_entrypoint: "templates/tooling/visualizer/src/visual-viewer.ts"
     overlay_input_ref: "FRIDA_VISUAL.overlay_schema_v1"
     overlay_entity_model_authorityRef: "FRIDA_VISUAL.overlay_entity_model_v1"
@@ -678,16 +700,19 @@ FRIDA_VISUAL:
         - "change_lod specification"
         - "open_trace exit_point:dashboard_summary:open_details"
   reference_viewer:
-    authority_rule: "This block is authoritative only for reference-viewer scope, delivery, optional-module wiring, and demo-fixture wiring. It MUST consume FRIDA_VISUAL.overlay_schema_v1 and FRIDA_VISUAL.viewer_runtime_v1 without redefining source, projection, overlay, or runtime semantics."
+    authority_rule: "This block is authoritative only for visualizer delivery metadata, packaged source-module location, and current entrypoint wiring. It MUST consume FRIDA_VISUAL.overlay_schema_v1 and FRIDA_VISUAL.viewer_runtime_v1 without redefining source, projection, overlay, runtime, legality, or bootstrap semantics."
     overlay_delivery_authorityRef: "FRIDA_VISUAL.overlay_schema_v1"
     runtime_contract_ref: "FRIDA_VISUAL.viewer_runtime_v1"
-    fixture_marker_field: "fixture_only"
-    fixture_rule: "Viewer/session-like demo inputs MUST remain outside the canonical core assembly. If retained by an optional visualizer module, they MUST live only in module-owned fixture_only: true surfaces and MUST NOT be taught as general component_input_interface semantics."
+    target_function_ref: "FRIDA_VISUAL.target_function"
+    execution_legality_ref: "FRIDA_VISUAL.execution_legality"
+    bootstrap_relation_ref: "FRIDA_VISUAL.bootstrap_relation"
     module_rootDirRef: "PATHS.tooling.visualizerDir"
     cli_entrypoint: "frida-core visual-viewer"
     browser_runtime_entrypoint: "templates/tooling/visualizer/src/visual-reference-viewer-app.ts"
-    output_rule: "Reference viewer MUST render overlay-only topology, flow, and specification views and MUST keep boundary transitions explicit."
-    demo_overlay: "templates/tooling/verify/fixtures/visual-overlay/mounted_child_boundary.overlay.json"
+    output_rule: "Visualizer delivery MUST present the architecture of the target application as an interactive diagram. Proof-oriented textual output is secondary and MUST NOT define the product surface."
+    frida_repo_rule: "The Frida repository is not a legal visualizer execution surface. Shipping source/templates there does not make local generation or runtime legal."
+    target_repo_rule: "Visualizer execution is legal only in a target repository with a legal app-contract inbox root."
+    template_contract_rule: "The derivative template app contract shipped inside the Frida repository is not a legal app-contract input for visualizer generation or execution."
   lod_levels:
     topology:
       zoom: [0.0, 0.35]

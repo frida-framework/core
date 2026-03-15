@@ -108,6 +108,12 @@ export interface ContractIndex {
   schema_version?: string;
   contract_id?: string;
   version?: string;
+  projection?: {
+    kind: 'public_package_projection';
+    layer_dir: string;
+    layer_file_suffix: string;
+    naming_rule?: string;
+  };
   layers?: ContractLayerSpec[];
   contract_index?: {
     version: string;

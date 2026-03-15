@@ -4,6 +4,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const ROOT_DIR = process.cwd();
+const WIN32_SHELL = process.env.ComSpec || 'cmd.exe';
 const FORBIDDEN_FILE_PREFIXES = ['core-contract/', 'core-templates/', 'core-tasks/'];
 const CONTRACT_FILES_TO_SCAN = [
   'contract/contract.index.yaml',
@@ -24,7 +25,17 @@ function fail(message) {
 }
 
 function readTarballFileList() {
-  const raw = execFileSync('npm', ['pack', '--dry-run', '--ignore-scripts', '--json'], {
+  const command = process.platform === 'win32'
+    ? {
+        file: WIN32_SHELL,
+        args: ['/d', '/s', '/c', 'npm pack --dry-run --ignore-scripts --json'],
+      }
+    : {
+        file: 'npm',
+        args: ['pack', '--dry-run', '--ignore-scripts', '--json'],
+      };
+
+  const raw = execFileSync(command.file, command.args, {
     cwd: ROOT_DIR,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],

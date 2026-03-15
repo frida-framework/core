@@ -18,7 +18,11 @@ export const PROJECTED_SOURCE_ONLY_PREFIXES = [
 
 export const PROJECTED_STRING_REPLACEMENTS: ReadonlyArray<readonly [string, string]> = [
   ['core-contract/', 'contract/'],
+  [SOURCE_MANAGEMENT_PLAYBOOK_PREFIX, 'the packaged management playbook surface '],
   ['.frida/templates/management/', 'undeployed management template paths'],
+  ['templates/frida/', 'the packaged Frida template surface '],
+  ['templates/docs-gen/', 'the packaged Frida docs template surface '],
+  ['templates/template_app_basic/', 'the derivative zero-start template surface '],
   ['INT_FRIDA_ZONES', 'the private internal zone block'],
   ['FRIDA_INT_AGENT_ROUTING', 'private self-routing metadata'],
   ['FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT', 'the private self-contract-management interface'],

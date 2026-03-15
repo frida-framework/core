@@ -454,7 +454,7 @@ entries:
     kind: file
     ownership_class: user_owned
     apply_mode: seed_if_absent
-    sha256: sha256:7a69b2611333df742b7e22bf0309674bed549e2ff0d26005970ad61a3ea836aa
+    sha256: sha256:91da038165b36f1685bee09ebf2798f8541844e836e3beb41bda3a67ae107b67
     components:
       - playbooks
       - interface-instructions-reset
@@ -468,7 +468,7 @@ entries:
     kind: file
     ownership_class: user_owned
     apply_mode: seed_if_absent
-    sha256: sha256:186d6b64167038df6551d1da853eac91f1e4d75ae5f262996003617ef161a562
+    sha256: sha256:a610761969778b0b9879af8f7a1c74905cfdb88120824aa7d43025db4bed62e0
     components:
       - playbooks
       - interface-instructions-reset
@@ -482,7 +482,7 @@ entries:
     kind: file
     ownership_class: engine_static
     apply_mode: copy
-    sha256: sha256:e78df38a4e72b6f55043306f67332e04291a1f84ee8fe159f47bae17a94f4134
+    sha256: sha256:54c641a9c24734274a8e33f40a0dec328e67275b3c76ebb34c14874ec1e26907
     components:
       - playbooks
     modes:
@@ -516,7 +516,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:8345a349fbaa5ab81a5a837660033c72aebff42e579056b9df90bcc57bf012c0
+    sha256: sha256:6885be12e893e7eb251ffbefdd2449183e9b913c10cfca39f5e66fa7b8de645a
     modes:
       - zero-start
   - id: zero_start_template_app_basic_shared_layer_seed
@@ -525,7 +525,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:89dbdb6c477f6e61d7552065a3cddecb9c38216d07789ab2f9cc94f118c90950
+    sha256: sha256:e211f8fde8eb170088d0aca3d9b66fe457c5a204c125fbe840f7f363a2d9f6d8
     modes:
       - zero-start
   - id: zero_start_template_app_basic_agent_framework_layer_seed
@@ -534,7 +534,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:ff53b48538f62278a2acc6e737f758fa8390a785e79e1c13504cb30bad993549
+    sha256: sha256:e2ccd8c5b00c958c49aba5d882728eae5a386aa1d2b66ada4238284a0961258b
     modes:
       - zero-start
   - id: zero_start_template_app_basic_host_root_layer_seed
@@ -543,7 +543,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:0e3ca95b88962da68b43abe669b926d82b5e790c8d442dca34cb6d81d1fd204d
+    sha256: sha256:7822776de5ad6350a675bfb2c7ec1c3f1be4f4dbc6dcbf9976ea642effce3886
     modes:
       - zero-start
   - id: zero_start_template_app_basic_backend_extension_seed
@@ -552,7 +552,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:ff2c9440c9190958cc0da889d8a01e80aeae31a54f7759f0c1eb86fbc2702926
+    sha256: sha256:f6e6e916fe789920542546a6b6c3470dfeb9e348b7b0b8e3de8805e3b82fb7ae
     modes:
       - zero-start
   - id: zero_start_template_app_basic_backend_supabase_extension_seed
@@ -561,7 +561,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:14c5c4076a0d4838645f01288bc0298836db95b972051d14609a5c080bdc2b14
+    sha256: sha256:b7b0c80e7b86f657b10ed1add36111971ef3b75ef9942362fe6ac01f37b2349f
     modes:
       - zero-start
   - id: zero_start_template_app_basic_readme_seed
@@ -570,7 +570,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:5206cfb7b14ba35827c45673be58867b99c295ba3bd7ecbc8d6d58e160dfc639
+    sha256: sha256:0e3ccc2b9fc6ac098e098078ad689fce32d2ead275ecb3251de427ae86fcbd6e
     modes:
       - zero-start
   - id: zero_start_template_app_basic_package_json_seed
@@ -579,6 +579,6 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:6d4e7955adcee5f9169575909a5933e49ffc167a2430c969ecaf0947b77947e6
+    sha256: sha256:bc6739531b83c3436b641362e03d96b31d66a787fb0371e4fc247c10131971ee
     modes:
       - zero-start

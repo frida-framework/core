@@ -58,8 +58,6 @@ function main() {
     'check-visual-contract-consistency',
     'frida:visual',
     'check-visual-schema-determinism',
-    'check-visual-overlay-goldens',
-    'run-visualizer-module-checks',
   ];
 
   for (const required of requiredInVerifyVisual) {

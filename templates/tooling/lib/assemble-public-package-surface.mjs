@@ -1,12 +1,26 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import YAML from 'yaml';
+import {
+  CORE_BOOTSTRAP_MANIFEST_REL,
+  CORE_CONTRACT_INDEX_REL,
+  PUBLIC_BOOTSTRAP_MANIFEST_REL,
+  PUBLIC_CONTRACT_INDEX_REL,
+  PUBLIC_CONTRACT_LAYER_DIR_FROM_INDEX,
+  PUBLIC_CONTRACT_LAYER_DIR_REL,
+  PUBLIC_CONTRACT_LAYER_FILE_SUFFIX,
+  PUBLIC_CONTRACT_PROJECTION_KIND,
+  PUBLIC_TEMPLATE_INTEGRITY_MANIFEST_REL,
+  toPublicContractLayerFileName,
+  toPublicContractLayerIndexPath,
+} from './source-contract-paths.mjs';
 
 const ROOT_DIR = path.resolve(process.env.FRIDA_REPO_ROOT || process.cwd());
-const SOURCE_CONTRACT_DIR = path.join(ROOT_DIR, 'core-contract');
-const TARGET_CONTRACT_DIR = path.join(ROOT_DIR, 'contract');
-const SOURCE_INDEX_PATH = path.join(SOURCE_CONTRACT_DIR, 'contract.index.yaml');
-const TARGET_INDEX_PATH = path.join(TARGET_CONTRACT_DIR, 'contract.index.yaml');
+const SOURCE_INDEX_PATH = path.join(ROOT_DIR, CORE_CONTRACT_INDEX_REL);
+const TARGET_INDEX_PATH = path.join(ROOT_DIR, PUBLIC_CONTRACT_INDEX_REL);
+const SOURCE_CONTRACT_DIR = path.dirname(SOURCE_INDEX_PATH);
+const TARGET_CONTRACT_DIR = path.dirname(TARGET_INDEX_PATH);
 
 const ROOT_CONTRACT_FILES = [
   'bootstrap-package.manifest.yaml',
@@ -18,8 +32,10 @@ const SOURCE_ONLY_PREFIXES = [
   'core-tasks/',
 ];
 
-const PATH_REWRITES = [
-  ['core-contract/', 'contract/'],
+const EXACT_PATH_REWRITES = [
+  [CORE_CONTRACT_INDEX_REL, PUBLIC_CONTRACT_INDEX_REL],
+  ['core-contract/template-integrity.manifest.yaml', PUBLIC_TEMPLATE_INTEGRITY_MANIFEST_REL],
+  [CORE_BOOTSTRAP_MANIFEST_REL, PUBLIC_BOOTSTRAP_MANIFEST_REL],
 ];
 
 function ensureDir(dirPath) {
@@ -31,11 +47,15 @@ function isPlainObject(value) {
 }
 
 function normalizeStringValue(value) {
-  let rewritten = value;
-  for (const [from, to] of PATH_REWRITES) {
+  let rewritten = value.replace(/\\/g, '/');
+  for (const [from, to] of EXACT_PATH_REWRITES) {
     rewritten = rewritten.replaceAll(from, to);
   }
-  return rewritten;
+  rewritten = rewritten.replace(
+    /core-contract\/layers\/([A-Za-z0-9._-]+\.ya?ml)/g,
+    (_, layerFileName) => `${PUBLIC_CONTRACT_LAYER_DIR_REL}/${toPublicContractLayerFileName(layerFileName)}`,
+  );
+  return rewritten.replaceAll('core-contract/', 'contract/');
 }
 
 function getBlockVisibility(key, block) {
@@ -135,6 +155,39 @@ function writeYaml(filePath, value) {
   fs.writeFileSync(filePath, YAML.stringify(value, { lineWidth: 120 }), 'utf8');
 }
 
+function sha256File(filePath) {
+  const bytes = fs.readFileSync(filePath);
+  return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+function refreshBootstrapManifestHashes(manifestPath) {
+  const manifest = loadYaml(manifestPath);
+  if (!isPlainObject(manifest) || !Array.isArray(manifest.entries)) {
+    return 0;
+  }
+
+  let refreshed = 0;
+  for (const entry of manifest.entries) {
+    if (!isPlainObject(entry) || typeof entry.source !== 'string' || !entry.source.trim()) {
+      continue;
+    }
+
+    const sourceAbsPath = path.resolve(ROOT_DIR, entry.source);
+    if (!fs.existsSync(sourceAbsPath) || !fs.statSync(sourceAbsPath).isFile()) {
+      continue;
+    }
+
+    const nextHash = sha256File(sourceAbsPath);
+    if (entry.sha256 !== nextHash) {
+      entry.sha256 = nextHash;
+      refreshed += 1;
+    }
+  }
+
+  writeYaml(manifestPath, manifest);
+  return refreshed;
+}
+
 function buildPublicContract() {
   if (!fs.existsSync(SOURCE_INDEX_PATH)) {
     throw new Error(`Source contract index not found: ${SOURCE_INDEX_PATH}`);
@@ -153,7 +206,7 @@ function buildPublicContract() {
 
   const privateBlocks = collectPrivateBlocks();
   fs.rmSync(TARGET_CONTRACT_DIR, { recursive: true, force: true });
-  ensureDir(path.join(TARGET_CONTRACT_DIR, 'layers'));
+  ensureDir(path.join(TARGET_CONTRACT_DIR, PUBLIC_CONTRACT_LAYER_DIR_FROM_INDEX));
 
   const publicLayers = [];
   for (const layer of layers) {
@@ -189,11 +242,12 @@ function buildPublicContract() {
       continue;
     }
 
-    const layerFileName = path.basename(sourceLayerRel);
-    writeYaml(path.join(TARGET_CONTRACT_DIR, 'layers', layerFileName), filteredLayerDoc);
+    const sourceLayerFileName = path.basename(sourceLayerRel);
+    const publicLayerFileName = toPublicContractLayerFileName(sourceLayerFileName);
+    writeYaml(path.join(TARGET_CONTRACT_DIR, PUBLIC_CONTRACT_LAYER_DIR_FROM_INDEX, publicLayerFileName), filteredLayerDoc);
     publicLayers.push({
       ...layer,
-      path: `contract/layers/${layerFileName}`,
+      path: toPublicContractLayerIndexPath(sourceLayerFileName),
       visibility: 'public',
       blocks: publicBlockIds,
     });
@@ -201,11 +255,25 @@ function buildPublicContract() {
 
   writeYaml(TARGET_INDEX_PATH, {
     ...sourceIndex,
+    projection: {
+      kind: PUBLIC_CONTRACT_PROJECTION_KIND,
+      layer_dir: PUBLIC_CONTRACT_LAYER_DIR_FROM_INDEX,
+      layer_file_suffix: PUBLIC_CONTRACT_LAYER_FILE_SUFFIX,
+      naming_rule: 'Projected public layers MUST live under public-layers/ and use a .public.yaml suffix.',
+    },
     layers: publicLayers,
   });
 
   for (const fileName of ROOT_CONTRACT_FILES) {
-    fs.copyFileSync(path.join(SOURCE_CONTRACT_DIR, fileName), path.join(TARGET_CONTRACT_DIR, fileName));
+    const sourcePath = path.join(SOURCE_CONTRACT_DIR, fileName);
+    const targetPath = path.join(TARGET_CONTRACT_DIR, fileName);
+    fs.copyFileSync(sourcePath, targetPath);
+    if (fileName === 'bootstrap-package.manifest.yaml') {
+      const refreshed = refreshBootstrapManifestHashes(targetPath);
+      if (refreshed > 0) {
+        console.log(`↻ Refreshed ${refreshed} bootstrap-package hashes for the public package surface`);
+      }
+    }
   }
 }
 

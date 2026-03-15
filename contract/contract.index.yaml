@@ -3,7 +3,7 @@ contract_id: FRIDA_CORE_CONTRACT
 version: 5.2.0
 layers:
   - id: identity
-    path: contract/layers/FL01-identity.yaml
+    path: public-layers/FL01-identity.public.yaml
     visibility: public
     keywords:
       - contract-meta
@@ -13,7 +13,7 @@ layers:
       - meta
       - core
   - id: infrastructure
-    path: contract/layers/FL03-infrastructure.yaml
+    path: public-layers/FL03-infrastructure.public.yaml
     visibility: public
     keywords:
       - zones
@@ -23,7 +23,7 @@ layers:
     blocks:
       - ZONES
   - id: core-configuration
-    path: contract/layers/FL04-core-configuration.yaml
+    path: public-layers/FL04-core-configuration.public.yaml
     visibility: public
     keywords:
       - config
@@ -36,7 +36,7 @@ layers:
       - FRIDA_ROOT_LAYOUT_POLICY
       - FRIDA_CONFIG_FIELD_DOCS
   - id: agent-framework
-    path: contract/layers/FL05-agent-framework.yaml
+    path: public-layers/FL05-agent-framework.public.yaml
     visibility: public
     keywords:
       - profiles
@@ -45,7 +45,7 @@ layers:
     blocks:
       - FRIDA_ENFORCEMENT_TYPES
   - id: cli
-    path: contract/layers/FL07-cli.yaml
+    path: public-layers/FL07-cli.public.yaml
     visibility: public
     keywords:
       - cli
@@ -55,7 +55,7 @@ layers:
       - FRIDA_TEMPLATE_INTEGRITY
       - FRIDA_CLI
   - id: buildtime
-    path: contract/layers/FL08-buildtime.yaml
+    path: public-layers/FL08-buildtime.public.yaml
     visibility: public
     keywords:
       - buildtime
@@ -65,7 +65,7 @@ layers:
       - FRIDA_GENERATOR
       - FRIDA_MAPPER_MODEL
   - id: bootstrap
-    path: contract/layers/FL09-bootstrap.yaml
+    path: public-layers/FL09-bootstrap.public.yaml
     visibility: public
     keywords:
       - bootstrap
@@ -79,7 +79,7 @@ layers:
       - FRIDA_BOOTSTRAP_PACKAGE_MANIFEST
       - FRIDA_APP_TEMPLATE_MODEL
   - id: visualization
-    path: contract/layers/FL10-visualization.yaml
+    path: public-layers/FL10-visualization.public.yaml
     visibility: public
     keywords:
       - visual
@@ -88,7 +88,7 @@ layers:
     blocks:
       - FRIDA_VISUAL
   - id: management
-    path: contract/layers/FL11-management.yaml
+    path: public-layers/FL11-management.public.yaml
     visibility: public
     keywords:
       - management
@@ -105,7 +105,7 @@ layers:
       - FRIDA_INTERFACE_TASKSET
       - FRIDA_VERSION_POLICY
   - id: agent-entry
-    path: contract/layers/FL13-agent-entry.yaml
+    path: public-layers/FL13-agent-entry.public.yaml
     visibility: public
     keywords:
       - agents
@@ -118,7 +118,7 @@ layers:
       - FRIDA_INTERFACE_ROUTING
       - FRIDA_CLAUSE_INDEX
   - id: wiki
-    path: contract/layers/FL12-wiki.yaml
+    path: public-layers/FL12-wiki.public.yaml
     visibility: public
     keywords:
       - wiki
@@ -126,3 +126,8 @@ layers:
       - synchronization
     blocks:
       - FRIDA_WIKI_MECHANICS
+projection:
+  kind: public_package_projection
+  layer_dir: public-layers
+  layer_file_suffix: .public.yaml
+  naming_rule: Projected public layers MUST live under public-layers/ and use a .public.yaml suffix.

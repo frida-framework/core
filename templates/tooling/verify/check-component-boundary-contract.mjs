@@ -238,7 +238,7 @@ function assertComponentContractSpec(contract, issues) {
     );
     assertListIncludesAll(
       domainRules.optional_block_fields || [],
-      ['projection_domains', 'fixture_only'],
+      ['projection_domains'],
       'component_domain_blocks.optional_block_fields',
       issues,
     );
@@ -253,12 +253,6 @@ function assertComponentContractSpec(contract, issues) {
       !domainRules.fallback_rule.includes('MUST NOT be promoted into topology')
     ) {
       issues.push('component_contract_spec.section_field_rules.component_domain_blocks.fallback_rule must keep selector-less blocks collapsed.');
-    }
-    if (
-      typeof domainRules?.fixture_only_rule !== 'string' ||
-      !domainRules.fixture_only_rule.includes('fixture_only: true')
-    ) {
-      issues.push('component_contract_spec.section_field_rules.component_domain_blocks.fixture_only_rule must isolate viewer/runtime demo state behind fixture_only: true.');
     }
   }
 
@@ -477,7 +471,7 @@ function assertValidationCoverage(contract, issues) {
       'component_mount_point.mounted_child_boundaryRefs and component_output_interface.*boundaryRef fields resolve only to explicit component boundaries when present.',
       'component_output_interface exit entries obey the strict target matrix: continue -> target_boundaryRef, return -> return_target_boundaryRef, exit -> neither.',
       'Component-level contract examples and snippets use only the canonical component_* vocabulary.',
-      'Authoritative component-contract examples remain runtime-free unless a fixture-only marker is explicit.',
+      'Authoritative component-contract examples remain runtime-free; viewer/runtime fixture exceptions are forbidden.',
       'Mixed legacy/new component-boundary namespace use in active definitions is a hard failure.',
     ],
     'FRIDA_VALIDATION_CHECKLIST.contract_consistency',
@@ -494,7 +488,10 @@ function assertValidationCoverage(contract, issues) {
       'component_shared_refs project dependency edges only and do not override ownership or boundary semantics.',
       'component_domain_blocks project only through explicit projection_domains selectors on top-level child blocks; heuristics are forbidden.',
       'A component_domain_blocks child block without projection_domains remains collapsed source detail and is not promoted into topology, flow, or expanded specification detail.',
-      'Optional visualizer demo state remains fixture-only and is not taught as general component_input_interface semantics.',
+      'Visualizer fixtures, demo overlays, and template-contract execution inputs are forbidden in active visualizer semantics.',
+      'Visualizer generation and execution are legal only in target application repositories with a legal app-contract inbox root.',
+      'The derivative template app contract in repo `frida` is not a legal visualizer app-contract input.',
+      'zero-start seeds the derivative app contract first and enables later legal visualizer invocation in the target repo, but zero-start itself does not generate or run the visualizer.',
       'When host_root is present, viewer depth is measured relative to that anchor and never becomes negative.',
     ],
     'FRIDA_VALIDATION_CHECKLIST.visual_consistency',

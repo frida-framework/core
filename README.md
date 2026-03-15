@@ -10,7 +10,7 @@
 - **Visibility** — `FRIDA_INTERFACE_*` blocks are public by default unless `_visibility: private` is set explicitly. `build --public` strips private blocks.
 - **Visual overlay** — read-only JSON derived from contract truth. UI/runtime consume `.frida/contract/visual/canon-overlay.json` (or `PATHS.visual.overlayFile`) instead of re-deriving visual semantics from raw contract. `npm run frida:visual` materializes the canonical artifact, and `npm run verify:visual` now requires it to exist and stay fresh.
 - **Viewer runtime contract** — runtime navigation state is a separate overlay-consuming layer with its own vocabulary: `scope`, `focus`, `lod`, `context_shell`, `enter`, `peek`, `back`, `up`, `trace`, `navigation_stack`.
-- **Reference viewer** — `frida-core visual-viewer` generates a minimal static HTML proof viewer backed by the overlay and the viewer runtime reducer. The viewer lives in the optional module `templates/tooling/visualizer`, consumes overlay artifacts only, and can be removed by dropping its contract activation line plus that directory. `npm run frida:visual-viewer:demo` still renders the mounted-child fixture into `dist/reference-viewer/demo/index.html`.
+- **Visualizer** — `frida-core visualizer` builds a diagram-first interactive HTML viewer in a **target app repo**. The visualizer is illegal to run inside the Frida repo itself. Source and templates ship with the package; the target repo performs the on-demand build and receives `dist/visualizer/index.html`.
 - **Self-management** — `FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT` is private, repo-local to `frida`, and is not deployed into target repos.
 - **Task surface** — In repo `frida`, only `core-tasks/TASK-*.md` is allowed. `tasks/` is forbidden in repo `frida`; `core-tasks/` is forbidden outside repo `frida`.
 - **Templates** — `.hbs` files are source of truth. Drift detected via SHA-256 manifest.
@@ -18,6 +18,7 @@
 Self-repo authoring surfaces live in `core-contract/`, `core-templates/`, and `core-tasks/`.
 Public/package surfaces live in `contract/` and `templates/`.
 Modular `core-contract/contract.index.yaml` is authoritative in repo `frida`; `contract/contract.index.yaml` is the generated public package projection.
+Projected public layers live under `contract/public-layers/*.public.yaml`, so they are visually and mechanically distinct from the canonical authoring layers in `core-contract/layers/*.yaml`.
 Assembled snapshot `contract/contract.cbmd.yaml` references are compatibility-only and must not be used as the active source.
 
 ## CLI
@@ -31,7 +32,7 @@ frida-core bootstrap --target <dir>                   # warm reconcile (default)
 frida-core bootstrap --target <dir> --mode zero-start # first-time onboarding for clean repos
 frida-core bootstrap --target <dir> --mode cold-engine  # engine-only first-time deploy
 frida-core visual [--check]       # build or check visual overlay schema v1 at PATHS.visual.overlayFile
-frida-core visual-viewer [--overlay <path>] [--contract <path>] [--out <path>] [--title <text>]  # generate a static proof viewer for an overlay or directly from a contract
+frida-core visualizer                      # build visualizer in a target app repo (illegal in Frida repo)
 frida-core hash --check           # verify template integrity
 frida-core init                   # normalize reporting config
 frida-core migration-report       # report deprecated contract fields
@@ -112,7 +113,6 @@ npm run clean             # remove dist/
 npm run build             # compile TypeScript
 npm run verify            # build + migration report + zone/contract checks + zero-start determinism
 npm run verify:zero-start # zero-start determinism + required-output check
-npm run frida:visual-viewer:template-app # generate a viewer from the shipped template app contract
 ```
 
 ## What's in this repository
@@ -123,7 +123,7 @@ npm run frida:visual-viewer:template-app # generate a viewer from the shipped te
 | `core-contract/contract.index.yaml` | Self-repo authoring contract entry point |
 | `core-templates/management/` | Private self-repo management playbooks that must never ship |
 | `core-tasks/` | Private self-repo task surface |
-| `contract/` | Generated public contract projection shipped in the npm package |
+| `contract/` | Generated public contract projection shipped in the npm package; projected layers live under `contract/public-layers/*.public.yaml` |
 | `contract/contract.index.yaml` | Public package contract entry point |
 | `contract/template-integrity.manifest.yaml` | Generated public template hash manifest for shipped templates |
 | `schemas/` | JSON Schemas for contract, runtime config, session reports |
@@ -150,3 +150,5 @@ The contract is split into numbered Frida layers. Core layers use `FL##-*`; Frid
 | `FL11 management` | mixed | guard-spec, antitask, verify, update, taskset |
 | `FL12 wiki` | public | wiki/SSOT sync |
 | `FL13 agent-entry` | mixed | entry protocol, interface routing, clause refs |
+
+Public/package projections keep the same layer ids, but their files are intentionally renamed and relocated under `contract/public-layers/*.public.yaml`. The canonical authoring entity stays only in `core-contract/layers/*.yaml`; the package surface is explicitly a projection, not a second source of truth.

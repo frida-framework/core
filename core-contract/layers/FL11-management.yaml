@@ -403,12 +403,12 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
       - id: boundary_non_duplication
         rule: "Parent component contracts MUST NOT inline mounted child internals when drill-in is required, and component_shared_refs MUST remain dependency-only."
       - id: boundary_runtime_example_clean
-        rule: "Authoritative source-contract examples MUST NOT place viewer/runtime session state in component_input_interface or other general teaching surfaces unless the data is explicitly marked fixture-only."
+        rule: "Authoritative source-contract examples MUST NOT place viewer/runtime session state in component_input_interface or other general teaching surfaces."
     visualization_boundaries:
       - id: boundary_first_projection
         rule: "Visualization interprets topology, flow, and specification relative to the current component boundary before using YAML depth."
       - id: overlay_authority_chain_strict
-        rule: "Authority MUST flow source contract semantics -> FRIDA_VISUAL.component_projection -> FRIDA_VISUAL.overlay_entity_model_v1 -> FRIDA_VISUAL.viewer_runtime_v1, and reference viewer scope MUST remain delivery-only."
+        rule: "Authority MUST flow source contract semantics -> FRIDA_VISUAL.component_projection -> FRIDA_VISUAL.overlay_entity_model_v1 -> FRIDA_VISUAL.viewer_runtime_v1, and delivery metadata MUST remain legality-neutral while target-repo-only execution is defined separately."
       - id: overlay_entity_inventory_declared
         rule: "Runtime/viewer may consume only overlay entity families normatively declared in FRIDA_VISUAL.overlay_entity_model_v1."
       - id: child_drill_in_explicit
@@ -423,8 +423,14 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
         rule: "Topology, flow, and specification projection of component_domain_blocks MUST route only through explicit projection_domains selectors on top-level child blocks."
       - id: domain_block_projection_fallback_strict
         rule: "A component_domain_blocks child block without projection_domains remains collapsed source detail only and MUST NOT be heuristically promoted into topology, flow, or expanded specification detail."
-      - id: reference_fixture_runtime_leakage_blocked
-        rule: "Optional visualizer/demo state MUST remain fixture-only and MUST NOT appear as normative component_input_interface teaching material."
+      - id: visualizer_fixture_inputs_forbidden
+        rule: "Visualizer fixtures, demo overlays, and fixture-style execution inputs are forbidden in active visualizer semantics and verification lanes."
+      - id: visualizer_target_repo_only_execution
+        rule: "Visualizer generation and execution are legal only in target application repositories with a legal app-contract inbox root."
+      - id: visualizer_template_contract_illegal
+        rule: "The derivative template app contract inside repo `frida` MUST NOT be treated as a legal application-contract input for visualizer invocation."
+      - id: visualizer_zero_start_enable_only
+        rule: "zero-start seeds the derivative app contract first and enables later legal visualizer invocation in the target repo, but zero-start itself MUST NOT generate or run the visualizer."
       - id: host_anchor_depth_zero
         rule: "When a host_root boundary is present, viewer/runtime depth is measured from that anchor and MUST NOT become negative."
       - id: overlay_determinism_strict
@@ -654,7 +660,6 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
         projection_unit: "Top-level child block under component_domain_blocks"
         optional_block_fields:
           - projection_domains
-          - fixture_only
         projection_selector_field: "projection_domains"
         projection_selector_allowed_values:
           - topology
@@ -673,12 +678,6 @@ FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT:
           Nested grandchildren inside component_domain_blocks are not
           independently projectable. They remain source detail unless a future
           contract extension declares explicit selectors.
-        fixture_only_rule: >-
-          Viewer/runtime demo state MUST NOT appear in authoritative source
-          examples or ordinary component_input_interface surfaces. If retained
-          for optional visualizer module fixtures or app-baseline demos, it
-          MUST live only inside component_domain_blocks child blocks marked
-          fixture_only: true.
         example:
           summary_stack:
             projection_domains:

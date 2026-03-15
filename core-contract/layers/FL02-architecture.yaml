@@ -91,6 +91,7 @@ FRIDA_ARCHITECTURE_DECISIONS:
       status: ACCEPTED
       decision:
         - "Component-level contract file is the primary visual projection unit."
+        - "FRIDA_VISUAL.target_function defines the visualizer as representation of the target application architecture through an interactive diagram."
         - "FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT.component_contract_spec is the authoritative source for component-boundary source semantics."
         - "FRIDA_VISUAL.component_projection is the authoritative source for source-contract-to-overlay projection semantics."
         - "FRIDA_VISUAL.overlay_entity_model_v1 is the authoritative source for derived overlay entity semantics, and FRIDA_VISUAL.overlay_schema_v1 is authoritative for overlay serialization and artifact delivery."
@@ -100,7 +101,11 @@ FRIDA_ARCHITECTURE_DECISIONS:
         - "component_domain_blocks projection is selector-driven only through explicit projection_domains declarations on top-level child blocks; no shape, key-name, or UI heuristics are allowed."
         - "Mounted child internals stay collapsed in parent specification view until explicit drill-in through component_mount_point.mounted_child_boundaryRefs."
         - "Mounted-child, continuation, and return refs produce typed overlay relations before any generic edge projection."
-        - "Reference-viewer demo state is fixture-only and MUST NOT be taught as general component_input_interface semantics."
+        - "Visualizer fixtures, demo overlays, and template-contract execution inputs are forbidden in active visualizer semantics."
+        - "Visualizer generation and execution are legal only in target application repositories with a legal app-contract inbox root."
+        - "The Frida repository may ship visualizer source and delivery metadata but is not itself a legal visualizer generation or execution environment."
+        - "`template_app_basic` in repo `frida` is a derivative zero-start seed and MUST NOT be treated as a legal application contract for visualizer invocation."
+        - "zero-start seeds the derivative app contract first and only then enables later legal visualizer invocation in the target repository; zero-start itself MUST NOT generate or run the visualizer."
         - "Overlay is deterministic: identical normalized contract input and identical generator build/configuration yield byte-identical overlay output after normalization of explicitly declared volatile fields only."
       evidence:
         - src/visual.ts

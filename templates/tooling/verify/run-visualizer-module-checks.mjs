@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,11 +7,6 @@ import { loadVisualizerModuleConfig } from '../lib/visualizer-module.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(process.cwd());
-const NODE_EXE = process.execPath;
-const CHECKS = [
-  path.join(__dirname, 'check-visual-viewer-runtime.mjs'),
-  path.join(__dirname, 'check-visual-reference-viewer.mjs'),
-];
 
 function fail(message) {
   console.error(`❌ ${message}`);
@@ -20,7 +14,7 @@ function fail(message) {
 }
 
 function main() {
-  console.log('🔍 Checking optional visualizer module...');
+  console.log('🔍 Checking optional visualizer module (static legality only)...');
   const config = loadVisualizerModuleConfig();
 
   if (!config.enabled) {
@@ -34,14 +28,34 @@ function main() {
     );
   }
 
-  for (const scriptPath of CHECKS) {
-    execFileSync(NODE_EXE, [scriptPath], {
-      cwd: ROOT_DIR,
-      stdio: 'inherit',
-    });
+  // Static legality: no fixture overlay references in visualizer module source
+  const srcDir = path.join(config.moduleRootAbs, 'src');
+  if (fs.existsSync(srcDir)) {
+    const srcFiles = fs.readdirSync(srcDir).filter((f) => f.endsWith('.ts') || f.endsWith('.mjs'));
+    for (const file of srcFiles) {
+      const content = fs.readFileSync(path.join(srcDir, file), 'utf8');
+      if (content.includes('fixtures/visual-overlay')) {
+        fail(`Visualizer module source references fixture overlays: ${file}`);
+      }
+      if (content.includes('demo_overlay') || content.includes('demo/index.html')) {
+        fail(`Visualizer module source references demo overlay surface: ${file}`);
+      }
+    }
   }
 
-  console.log('✅ Optional visualizer module checks OK');
+  // Static legality: no reference-viewer output paths remain
+  const distDir = config.moduleDistAbs;
+  if (distDir && fs.existsSync(distDir)) {
+    const distFiles = fs.readdirSync(distDir);
+    for (const file of distFiles) {
+      const content = fs.readFileSync(path.join(distDir, file), 'utf8');
+      if (content.includes('dist/reference-viewer/')) {
+        fail(`Visualizer module dist references legacy reference-viewer output path: ${file}`);
+      }
+    }
+  }
+
+  console.log('✅ Optional visualizer module checks OK (static legality only)');
 }
 
 try {

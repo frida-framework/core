@@ -56,7 +56,7 @@ FRIDA_CONTRACT_BOOTSTRAP:
       explicit_only: true
       zero_deploy_only: true
       entrypoint: "frida-core bootstrap --target <dir> --mode demo"
-      purpose: "Deploy reference demo assets (visualizer + demo seed) when package demo assets are available."
+      purpose: "Deploy reference demo seed assets when package demo assets are available. Visualizer generation or execution is not part of demo mode."
       app_contract_writes: allowed_demo_seed_only
       on_existing_frida_or_contract:
         action: HALT
@@ -72,7 +72,7 @@ FRIDA_CONTRACT_BOOTSTRAP:
         and inactive app-extension layers under
         .frida/inbox/app-contract/extensions/. Post-generation runs with fixed
         generatedAt=1970-01-01T00:00:00.000Z so identical clean initial state and identical package input
-        yield identical zero-start output.
+        yield identical zero-start output. The seeded derivative app contract is established first; visualizer invocation becomes legal only later in the target repo and zero-start itself MUST NOT generate or run the visualizer.
       requires_frida_markers: false
       requires_app_contract_inbox: false
       app_contract_writes: allowed_template_seed_only
@@ -166,7 +166,9 @@ FRIDA_CONTRACT_BOOTSTRAP:
     Demo bootstrap deliverables remain package-specific. Warm/cold-engine bootstrap
     are engine-surface reconciliation flows and must not mutate app-contract data.
     Zero-start is defined as cold-engine surface deployment plus `template_app_basic` seeding
-    with deterministic post-generation.
+    with deterministic post-generation. The derivative template seed is not itself a legal
+    app-contract execution context while it remains inside repo `frida`; visualizer legality
+    begins only after seeding into a target repository.
 
 FRIDA_APP_TEMPLATE_MODEL:
   _visibility: public

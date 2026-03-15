@@ -110,6 +110,108 @@ function assertVisualPaths(contract, issues) {
   }
 }
 
+function assertVisualizerGovernanceContract(contract, issues) {
+  const visual = contract.FRIDA_VISUAL;
+  if (!isObjectLike(visual)) {
+    return;
+  }
+
+  const targetFunction = visual.target_function;
+  if (!isObjectLike(targetFunction)) {
+    issues.push('FRIDA_VISUAL.target_function is missing or invalid.');
+  } else {
+    if (targetFunction.statement !== 'Represent the architecture of the target application as an interactive diagram.') {
+      issues.push('FRIDA_VISUAL.target_function.statement must define the interactive target-application architecture diagram.');
+    }
+    if (
+      typeof targetFunction?.primary_surface_rule !== 'string' ||
+      !targetFunction.primary_surface_rule.includes('interactive diagram as the primary product surface')
+    ) {
+      issues.push('FRIDA_VISUAL.target_function.primary_surface_rule must make the diagram the primary product surface.');
+    }
+    if (
+      typeof targetFunction?.semantic_scope_rule !== 'string' ||
+      !targetFunction.semantic_scope_rule.includes('overlay semantics only')
+    ) {
+      issues.push('FRIDA_VISUAL.target_function.semantic_scope_rule must keep visualizer semantics overlay-driven only.');
+    }
+  }
+
+  const legality = visual.execution_legality;
+  if (!isObjectLike(legality)) {
+    issues.push('FRIDA_VISUAL.execution_legality is missing or invalid.');
+  } else {
+    if (legality.allowed_repository_scope !== 'target_app_repo_only') {
+      issues.push("FRIDA_VISUAL.execution_legality.allowed_repository_scope must equal 'target_app_repo_only'.");
+    }
+    if (legality.forbidden_repository_scope !== 'frida_repo') {
+      issues.push("FRIDA_VISUAL.execution_legality.forbidden_repository_scope must equal 'frida_repo'.");
+    }
+    if (legality.required_contract_root !== '.frida/inbox/app-contract/contract.index.yaml') {
+      issues.push("FRIDA_VISUAL.execution_legality.required_contract_root must equal '.frida/inbox/app-contract/contract.index.yaml'.");
+    }
+    if (
+      typeof legality?.target_repo_rule !== 'string' ||
+      !legality.target_repo_rule.includes('legal only inside a target application repository')
+    ) {
+      issues.push('FRIDA_VISUAL.execution_legality.target_repo_rule must confine visualizer legality to target application repositories.');
+    }
+    if (
+      typeof legality?.frida_repo_rule !== 'string' ||
+      !legality.frida_repo_rule.includes('MUST NOT be treated as a legal visualizer generation or execution environment')
+    ) {
+      issues.push('FRIDA_VISUAL.execution_legality.frida_repo_rule must forbid Frida-repo visualizer generation/execution.');
+    }
+    if (
+      typeof legality?.template_seed_rule !== 'string' ||
+      !legality.template_seed_rule.includes('MUST NOT be treated as a legal application contract')
+    ) {
+      issues.push('FRIDA_VISUAL.execution_legality.template_seed_rule must forbid treating template_app_basic as a legal app contract in repo frida.');
+    }
+
+    const forbiddenInputs = Array.isArray(legality?.forbidden_inputs) ? legality.forbidden_inputs : [];
+    const requiredForbiddenInputs = new Set([
+      'templates/template_app_basic/app-contract/contract.index.yaml',
+      'templates/tooling/verify/fixtures/visual-overlay/**',
+      'contract/** in repo frida',
+    ]);
+    for (const requiredInput of requiredForbiddenInputs) {
+      if (!forbiddenInputs.includes(requiredInput)) {
+        issues.push(`FRIDA_VISUAL.execution_legality.forbidden_inputs is missing ${requiredInput}.`);
+      }
+    }
+    if (!forbiddenInputs.includes('core-contract/**') && !forbiddenInputs.includes('contract/**')) {
+      issues.push('FRIDA_VISUAL.execution_legality.forbidden_inputs must forbid the Frida contract source/public surfaces.');
+    }
+  }
+
+  const bootstrap = visual.bootstrap_relation;
+  if (!isObjectLike(bootstrap)) {
+    issues.push('FRIDA_VISUAL.bootstrap_relation is missing or invalid.');
+  } else {
+    const zeroStartOrder = Array.isArray(bootstrap?.zero_start_order) ? bootstrap.zero_start_order : [];
+    const expectedZeroStartOrder = [
+      'zero-start seeds the derivative app contract into the target repository first',
+      'only after that seeded contract exists does visualizer invocation become legal in that target repository',
+    ];
+    if (JSON.stringify(zeroStartOrder) !== JSON.stringify(expectedZeroStartOrder)) {
+      issues.push('FRIDA_VISUAL.bootstrap_relation.zero_start_order must preserve seed-first then visualizer-legality ordering.');
+    }
+    if (
+      typeof bootstrap?.zero_start_auto_run_rule !== 'string' ||
+      !bootstrap.zero_start_auto_run_rule.includes('MUST NOT generate or run the visualizer automatically')
+    ) {
+      issues.push('FRIDA_VISUAL.bootstrap_relation.zero_start_auto_run_rule must forbid automatic visualizer execution.');
+    }
+    if (
+      typeof bootstrap?.legality_transition_rule !== 'string' ||
+      !bootstrap.legality_transition_rule.includes('not itself a visualizer execution path')
+    ) {
+      issues.push('FRIDA_VISUAL.bootstrap_relation.legality_transition_rule must keep zero-start as enable-only.');
+    }
+  }
+}
+
 function assertOverlayAuthorityModel(contract, issues) {
   const visual = contract.FRIDA_VISUAL;
   if (!isObjectLike(visual)) {
@@ -121,7 +223,6 @@ function assertOverlayAuthorityModel(contract, issues) {
     issues.push('FRIDA_VISUAL.authority_chain is missing or invalid.');
   } else {
     const expectedRefs = {
-      source_contract_semantics: 'FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT.component_contract_spec',
       source_to_overlay_projection: 'FRIDA_VISUAL.component_projection',
       overlay_entity_model: 'FRIDA_VISUAL.overlay_entity_model_v1',
       overlay_schema_delivery: 'FRIDA_VISUAL.overlay_schema_v1',
@@ -135,11 +236,20 @@ function assertOverlayAuthorityModel(contract, issues) {
       }
     }
 
+    const sourceAuthorityRef = authorityChain?.source_contract_semantics?.authorityRef;
+    if (
+      sourceAuthorityRef !== undefined &&
+      sourceAuthorityRef !== 'FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT.component_contract_spec'
+    ) {
+      issues.push('FRIDA_VISUAL.authority_chain.source_contract_semantics.authorityRef must equal FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT.component_contract_spec when published.');
+    }
+
     if (
       typeof authorityChain?.rule !== 'string' ||
-      !authorityChain.rule.includes('source contract semantics -> derived overlay semantics -> runtime/viewer contract')
+      !authorityChain.rule.includes('source contract semantics -> derived overlay semantics -> runtime/viewer contract') ||
+      !authorityChain.rule.includes('legality remains target-repo-only')
     ) {
-      issues.push('FRIDA_VISUAL.authority_chain.rule must preserve the source -> overlay -> runtime/viewer authority flow.');
+      issues.push('FRIDA_VISUAL.authority_chain.rule must preserve the source -> overlay -> runtime/viewer authority flow and target-repo-only legality.');
     }
   }
 
@@ -248,27 +358,62 @@ function assertOverlayAuthorityModel(contract, issues) {
     if (referenceViewer.runtime_contract_ref !== 'FRIDA_VISUAL.viewer_runtime_v1') {
       issues.push('FRIDA_VISUAL.reference_viewer.runtime_contract_ref must equal FRIDA_VISUAL.viewer_runtime_v1.');
     }
-    if (referenceViewer.fixture_marker_field !== 'fixture_only') {
-      issues.push('FRIDA_VISUAL.reference_viewer.fixture_marker_field must equal fixture_only.');
+    if (referenceViewer.target_function_ref !== 'FRIDA_VISUAL.target_function') {
+      issues.push('FRIDA_VISUAL.reference_viewer.target_function_ref must equal FRIDA_VISUAL.target_function.');
+    }
+    if (referenceViewer.execution_legality_ref !== 'FRIDA_VISUAL.execution_legality') {
+      issues.push('FRIDA_VISUAL.reference_viewer.execution_legality_ref must equal FRIDA_VISUAL.execution_legality.');
+    }
+    if (referenceViewer.bootstrap_relation_ref !== 'FRIDA_VISUAL.bootstrap_relation') {
+      issues.push('FRIDA_VISUAL.reference_viewer.bootstrap_relation_ref must equal FRIDA_VISUAL.bootstrap_relation.');
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(referenceViewer, 'fixture_marker_field') ||
+      Object.prototype.hasOwnProperty.call(referenceViewer, 'fixture_rule') ||
+      Object.prototype.hasOwnProperty.call(referenceViewer, 'demo_overlay')
+    ) {
+      issues.push('FRIDA_VISUAL.reference_viewer must not expose fixture/demo fields.');
     }
     if (
       typeof referenceViewer?.authority_rule !== 'string' ||
-      !referenceViewer.authority_rule.includes('optional-module wiring') ||
-      !referenceViewer.authority_rule.includes('demo-fixture wiring')
+      !referenceViewer.authority_rule.includes('visualizer delivery metadata') ||
+      !referenceViewer.authority_rule.includes('legality') ||
+      !referenceViewer.authority_rule.includes('bootstrap semantics')
     ) {
-      issues.push('FRIDA_VISUAL.reference_viewer.authority_rule must limit the block to scope, delivery, and demo-fixture wiring.');
-    }
-    if (
-      typeof referenceViewer?.fixture_rule !== 'string' ||
-      !referenceViewer.fixture_rule.includes('fixture_only: true')
-    ) {
-      issues.push('FRIDA_VISUAL.reference_viewer.fixture_rule must isolate viewer/session demo inputs behind fixture_only: true.');
+      issues.push('FRIDA_VISUAL.reference_viewer.authority_rule must limit the block to delivery metadata and forbid redefining legality/bootstrap semantics.');
     }
     if (referenceViewer.module_rootDirRef !== 'PATHS.tooling.visualizerDir') {
       issues.push('FRIDA_VISUAL.reference_viewer.module_rootDirRef must equal PATHS.tooling.visualizerDir.');
     }
+    if (referenceViewer.cli_entrypoint !== 'frida-core visual-viewer') {
+      issues.push("FRIDA_VISUAL.reference_viewer.cli_entrypoint must equal 'frida-core visual-viewer' until the delivery rename lands.");
+    }
     if (referenceViewer.browser_runtime_entrypoint !== 'templates/tooling/visualizer/src/visual-reference-viewer-app.ts') {
       issues.push('FRIDA_VISUAL.reference_viewer.browser_runtime_entrypoint must equal templates/tooling/visualizer/src/visual-reference-viewer-app.ts.');
+    }
+    if (
+      typeof referenceViewer?.output_rule !== 'string' ||
+      !referenceViewer.output_rule.includes('interactive diagram')
+    ) {
+      issues.push('FRIDA_VISUAL.reference_viewer.output_rule must require an interactive diagram as the primary output.');
+    }
+    if (
+      typeof referenceViewer?.frida_repo_rule !== 'string' ||
+      !referenceViewer.frida_repo_rule.includes('not a legal visualizer execution surface')
+    ) {
+      issues.push('FRIDA_VISUAL.reference_viewer.frida_repo_rule must forbid Frida-repo execution.');
+    }
+    if (
+      typeof referenceViewer?.target_repo_rule !== 'string' ||
+      !referenceViewer.target_repo_rule.includes('legal only in a target repository')
+    ) {
+      issues.push('FRIDA_VISUAL.reference_viewer.target_repo_rule must confine execution to legal target repositories.');
+    }
+    if (
+      typeof referenceViewer?.template_contract_rule !== 'string' ||
+      !referenceViewer.template_contract_rule.includes('not a legal app-contract input')
+    ) {
+      issues.push('FRIDA_VISUAL.reference_viewer.template_contract_rule must forbid template-app visualizer inputs inside repo frida.');
     }
   }
 }
@@ -731,6 +876,15 @@ function assertViewerRuntimeContract(contract, issues) {
   }
 
   if (
+    typeof viewer?.authority_rule !== 'string' ||
+    !viewer.authority_rule.includes('FRIDA_VISUAL.target_function') ||
+    !viewer.authority_rule.includes('FRIDA_VISUAL.execution_legality') ||
+    !viewer.authority_rule.includes('FRIDA_VISUAL.bootstrap_relation')
+  ) {
+    issues.push('FRIDA_VISUAL.viewer_runtime_v1.authority_rule must remain subordinate to target_function, execution_legality, and bootstrap_relation.');
+  }
+
+  if (
     typeof viewer?.actions?.peek?.rule !== 'string' ||
     !viewer.actions.peek.rule.includes('MUST NOT mutate current scope')
   ) {
@@ -772,6 +926,7 @@ function main() {
 
   assertVisualContracts(contract, issues);
   assertVisualPaths(contract, issues);
+  assertVisualizerGovernanceContract(contract, issues);
   assertOverlayAuthorityModel(contract, issues);
   assertBoundaryFirstVisualProjection(contract, issues);
   assertViewerRuntimeContract(contract, issues);

@@ -18,7 +18,7 @@ CONTRACT_META:
     interface_visibility_default: "FRIDA_INTERFACE_* blocks are public unless `_visibility: private` is explicitly set."
     layer_prefix_rule: "Frida core contract layers use FL##-*.yaml; Frida-managed app contract layers use AL##-*.yaml."
     layer_number_format: "Two digits exactly (`FL01`, `AL02`)."
-    app_template_term: "A template is a named Frida-shipped derivative app-contract seed; `template_app_basic` materializes Frida bootstrap and contract rules as the neutral zero-start baseline and is not a source of truth."
+    app_template_term: "A template is a named Frida-shipped derivative app-contract seed; `template_app_basic` materializes Frida bootstrap and contract rules as the neutral zero-start baseline, is not a source of truth, and while it remains inside repo `frida` it is not a legal application-contract execution input for the visualizer."
     app_extension_term: "An app extension is a named optional app-contract layer activated only by linking its AL## file in the target app contract index."
     instruction_surface_classes:
       engine_invariant_instruction_surfaces:

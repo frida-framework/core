@@ -31,6 +31,7 @@ Resolve repository scope before loading any audit canon:
 
 1. If `contract/contract.index.yaml` exists and the repository is the Frida core checkout, scope is `frida_repo`.
    Canonical self-repo source path is `core-contract/contract.index.yaml`; `contract/contract.index.yaml` is the generated public projection.
+   Projected package layers are intentionally distinct and live under `contract/public-layers/*.public.yaml`; do not treat them as authoring sources.
 2. Otherwise, if `.frida/inbox/app-contract/contract.index.yaml` exists, scope is `target_app_repo`.
 3. If neither condition is satisfied, HALT with `CONTRACT.GAP`.
 
