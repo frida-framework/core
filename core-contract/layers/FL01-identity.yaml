@@ -3,9 +3,9 @@
 CONTRACT_META:
   _visibility: private
   id: frida-contract-meta
-  version: 5.2.0
+  version: 6.0.0
   owner: frida-core
-  updated_at: "2026-03-09"
+  updated_at: "2026-03-20"
   scope:
     repository: hanszel/frida
     package: "@sistemado/frida"
@@ -45,6 +45,26 @@ CONTRACT_META:
         repository_scope: frida_repo_only
         mutation_scope: frida_contract_only
         deployment_scope: not_deployed_to_target_repo
+      task_intake:
+        block: FRIDA_INTERFACE_TASK_INTAKE
+        repository_scope: target_app_repo_only
+        mutation_scope: target_task_intake_only
+        deployment_scope: public
+      task_setter:
+        block: FRIDA_INTERFACE_TASK_SETTER
+        repository_scope: target_app_repo_only
+        mutation_scope: target_task_spec_only
+        deployment_scope: public
+      task_validation:
+        block: FRIDA_INTERFACE_TASK_VALIDATION
+        repository_scope: target_app_repo_only
+        mutation_scope: target_task_validation_only
+        deployment_scope: public
+      task_tracking:
+        block: FRIDA_INTERFACE_TASK_TRACKING
+        repository_scope: target_app_repo_only
+        mutation_scope: target_task_status_only
+        deployment_scope: public
       update_app_by_spec:
         block: FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
         repository_scope: target_app_repo_only
@@ -77,7 +97,7 @@ CONTRACT_UNIQUENESS:
 meta:
   id: frida-meta
   version: 1.0.0
-  schemaVersion: "6.1"
+  schemaVersion: "7.0"
   mode: schema
   contractArtifactRef: "PATHS.contract.coreCanonFile"
 
@@ -118,7 +138,10 @@ core:
     - FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
     - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
     - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
-    - FRIDA_INTERFACE_TASKSET
+    - FRIDA_INTERFACE_TASK_INTAKE
+    - FRIDA_INTERFACE_TASK_SETTER
+    - FRIDA_INTERFACE_TASK_VALIDATION
+    - FRIDA_INTERFACE_TASK_TRACKING
     - FRIDA_AGENT_ENTRY_PROTOCOL
     - FRIDA_INTERFACE_ROUTING
     - FRIDA_INT_AGENT_ROUTING

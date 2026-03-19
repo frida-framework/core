@@ -3,8 +3,8 @@
     1. CHECK if the task matches audit/readiness/deployment diagnostics.
       1.1. If yes: route to `FRIDA_INTERFACE_AUDIT`.
       1.2. If no: proceed to interface routing.
-    2. ANALYZE the user prompt for routing keywords.
-    3. MATCH keywords to an <interface>.
+    2. ANALYZE the user prompt for intent signals.
+    3. MATCH signal phrases and intent families to an <interface>; use keywords only as fallback.
     4. SELECT a profile only from the repository-scoped profile block allowed for that interface.
     5. READ the file specified in `context_path`.
     6. ADOPT the role and constraints.
@@ -15,6 +15,8 @@
     {{#each routes}}
     <interface id="{{id}}">
       <interface_ref>{{interface_ref}}</interface_ref>
+      <intent_family>{{intent_family}}</intent_family>
+      <phrases>{{phrases}}</phrases>
       <keywords>{{keywords}}</keywords>
       <allowed_profiles>{{allowed_profiles}}</allowed_profiles>
       <context_path>.frida/contract/profiles/{{context_profile}}.xml</context_path>

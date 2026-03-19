@@ -51,6 +51,10 @@ These boundaries are enforced by `npm run verify`:
 |-------|------|----------|
 | `GUARD_CONTRACT_SCHEMA_FIRST` | `` | `` |
 | `GUARD_CONTRACT_SOURCE_DECLARED` | `` | `` |
+| `GUARD_APP_PATHS_FILESYSTEM_ONLY` | `` | `` |
+| `GUARD_APP_PATH_SURFACES_REQUIRED` | `` | `` |
+| `GUARD_APP_PATH_ALIAS_ZERO` | `` | `` |
+| `GUARD_APP_WIKI_MECHANICS_CORE_OWNED` | `` | `` |
 | `GUARD_CONTRACT_NOT_RUNTIME` | `` | `` |
 | `GUARD_ARTIFACT_NO_MANUAL_EDITS` | `` | `` |
 | `GUARD_WORKSPACE_TEMP_ONLY` | `` | `` |
@@ -78,4 +82,5 @@ These boundaries are enforced by `npm run verify`:
 | `GUARD_COMPONENT_AUTHORITATIVE_EXAMPLE_RUNTIME_FREE` | `` | `` |
 | `GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN` | `` | `` |
 | `GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN` | `` | `` |
+| `GUARD_APP_DEMOTE_OR_SPLIT` | `` | `` |
 | `GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST` | `` | `` |

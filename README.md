@@ -147,7 +147,7 @@ The contract is split into numbered Frida layers. Core layers use `FL##-*`; Frid
 | `FL08 buildtime` | public | generator, mapper, bootstrap tooling |
 | `FL09 bootstrap` | public | bootstrap and reconcile semantics |
 | `FL10 visualization` | public | visual, overlay, LOD, edges, graph, determinism |
-| `FL11 management` | mixed | guard-spec, antitask, verify, update, taskset |
+| `FL11 management` | mixed | guard-spec, antitask, verify, update, task-setting interfaces |
 | `FL12 wiki` | public | wiki/SSOT sync |
 | `FL13 agent-entry` | mixed | entry protocol, interface routing, clause refs |
 

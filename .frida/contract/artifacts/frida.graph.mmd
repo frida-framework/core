@@ -1,6 +1,10 @@
 flowchart TD
   n_c7e20ac64ad9["GUARD_CONTRACT_SCHEMA_FIRST"]
   n_dc5328bb4cb2["GUARD_CONTRACT_SOURCE_DECLARED"]
+  n_22c68ce3ae97["GUARD_APP_PATHS_FILESYSTEM_ONLY"]
+  n_28926a108d7a["GUARD_APP_PATH_SURFACES_REQUIRED"]
+  n_bc730f8972f1["GUARD_APP_PATH_ALIAS_ZERO"]
+  n_5cec231cbfcb["GUARD_APP_WIKI_MECHANICS_CORE_OWNED"]
   n_b2e9d05238c2["GUARD_CONTRACT_NOT_RUNTIME"]
   n_6524256f3141["GUARD_ARTIFACT_NO_MANUAL_EDITS"]
   n_ea857b05bd79["GUARD_WORKSPACE_TEMP_ONLY"]
@@ -28,6 +32,7 @@ flowchart TD
   n_c4b2b30091f2["GUARD_COMPONENT_AUTHORITATIVE_EXAMPLE_RUNTIME_FREE"]
   n_8b25faa7b0f2["GUARD_COMPONENT_LEGACY_TERMS_FORBIDDEN"]
   n_68fcdbec9d59["GUARD_COMPONENT_MIXED_NAMESPACE_FORBIDDEN"]
+  n_9d6928836c48["GUARD_APP_DEMOTE_OR_SPLIT"]
   n_f2506e57097d["GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST"]
   n_f55c42b384ba["contract_entity_single_declaration"]
   n_272cb45e3d54["visual_overlay_only"]
@@ -45,6 +50,15 @@ flowchart TD
   n_93627fbef75b["bootstrap_demo_zero_deploy_only"]
   n_65514f6422e3["bootstrap_no_app_contract_writes"]
   n_58b016b8c147["frida_inbox_no_agent_access"]
+  n_221a33c5d334["task_pack_immutable"]
+  n_01d8b6720a71["task_pack_no_live_status"]
+  n_e51db458f95d["task_status_registry_separate_from_sessions"]
+  n_e8447c05ae79["task_validation_mirror_only"]
+  n_6fcb2448c579["task_validation_requires_mirror_integrity"]
+  n_bf791af0d107["task_validation_artifact_required"]
+  n_da9b7c62b96c["task_validation_contract_collision_is_error"]
+  n_91da11232606["task_triage_routes_before_publication"]
+  n_dbe4a5609b6b["task_session_logs_append_only"]
   n_80a19353e2d1["zone_resolution_path_only"]
   n_dc96c62cfc7a["guard_chain_structural"]
   n_cefa76720c99["report_on_every_run"]
@@ -62,6 +76,11 @@ flowchart TD
   n_d1c1356a8d8a["app_extensions_link_driven"]
   n_de1503ce17e5["app_update_interfaces_non_inventive"]
   n_6b48739f2bb9["strict_path_refs"]
+  n_6cf438707d25["app_paths_filesystem_facts_only"]
+  n_44ead1a1b9d5["app_path_surfaces_required"]
+  n_21cf23b5715b["app_path_alias_zero"]
+  n_02615896d986["app_demote_or_split"]
+  n_7382d91ea9bb["app_wiki_mechanics_core_owned"]
   n_84f5fc64a335["schema_version_fixed"]
   n_224fe067eab9["index_format_symmetric"]
   n_16df33f2dc25["exports_are_authoritative"]
@@ -90,13 +109,13 @@ flowchart TD
   n_fdfa6b57c710["Frida_managed"]
   n_b63f5826d23a["Non_templates"]
   n_9977e01e65fb["frida_governance"]
-  n_58cea83b951c["frida_task_setter"]
   n_96a207e021d2["frida_readonly_observer"]
-  n_5cdc9856adf0["frida-tasks/**"]
-  n_7da764aeffc3["contract/**"]
+  n_9c2af2c03fd7["core-tasks/**"]
+  n_032ba52d38fc["core-contract/**"]
   n_821e3fc8ad70["schemas/**"]
   n_c8b28e0ad5ca["src/**"]
   n_832fec061ed2["templates/**"]
+  n_69b4f43b6aa3["core-templates/**"]
   n_0960324713f8["README.md"]
   n_c14b7c39512a["package.json"]
   n_5d83ddf5ca83[".frida/AGENTS.md"]
@@ -106,21 +125,17 @@ flowchart TD
   n_8f017cbf33a6[".frida/reports/*.yaml"]
   n_21821fa25569["AGENTS.md"]
   n_fe49c23f2c44["templates/AGENTS.md"]
-  n_3acaac268075["frida-tasks/README.md"]
+  n_2bb82c5f16b7["core-tasks/README.md"]
   n_d3ee38d74791[".frida/inbox/**"]
   n_5b56e9f3120e["tasks/**"]
   n_8a75dbc25456[".frida/**"]
-  n_053c4e619d30["frida-tasks/TASK-*.md"]
-  n_ea3d1aa6af82["frida-tasks/**/TASK-*.md"]
-  n_94ac154e07a6["templates/management/**"]
+  n_dc43909a2d66["core-tasks/TASK-*.md"]
+  n_d9fddcc0dec0["core-tasks/**/TASK-*.md"]
   n_34551235f73d["**"]
-  n_58cea83b951c -->|requires| n_609a672ec3e9
   n_96a207e021d2 -->|requires| n_c2d134702189
   n_9977e01e65fb -->|may_access_zone| n_2a475bc68ea8
   n_9977e01e65fb -->|may_access_zone| n_fdfa6b57c710
   n_9977e01e65fb -->|may_access_zone| n_b63f5826d23a
-  n_58cea83b951c -->|may_access_zone| n_2a475bc68ea8
-  n_58cea83b951c -->|may_access_zone| n_b63f5826d23a
   n_96a207e021d2 -->|may_access_zone| n_2a475bc68ea8
   n_96a207e021d2 -->|may_access_zone| n_fdfa6b57c710
   n_96a207e021d2 -->|may_access_zone| n_b63f5826d23a

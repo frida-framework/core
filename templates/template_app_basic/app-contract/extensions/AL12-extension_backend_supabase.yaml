@@ -47,7 +47,7 @@ APP_EXTENSION_BACKEND_SUPABASE:
         security:
           edit_forbid:
             - supabase/**
-      app_architect_inbox:
+      app_task_intake:
         security:
           forbid:
             - supabase/**

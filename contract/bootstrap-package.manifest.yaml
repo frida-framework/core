@@ -1,4 +1,4 @@
-version: "1.1"
+version: "1.2"
 manifest_id: frida-bootstrap-package-manifest
 assets_root: .
 entries:
@@ -448,13 +448,25 @@ entries:
     modes:
       - warm
       - cold-engine
+  - id: cleanup_legacy_playbook_task_formulation
+    target: .frida/contract/playbooks/AGENT-task-formulation.md
+    kind: file
+    ownership_class: engine_generated
+    apply_mode: generated
+    prune_scope: true
+    cleanup_only: true
+    components:
+      - playbooks
+    modes:
+      - warm
+      - cold-engine
   - id: playbook_app_contract_update
     source: templates/management/AGENT-app-contract-update.md
     target: .frida/contract/playbooks/AGENT-app-contract-update.md
     kind: file
     ownership_class: user_owned
     apply_mode: seed_if_absent
-    sha256: sha256:91da038165b36f1685bee09ebf2798f8541844e836e3beb41bda3a67ae107b67
+    sha256: sha256:7a69b2611333df742b7e22bf0309674bed549e2ff0d26005970ad61a3ea836aa
     components:
       - playbooks
       - interface-instructions-reset
@@ -468,7 +480,7 @@ entries:
     kind: file
     ownership_class: user_owned
     apply_mode: seed_if_absent
-    sha256: sha256:a610761969778b0b9879af8f7a1c74905cfdb88120824aa7d43025db4bed62e0
+    sha256: sha256:186d6b64167038df6551d1da853eac91f1e4d75ae5f262996003617ef161a562
     components:
       - playbooks
       - interface-instructions-reset
@@ -482,22 +494,65 @@ entries:
     kind: file
     ownership_class: engine_static
     apply_mode: copy
-    sha256: sha256:54c641a9c24734274a8e33f40a0dec328e67275b3c76ebb34c14874ec1e26907
+    sha256: sha256:2b360f0ca951e7acd397f584e071032b231ac9805d4237bfe6c88164e4aaa450
     components:
       - playbooks
     modes:
       - warm
       - cold-engine
       - demo
-  - id: playbook_task_formulation
-    source: templates/management/AGENT-task-formulation.md
-    target: .frida/contract/playbooks/AGENT-task-formulation.md
+  - id: playbook_task_intake
+    source: templates/management/AGENT-task-intake.md
+    target: .frida/contract/playbooks/AGENT-task-intake.md
     kind: file
-    ownership_class: engine_static
-    apply_mode: copy
-    sha256: sha256:e50a20ab7cf77011a075d574a3fbba589b389430ad51a07c21a33a2206cea05e
+    ownership_class: user_owned
+    apply_mode: seed_if_absent
+    sha256: sha256:57ceedc6d9744862741ff358f72499796ed2f11b3706947cd4036afbfe710c84
     components:
       - playbooks
+      - interface-instructions-reset
+    modes:
+      - warm
+      - cold-engine
+      - demo
+  - id: playbook_task_setter
+    source: templates/management/AGENT-task-setter.md
+    target: .frida/contract/playbooks/AGENT-task-setter.md
+    kind: file
+    ownership_class: user_owned
+    apply_mode: seed_if_absent
+    sha256: sha256:eb306c2038c54ec016d1f7d36507bb036ea4a7e7718ee0db7c2e41de7e73de79
+    components:
+      - playbooks
+      - interface-instructions-reset
+    modes:
+      - warm
+      - cold-engine
+      - demo
+  - id: playbook_task_validation
+    source: templates/management/AGENT-task-validation.md
+    target: .frida/contract/playbooks/AGENT-task-validation.md
+    kind: file
+    ownership_class: user_owned
+    apply_mode: seed_if_absent
+    sha256: sha256:4fcd8eab72997dc03d3cfe1bfe75bf981a38ed1938701af24a7eb0876ef66646
+    components:
+      - playbooks
+      - interface-instructions-reset
+    modes:
+      - warm
+      - cold-engine
+      - demo
+  - id: playbook_task_tracking
+    source: templates/management/AGENT-task-tracking.md
+    target: .frida/contract/playbooks/AGENT-task-tracking.md
+    kind: file
+    ownership_class: user_owned
+    apply_mode: seed_if_absent
+    sha256: sha256:b81c13fb4873fbe8f58427f28d6cd88b3bb9caa74a50071fd159d920429fdd65
+    components:
+      - playbooks
+      - interface-instructions-reset
     modes:
       - warm
       - cold-engine
@@ -516,7 +571,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:6885be12e893e7eb251ffbefdd2449183e9b913c10cfca39f5e66fa7b8de645a
+    sha256: sha256:8345a349fbaa5ab81a5a837660033c72aebff42e579056b9df90bcc57bf012c0
     modes:
       - zero-start
   - id: zero_start_template_app_basic_shared_layer_seed
@@ -525,7 +580,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:e211f8fde8eb170088d0aca3d9b66fe457c5a204c125fbe840f7f363a2d9f6d8
+    sha256: sha256:8f06fce73360cbe0b14a32562e66700ea7d264557fc17ad289ab66987a72d872
     modes:
       - zero-start
   - id: zero_start_template_app_basic_agent_framework_layer_seed
@@ -534,7 +589,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:e2ccd8c5b00c958c49aba5d882728eae5a386aa1d2b66ada4238284a0961258b
+    sha256: sha256:f3090734874cfe730c63933269b539b9808185385cd3349887aed5a2a39002db
     modes:
       - zero-start
   - id: zero_start_template_app_basic_host_root_layer_seed
@@ -543,7 +598,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:7822776de5ad6350a675bfb2c7ec1c3f1be4f4dbc6dcbf9976ea642effce3886
+    sha256: sha256:0e3ca95b88962da68b43abe669b926d82b5e790c8d442dca34cb6d81d1fd204d
     modes:
       - zero-start
   - id: zero_start_template_app_basic_backend_extension_seed
@@ -552,7 +607,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:f6e6e916fe789920542546a6b6c3470dfeb9e348b7b0b8e3de8805e3b82fb7ae
+    sha256: sha256:a7860876fe1dd8644963e9df9b4382b2766c760eee4c0451c9467b95ef808bc0
     modes:
       - zero-start
   - id: zero_start_template_app_basic_backend_supabase_extension_seed
@@ -561,7 +616,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:b7b0c80e7b86f657b10ed1add36111971ef3b75ef9942362fe6ac01f37b2349f
+    sha256: sha256:1120dae4a080ae1a0a85fb370a9cf9d884533d69ac03baef979691e3b8d863ec
     modes:
       - zero-start
   - id: zero_start_template_app_basic_readme_seed
@@ -570,7 +625,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:0e3ccc2b9fc6ac098e098078ad689fce32d2ead275ecb3251de427ae86fcbd6e
+    sha256: sha256:5206cfb7b14ba35827c45673be58867b99c295ba3bd7ecbc8d6d58e160dfc639
     modes:
       - zero-start
   - id: zero_start_template_app_basic_package_json_seed
@@ -579,6 +634,6 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:bc6739531b83c3436b641362e03d96b31d66a787fb0371e4fc247c10131971ee
+    sha256: sha256:07373cc9caaa90c7fd2bbccfb3bd72aadc1b9b2ecef127ceb59b9912b23cc99e
     modes:
       - zero-start

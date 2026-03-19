@@ -241,12 +241,25 @@ FRIDA_CONFIG:
         target_app:
           read_allow_required:
             - "tasks/**"
+          task_intake_profile_ids:
+            - "app_task_intake"
+          task_setter_profile_ids:
+            - "app_task_setter"
+          task_validator_profile_ids:
+            - "app_task_validator"
+          task_tracker_profile_ids:
+            - "app_task_tracker"
           read_allow_governance_required:
             - ".frida/AGENTS.md"
             - ".frida/config.yaml"
             - ".frida/templates/config.template.yaml"
             - ".frida/contract/**"
             - ".frida/reports/*.yaml"
+          read_allow_task_setter_required:
+            - "tasks/**"
+            - "docs/**"
+            - ".frida/contract/app/**"
+            - ".temp/**"
           contract_editor_profile_ids:
             - "app_contract_editor"
           read_allow_contract_editor_required:
@@ -263,6 +276,7 @@ FRIDA_CONFIG:
             - ".frida/inbox/app-contract/**"
             - ".temp/**"
           edit_allow_non_architect_required:
+            - "tasks/index.yaml"
             - "tasks/README.md"
             - "tasks/**/README.md"
           edit_forbid_required:

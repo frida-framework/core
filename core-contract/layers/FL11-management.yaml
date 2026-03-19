@@ -1,6 +1,6 @@
 # ─── FRIDA LAYER FL11: MANAGEMENT ──────────────────────────────────────────
 # Purpose: Interfaces for interacting with the contract — how to read, verify,
-#          and change it. Specs, guards, antitasks, update/verify/taskset protocols.
+#          and change it. Specs, guards, antitasks, update/verify/task-setting protocols.
 #          Also defines version policy for package, contract, and schema.
 
 FRIDA_VERSION_POLICY:
@@ -993,72 +993,416 @@ FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
       deployed_playbook_ref: ".frida/contract/playbooks/AGENT-app-contract-repair.md"
       requires_role: ARCHITECT_AGENT
 
-FRIDA_INTERFACE_TASKSET:
+FRIDA_INTERFACE_TASK_INTAKE:
   _visibility: public
-  id: frida-interface-taskset
+  id: frida-interface-task-intake
   version: 1.0.0
-  purpose: "Prepare self-contained task packs from contract for agent execution."
-  playbook_ref: "templates/management/AGENT-task-formulation.md"
-  source_playbook_ref: "templates/management/AGENT-task-formulation.md"
-  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-formulation.md"
-  task_pack_definition:
-    term: >-
-      A Task Pack is a self-contained instruction set for an agent-developer.
-      It transfers contract requirements into an actionable scope without
-      requiring the agent to interpret the wiki or contract directly.
-    principle: "CONTRACT → ANTITASK → DEVELOPMENT"
+  purpose: "Normalize raw requests into executable task-setting decisions, inbox routing, clarification requests, or rejection."
+  repository_scope: target_app_repo_only
+  mutation_scope: target_task_intake_only
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - target_app_contract
+    - target_app_repo_code
+  deployment_scope: public
+  playbook_ref: "templates/management/AGENT-task-intake.md"
+  source_playbook_ref: "templates/management/AGENT-task-intake.md"
+  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-intake.md"
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_TASK_INTAKE
+    repository_scope: target_app_repo_only
+    mutation_scope: target_task_intake_only
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - ".frida/contract/app/**"
+      - tasks/inbox/**
+      - tasks/index.yaml
+      - create_task_pack
+      - route_to_architect_inbox
+      - route_to_contract_editor
+      - request_clarification
+      - reject_as_invalid
+      - insufficient_contract_context
+    required_rules_refs:
+      - FRIDA_INTERFACE_TASK_INTAKE
+      - FRIDA_INTERFACE_TASK_SETTER
+      - FRIDA_INTERFACE_TASK_VALIDATION
+      - FRIDA_INTERFACE_TASK_TRACKING
+    required_invariants:
+      - task_validation_mirror_only
+      - task_validation_requires_mirror_integrity
+      - task_triage_routes_before_publication
+    required_guard_refs: []
+    required_verification:
+      - frida-core check task-set
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - "This instruction authorizes mutation of the target app contract."
+      - "This instruction authorizes direct code changes in src/**."
+    baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    contract_read_surface:
+      source_of_truth: ".frida/contract/app/**"
+      mirror_integrity_gate: required
+      forbidden_source:
+        - ".frida/inbox/app-contract/**"
+    instruction_surfaces:
+      intake:
+        source_playbook_ref: "templates/management/AGENT-task-intake.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-intake.md"
+  triage:
+    outcomes:
+      - create_task_pack
+      - route_to_architect_inbox
+      - route_to_contract_editor
+      - request_clarification
+      - reject_as_invalid
+    halt_or_redirect_conditions:
+      - "App contract mirror unavailable, invalid, or stale."
+      - "Acceptance criteria cannot be made observable."
+      - "Request crosses multiple zones without explicit bounded scope."
+      - "Request implies app-contract mutation or architectural choice."
+    normalized_output_statuses:
+      - task_created
+      - task_rejected_contract_collision
+      - task_rejected_insufficient_input
+      - task_rerouted_to_architect_inbox
+      - task_rerouted_to_contract_editor
+      - task_waiting_for_clarification
+  inbox_item_definition:
+    term: "Persisted intake artifact for requests that are not ready for task-pack publication."
+    path: "tasks/inbox/**"
     required_fields:
-      - action: "What to do — concrete, unambiguous."
-      - files: "Paths or zones affected."
-      - interface_ref: "Source interface that authorizes the task output."
-      - profile_id: "Id from the repository-scoped profile block."
-      - contract_requirements: "Guards/invariants/terms embedded explicitly."
-      - verification_command: "Usually 'npm run verify', may differ by zone."
-    optional_fields:
-      - specific_invariants: "Task-specific invariant checks."
-    forbidden: "Referencing wiki or contract by link instead of embedding requirements."
-  output_bindings:
-    frida_core:
-      interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
-      repository_scope: frida_repo_only
-      file_pattern: "core-tasks/TASK-*.md"
-      rule: "This is the only allowed task output surface inside the Frida repo."
-    target_app:
-      interface_refs:
-        - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
-        - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
-      repository_scope: target_app_repo_only
-      frida_repo_output: forbidden
-  readiness_checklist:
-    contract_ready:
-      - "Feature described in the appropriate contract:* block."
-      - "All terms used in the task defined in contract:GLOSSARY."
-    frida_ready:
-      - "Zone for target files exists in the repository-scoped zone block (`ZONES` in target repos, private internal-zone block in repo `frida`)."
-      - "Antitask generated after last contract update."
-      - "Repository-scoped profile covers target paths via edit_allow/edit_allowGlobRefs."
-      - "Profile invariants are current for the task."
-    version_check:
-      - "Contract version matches CONTRACT_META.version (FRIDA_VERSION_POLICY.invariants.version.contract_meta_sync)."
-      - "Schema version consistent across all sources (FRIDA_VERSION_POLICY.invariants.version.schema_sync)."
-    scope_check:
-      - "Task does not add functionality beyond what is described in contract."
-      - "If new functionality needed — update contract first."
-      - "If task semantics require a shipped but inactive app extension, task formulation MUST HALT and require explicit extension activation."
-      - "Task output path matches the repository scope of interface_ref."
-  audit_task_format:
-    playbook_ref: "templates/management/AGENT-repo-audit.md"
-    source_playbook_ref: "templates/management/AGENT-repo-audit.md"
-    deployed_playbook_ref: ".frida/contract/playbooks/AGENT-repo-audit.md"
-    determinism:
-      - "Profiles sorted by name."
-      - "Invariants within task sorted by id."
-      - "Guards within task sorted by id."
-      - "Zones within task sorted by zone name."
+      - id: "Stable inbox item id."
+      - title: "Human-readable label."
+      - source_request: "Original request or normalized restatement."
+      - triage_outcome: "One of the non-publication triage outcomes."
+      - reroute_target: "architect_inbox | contract_editor | clarification."
+      - reason: "Why task-pack publication did not happen."
   halt_conditions:
-    - "Contract does not describe the feature being tasked."
-    - "Zone or profile does not cover target files."
-    - "Antitask not regenerated after last contract update."
-    - "Task requires agent to write outside edit_allowGlobRefs."
+    - "Task intake would require editing `.frida/inbox/app-contract/**`."
+    - "Task intake would publish a task pack without contract validation."
+
+FRIDA_INTERFACE_TASK_SETTER:
+  _visibility: public
+  id: frida-interface-task-setter
+  version: 1.0.0
+  purpose: "Publish immutable task packs only after mirror-only contract validation succeeds."
+  repository_scope: target_app_repo_only
+  mutation_scope: target_task_spec_only
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - target_app_contract
+  deployment_scope: public
+  playbook_ref: "templates/management/AGENT-task-setter.md"
+  source_playbook_ref: "templates/management/AGENT-task-setter.md"
+  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-setter.md"
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_TASK_SETTER
+    repository_scope: target_app_repo_only
+    mutation_scope: target_task_spec_only
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - ".frida/contract/app/**"
+      - tasks/TASK-*.md
+      - tasks/index.yaml
+      - contract_collision_scan
+      - contract_validation_status
+      - task_created
+      - valid
+    required_rules_refs:
+      - FRIDA_INTERFACE_TASK_SETTER
+      - FRIDA_INTERFACE_TASK_VALIDATION
+      - FRIDA_INTERFACE_TASK_TRACKING
+    required_invariants:
+      - task_pack_immutable
+      - task_pack_no_live_status
+      - task_validation_mirror_only
+      - task_validation_contract_collision_is_error
+      - task_validation_artifact_required
+    required_guard_refs: []
+    required_verification:
+      - frida-core check task-collision --task <path>
+      - frida-core check task-set
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - "This instruction authorizes direct edits to `.frida/inbox/app-contract/**`."
+      - "This instruction authorizes live status storage inside TASK-*.md."
+    baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    contract_read_surface:
+      source_of_truth: ".frida/contract/app/**"
+      mirror_integrity_gate: required
+      forbidden_source:
+        - ".frida/inbox/app-contract/**"
+    instruction_surfaces:
+      setter:
+        source_playbook_ref: "templates/management/AGENT-task-setter.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-setter.md"
+  task_pack_definition:
+    term: "An immutable specification artifact that describes one bounded executable task."
+    principle: "CONTRACT → ANTITASK → DEVELOPMENT"
+    required_frontmatter_fields:
+      - id: "Stable task id matching the file name."
+      - title: "Short task title."
+      - source_request: "Source request or intake reference."
+      - goal: "Observable outcome."
+      - scope: "Bounded implementation scope."
+      - non_goals: "Explicit exclusions."
+      - target_paths: "Concrete paths or zones affected."
+      - target_profile: "One primary repository-scoped execution profile."
+      - interface_ref: "Must be `FRIDA_INTERFACE_TASK_SETTER`."
+      - constraints: "Embedded contract constraints."
+      - dependencies: "Blocking prerequisites or predecessor tasks."
+      - acceptance_criteria: "Observable, testable criteria."
+      - verification: "Verification commands or checks."
+      - contract_validation_status: "Must be `valid` for published task packs."
+      - escalate_if: "Explicit escalation conditions."
+    forbidden_fields:
+      - status
+      - current_status
+      - progress
+    publication_rules:
+      - "Write only new `tasks/TASK-*.md` files; never mutate an existing task pack."
+      - "Do not publish when validation decision is not `valid`."
+      - "Do not reference `.frida/inbox/app-contract/**` as task-setting context."
+  output_bindings:
+    target_app:
+      interface_ref: FRIDA_INTERFACE_TASK_SETTER
+      repository_scope: target_app_repo_only
+      file_pattern: "tasks/TASK-*.md"
+      registry_path: "tasks/index.yaml"
+      validation_artifact_path: ".frida/reports/*.yaml"
+      telemetry_path: "tasks/sessions/*.md"
+  halt_conditions:
+    - "Validation decision is not `valid`."
+    - "Task would require direct app-contract mutation."
+    - "Task would publish live status inside the task pack."
+
+FRIDA_INTERFACE_TASK_VALIDATION:
+  _visibility: public
+  id: frida-interface-task-validation
+  version: 1.0.0
+  purpose: "Perform contract-collision validation for task packs against the app contract mirror before publication or status promotion."
+  repository_scope: target_app_repo_only
+  mutation_scope: target_task_validation_only
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - target_app_contract
+  deployment_scope: public
+  playbook_ref: "templates/management/AGENT-task-validation.md"
+  source_playbook_ref: "templates/management/AGENT-task-validation.md"
+  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-validation.md"
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_TASK_VALIDATION
+    repository_scope: target_app_repo_only
+    mutation_scope: target_task_validation_only
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - ".frida/contract/app/**"
+      - contract_collision_scan
+      - valid
+      - invalid_contract_collision
+      - requires_contract_change
+      - requires_architectural_review
+      - insufficient_contract_context
+      - task_rejected_contract_collision
+      - task_rejected_insufficient_input
+    required_rules_refs:
+      - FRIDA_INTERFACE_TASK_VALIDATION
+      - FRIDA_INTERFACE_TASK_SETTER
+      - FRIDA_INTERFACE_TASK_TRACKING
+    required_invariants:
+      - task_validation_mirror_only
+      - task_validation_requires_mirror_integrity
+      - task_validation_artifact_required
+      - task_validation_contract_collision_is_error
+    required_guard_refs: []
+    required_verification:
+      - frida-core check task-collision --task <path>
+      - frida-core check task-set
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - "This instruction authorizes reading `.frida/inbox/app-contract/**` as task-setting ground truth."
+      - "This instruction authorizes publishing a task pack after contract collision."
+    baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    contract_read_surface:
+      source_of_truth: ".frida/contract/app/**"
+      mirror_integrity_gate: required
+      forbidden_source:
+        - ".frida/inbox/app-contract/**"
+    instruction_surfaces:
+      validation:
+        source_playbook_ref: "templates/management/AGENT-task-validation.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-validation.md"
+  collision_validation:
+    command: "frida-core check task-collision --task <path>"
+    required_decisions:
+      - valid
+      - invalid_contract_collision
+      - requires_contract_change
+      - requires_architectural_review
+      - insufficient_contract_context
+    collision_scan_status_mapping:
+      valid: task_created
+      invalid_contract_collision: task_rejected_contract_collision
+      requires_contract_change: task_rerouted_to_contract_editor
+      requires_architectural_review: task_rerouted_to_architect_inbox
+      insufficient_contract_context: task_rejected_insufficient_input
+  validation_artifact:
+    path: ".frida/reports/*.yaml"
+    required_fields:
+      - task_id
+      - validation_time
+      - contract_sources
+      - collision_scan_result
+      - conflicts
+      - decision
+      - reroute_target
+      - notes
+    artifact_rule:
+      - "Every published task pack has exactly one latest validation artifact referenced by `tasks/index.yaml`."
+      - "Validation artifact path stays outside `tasks/**`."
+  halt_conditions:
+    - "App contract mirror is unavailable, invalid, or stale."
+    - "Validation would rely on `.frida/inbox/app-contract/**` instead of `.frida/contract/app/**`."
+
+FRIDA_INTERFACE_TASK_TRACKING:
+  _visibility: public
+  id: frida-interface-task-tracking
+  version: 1.0.0
+  purpose: "Maintain the normative task status registry separately from immutable task specs and append-only session telemetry."
+  repository_scope: target_app_repo_only
+  mutation_scope: target_task_status_only
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - target_app_contract
+  deployment_scope: public
+  playbook_ref: "templates/management/AGENT-task-tracking.md"
+  source_playbook_ref: "templates/management/AGENT-task-tracking.md"
+  deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-tracking.md"
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_TASK_TRACKING
+    repository_scope: target_app_repo_only
+    mutation_scope: target_task_status_only
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - tasks/index.yaml
+      - tasks/TASK-*.md
+      - tasks/sessions/**
+      - draft
+      - validated
+      - ready
+      - in_progress
+      - blocked
+      - done
+      - rejected
+      - superseded
+    required_rules_refs:
+      - FRIDA_INTERFACE_TASK_TRACKING
+      - FRIDA_INTERFACE_TASK_VALIDATION
+    required_invariants:
+      - task_status_registry_separate_from_sessions
+      - task_pack_immutable
+      - task_session_logs_append_only
+    required_guard_refs: []
+    required_verification:
+      - frida-core check task-set
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - "This instruction authorizes using `tasks/sessions/**` as the normative status source."
+      - "This instruction authorizes editing published task packs."
+    baseline_reset_command: "frida-core bootstrap --component interface-instructions-reset --target <dir>"
+    contract_read_surface:
+      source_of_truth: ".frida/contract/app/**"
+      mirror_integrity_gate: required
+      forbidden_source:
+        - ".frida/inbox/app-contract/**"
+    instruction_surfaces:
+      tracking:
+        source_playbook_ref: "templates/management/AGENT-task-tracking.md"
+        deployed_playbook_ref: ".frida/contract/playbooks/AGENT-task-tracking.md"
+  status_registry:
+    path: "tasks/index.yaml"
+    required_entry_fields:
+      - id
+      - status
+      - spec_path
+      - validation_artifact
+      - latest_session_ref
+      - supersedes
+      - superseded_by
+      - updated_at
+    allowed_status:
+      - draft
+      - validated
+      - ready
+      - in_progress
+      - blocked
+      - done
+      - rejected
+      - superseded
+    status_semantics:
+      validated: "Contract collision scan passed, but execution may still wait on dependencies or prerequisites."
+      ready: "Contract collision scan passed and the task is executable with prerequisites satisfied."
+  session_telemetry:
+    path: "tasks/sessions/*.md"
+    rule:
+      - "Sessions are append-only execution evidence."
+      - "Sessions do not determine current normative task status."
+      - "Tracking updates `tasks/index.yaml`; executors append new session files."
+  halt_conditions:
+    - "Tracking would infer normative status from narrative session logs alone."
+    - "Tracking would mutate an immutable task pack."
 
 

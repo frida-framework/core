@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.frida.dev/frida-contract.schema.json",
-  "title": "Frida Contract Schema v6.1",
+  "title": "Frida Contract Schema v7.0",
   "description": "Schema for the consolidated Frida core contract and Frida-managed app contract surfaces.",
   "type": "object",
   "required": [
@@ -1470,28 +1470,159 @@
         }
       }
     },
-    "FRIDA_INTERFACE_TASKSET": {
+    "FRIDA_INTERFACE_TASK_INTAKE": {
+      "type": "object",
+      "required": [
+        "purpose",
+        "triage"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "repository_scope": {
+          "type": "string",
+          "const": "target_app_repo_only"
+        },
+        "mutation_scope": {
+          "type": "string"
+        },
+        "deployment_scope": {
+          "type": "string",
+          "const": "public"
+        },
+        "instruction_contract": {
+          "type": "object"
+        },
+        "triage": {
+          "type": "object"
+        },
+        "halt_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "FRIDA_INTERFACE_TASK_SETTER": {
       "type": "object",
       "required": [
         "purpose",
         "task_pack_definition"
       ],
       "properties": {
+        "_visibility": {
+          "type": "string"
+        },
         "purpose": {
           "type": "string"
         },
+        "repository_scope": {
+          "type": "string",
+          "const": "target_app_repo_only"
+        },
+        "mutation_scope": {
+          "type": "string"
+        },
+        "deployment_scope": {
+          "type": "string",
+          "const": "public"
+        },
+        "instruction_contract": {
+          "type": "object"
+        },
         "task_pack_definition": {
-          "type": "object",
-          "required": [
-            "term",
-            "principle",
-            "required_fields"
-          ]
+          "type": "object"
         },
         "output_bindings": {
           "type": "object"
         },
-        "readiness_checklist": {
+        "halt_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "FRIDA_INTERFACE_TASK_VALIDATION": {
+      "type": "object",
+      "required": [
+        "purpose",
+        "collision_validation",
+        "validation_artifact"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "repository_scope": {
+          "type": "string",
+          "const": "target_app_repo_only"
+        },
+        "mutation_scope": {
+          "type": "string"
+        },
+        "deployment_scope": {
+          "type": "string",
+          "const": "public"
+        },
+        "instruction_contract": {
+          "type": "object"
+        },
+        "collision_validation": {
+          "type": "object"
+        },
+        "validation_artifact": {
+          "type": "object"
+        },
+        "halt_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "FRIDA_INTERFACE_TASK_TRACKING": {
+      "type": "object",
+      "required": [
+        "purpose",
+        "status_registry",
+        "session_telemetry"
+      ],
+      "properties": {
+        "_visibility": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "repository_scope": {
+          "type": "string",
+          "const": "target_app_repo_only"
+        },
+        "mutation_scope": {
+          "type": "string"
+        },
+        "deployment_scope": {
+          "type": "string",
+          "const": "public"
+        },
+        "instruction_contract": {
+          "type": "object"
+        },
+        "status_registry": {
+          "type": "object"
+        },
+        "session_telemetry": {
           "type": "object"
         },
         "halt_conditions": {

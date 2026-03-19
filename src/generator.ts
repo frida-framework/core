@@ -1935,6 +1935,9 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
             ? contract.FRIDA_INT_AGENT_ROUTING.routes
             : []),
     ].map((route: any) => {
+        const selectorPhrases = Array.isArray(route?.selector_phrases)
+            ? route.selector_phrases.filter((value: unknown) => typeof value === 'string' && value.trim())
+            : [];
         const allowedProfilesRaw = isEngineSelfRepo(ROOT_DIR)
             ? (Array.isArray(route?.allowed_profiles) ? route.allowed_profiles : route?.allowed_profiles?.frida_repo)
             : route?.allowed_profiles?.target_app_repo;
@@ -1942,6 +1945,8 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
         return {
             id: route?.id || 'unknown',
             interface_ref: route?.interface_ref || '',
+            intent_family: typeof route?.intent_family === 'string' ? route.intent_family : route?.id || 'unknown',
+            phrases: selectorPhrases.join(', '),
             keywords: Array.isArray(route?.selector_keywords) ? route.selector_keywords.join(', ') : '',
             allowed_profiles: allowedProfiles.join(', '),
             context_profile: allowedProfiles[0] || profiles[0]?.id || '',

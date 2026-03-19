@@ -56,37 +56,114 @@ FRIDA_INTERFACE_ROUTING:
   default_profile_source:
     clause_ref: FL13:6.1
     value: repository_scoped_profile_block
+  selector_model:
+    clause_ref: FL13:6.1
+    primary_signal: intent_family
+    fallback_signal: selector_keywords
+    additional_signal_sets:
+      - selector_phrases
+    rule: "Routing resolves intent families first, uses explicit phrase matches next, and falls back to keyword matches only when phrase-level intent remains ambiguous."
   routes:
     - id: audit
       clause_ref: FL13:6.2
       interface_ref: FRIDA_INTERFACE_AUDIT
+      intent_family: audit
       selector_keywords:
         - audit
         - deployment
         - readiness
         - diagnostics
         - health-check
+      selector_phrases:
+        - readiness check
+        - deployment audit
+        - health check
+        - аудит развёртывания
+        - проверка готовности
       allowed_profiles:
         frida_repo:
           - frida_readonly_observer
         target_app_repo:
           - app_readonly_observer
-    - id: taskset
+    - id: task_intake
       clause_ref: FL13:6.3
-      interface_ref: FRIDA_INTERFACE_TASKSET
+      interface_ref: FRIDA_INTERFACE_TASK_INTAKE
+      intent_family: task_intake
       selector_keywords:
         - task
-        - formulation
-        - spec
-        - task pack
+        - intake
+        - triage
+        - inbox
+        - clarification
+      selector_phrases:
+        - create task request
+        - triage this request
+        - route to architect inbox
+        - route to contract editor
+        - постановка задачи
+        - разберись с запросом
+        - отправь в inbox
+        - нужно уточнение по задаче
       allowed_profiles:
-        frida_repo:
-          - frida_task_setter
+        target_app_repo:
+          - app_task_intake
+    - id: task_setter
+      clause_ref: FL13:6.3.1
+      interface_ref: FRIDA_INTERFACE_TASK_SETTER
+      intent_family: task_setter
+      selector_keywords:
+        - task pack
+        - task setter
+        - executable task
+        - publish task
+      selector_phrases:
+        - create executable task pack
+        - publish task pack
+        - make this into a task
+        - оформи task pack
+        - создай исполнимую задачу
+      allowed_profiles:
         target_app_repo:
           - app_task_setter
+    - id: task_validation
+      clause_ref: FL13:6.3.2
+      interface_ref: FRIDA_INTERFACE_TASK_VALIDATION
+      intent_family: task_validation
+      selector_keywords:
+        - validate task
+        - task validation
+        - collision
+        - task collision
+      selector_phrases:
+        - validate task against contract
+        - run contract collision scan
+        - проверь задачу на коллизию с контрактом
+        - task collision scan
+      allowed_profiles:
+        target_app_repo:
+          - app_task_validator
+    - id: task_tracking
+      clause_ref: FL13:6.3.3
+      interface_ref: FRIDA_INTERFACE_TASK_TRACKING
+      intent_family: task_tracking
+      selector_keywords:
+        - task tracking
+        - task status
+        - update task status
+        - session telemetry
+      selector_phrases:
+        - update task registry
+        - sync task status
+        - update tasks index
+        - обнови статус задачи
+        - синхронизируй tasks index
+      allowed_profiles:
+        target_app_repo:
+          - app_task_tracker
     - id: update_app_by_spec
       clause_ref: FL13:6.4
       interface_ref: FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
+      intent_family: app_contract_update_by_spec
       selector_keywords:
         - spec
         - specification
@@ -94,17 +171,26 @@ FRIDA_INTERFACE_ROUTING:
         - extend app contract
         - change app contract
         - repair app contract
+      selector_phrases:
+        - update app contract by specification
+        - extend app contract
+        - измени app contract
       allowed_profiles:
         target_app_repo:
           - app_contract_editor
     - id: update_app_by_code
       clause_ref: FL13:6.5
       interface_ref: FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      intent_family: app_contract_update_by_code
       selector_keywords:
         - code outpaces contract
         - update contract by code
         - extract contract from code
         - sync contract from code
+      selector_phrases:
+        - update app contract from code
+        - sync contract from code
+        - код обогнал контракт
       allowed_profiles:
         target_app_repo:
           - app_contract_editor
@@ -119,24 +205,20 @@ FRIDA_INT_AGENT_ROUTING:
     - id: self_contract_management
       clause_ref: FL13:7.1
       interface_ref: FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
+      intent_family: self_contract_management
       selector_keywords:
         - governance
         - contract
         - frida
         - self-contract
+      selector_phrases:
+        - update frida contract
+        - frida governance change
+        - измени контракт frida
       allowed_profiles:
         - frida_governance
-    - id: self_contract_task_formulation
-      clause_ref: FL13:7.2
-      interface_ref: FRIDA_INTERFACE_TASKSET
-      selector_keywords:
-        - core-tasks
-        - task
-        - formulation
-      allowed_profiles:
-        - frida_task_setter
   non_deploy_rule:
-    clause_ref: FL13:7.3
+    clause_ref: FL13:7.2
     rule: "Private self-routing metadata MUST NOT be projected into target repos."
 
 FRIDA_CLAUSE_INDEX:

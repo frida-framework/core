@@ -9,7 +9,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,11 +21,28 @@ function fail(message, code = 1) {
   process.exit(code);
 }
 
-function runViaLocalCli(args) {
-  return spawnSync(process.execPath, [LOCAL_CLI, 'check', 'contract-set', ...args], {
-    cwd: ROOT_DIR,
-    stdio: 'inherit',
-  });
+function parseForwardedArgs(args) {
+  const options = { rootDir: ROOT_DIR };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (token === '--include-frida-internal') {
+      options.includeFridaInternal = true;
+      continue;
+    }
+    if (token === '--contract' && typeof args[index + 1] === 'string') {
+      options.contractPath = args[index + 1];
+      index += 1;
+    }
+  }
+
+  return options;
+}
+
+async function runViaLocalModule(args) {
+  const moduleUrl = pathToFileURL(path.join(ROOT_DIR, 'dist', 'agents-contract-set.js')).href;
+  const mod = await import(moduleUrl);
+  return mod.runFridaAgentsContractSetCheck(parseForwardedArgs(args));
 }
 
 function runViaFridaCore(args) {
@@ -37,12 +54,13 @@ function runViaFridaCore(args) {
 }
 
 const forwardedArgs = process.argv.slice(2);
-const result = existsSync(LOCAL_CLI)
-  ? runViaLocalCli(forwardedArgs)
-  : runViaFridaCore(forwardedArgs);
 
+if (existsSync(LOCAL_CLI)) {
+  process.exit(await runViaLocalModule(forwardedArgs));
+}
+
+const result = runViaFridaCore(forwardedArgs);
 if (result.error) {
   fail(result.error.message, 2);
 }
-
 process.exit(result.status ?? 1);

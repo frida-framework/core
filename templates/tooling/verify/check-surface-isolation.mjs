@@ -62,12 +62,20 @@ for (const token of ['source_playbook_ref:', 'deployed_playbook_ref:']) {
     fail(`${managementLayerPath}: missing repo-scoped playbook metadata (${token})`);
   }
 }
-for (const token of ['AGENT-contract-update.md', 'AGENT-contract-repair.md']) {
+for (const token of ['AGENT-contract-update.md', 'AGENT-contract-repair.md', 'AGENT-task-formulation.md']) {
   if (managementLayer.includes(token)) {
     fail(`${managementLayerPath}: legacy shared playbook name must be removed (${token})`);
   }
 }
-for (const token of ['instruction_contract:', 'AGENT-app-contract-update.md', 'AGENT-app-contract-repair.md']) {
+for (const token of [
+  'instruction_contract:',
+  'AGENT-app-contract-update.md',
+  'AGENT-app-contract-repair.md',
+  'AGENT-task-intake.md',
+  'AGENT-task-setter.md',
+  'AGENT-task-validation.md',
+  'AGENT-task-tracking.md',
+]) {
   if (!managementLayer.includes(token)) {
     fail(`${managementLayerPath}: missing interface-instruction contract metadata (${token})`);
   }
@@ -79,10 +87,18 @@ const entries = Array.isArray(bootstrapManifest?.entries) ? bootstrapManifest.en
 const findEntry = (id) => entries.find((entry) => entry?.id === id);
 const appUpdateEntry = findEntry('playbook_app_contract_update');
 const appRepairEntry = findEntry('playbook_app_contract_repair');
+const taskIntakeEntry = findEntry('playbook_task_intake');
+const taskSetterEntry = findEntry('playbook_task_setter');
+const taskValidationEntry = findEntry('playbook_task_validation');
+const taskTrackingEntry = findEntry('playbook_task_tracking');
 
 for (const [id, entry, target] of [
   ['playbook_app_contract_update', appUpdateEntry, '.frida/contract/playbooks/AGENT-app-contract-update.md'],
   ['playbook_app_contract_repair', appRepairEntry, '.frida/contract/playbooks/AGENT-app-contract-repair.md'],
+  ['playbook_task_intake', taskIntakeEntry, '.frida/contract/playbooks/AGENT-task-intake.md'],
+  ['playbook_task_setter', taskSetterEntry, '.frida/contract/playbooks/AGENT-task-setter.md'],
+  ['playbook_task_validation', taskValidationEntry, '.frida/contract/playbooks/AGENT-task-validation.md'],
+  ['playbook_task_tracking', taskTrackingEntry, '.frida/contract/playbooks/AGENT-task-tracking.md'],
 ]) {
   if (!entry) {
     fail(`${bootstrapManifestPath}: missing manifest entry ${id}`);
@@ -104,9 +120,13 @@ for (const entry of entries) {
   if (entry.target.includes('AGENT-frida-internal-contract-') && !entry.cleanup_only) {
     fail(`${bootstrapManifestPath}: internal Frida playbooks must not be deployed to target repos`);
   }
-  if (entry.target.includes('AGENT-contract-update.md') || entry.target.includes('AGENT-contract-repair.md')) {
+  if (
+    entry.target.includes('AGENT-contract-update.md') ||
+    entry.target.includes('AGENT-contract-repair.md') ||
+    entry.target.includes('AGENT-task-formulation.md')
+  ) {
     if (!entry.cleanup_only) {
-      fail(`${bootstrapManifestPath}: legacy AGENT-contract-* targets must be cleanup-only`);
+      fail(`${bootstrapManifestPath}: legacy playbook targets must be cleanup-only`);
     }
   }
 }

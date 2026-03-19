@@ -16,8 +16,8 @@
     <forbidden_paths action="REDIRECT">
       <path>.frida/inbox/**</path>
       <path>tasks/**</path>
-      <path mode="no-edit">frida-tasks/TASK-*.md</path>
-      <path mode="no-edit">frida-tasks/**/TASK-*.md</path>
+      <path mode="no-edit">core-tasks/TASK-*.md</path>
+      <path mode="no-edit">core-tasks/**/TASK-*.md</path>
       <path mode="no-edit">.frida/reports/*.yaml</path>
       <path mode="no-edit">**</path>
     </forbidden_paths>

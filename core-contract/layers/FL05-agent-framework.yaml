@@ -15,10 +15,11 @@ FRIDA_TASK_PROFILES:
     security:
       read_allow:
         - "core-tasks/**"
-        - "contract/**"
+        - "core-contract/**"
         - "schemas/**"
         - "src/**"
         - "templates/**"
+        - "core-templates/**"
         - "README.md"
         - "package.json"
         - ".frida/AGENTS.md"
@@ -27,10 +28,11 @@ FRIDA_TASK_PROFILES:
         - ".frida/contract/**"
         - ".frida/reports/*.yaml"
       edit_allow:
-        - "contract/**"
+        - "core-contract/**"
         - "schemas/**"
         - "src/**"
         - "templates/**"
+        - "core-templates/**"
         - "README.md"
         - "package.json"
         - "core-tasks/README.md"
@@ -45,34 +47,6 @@ FRIDA_TASK_PROFILES:
         - "core-tasks/**/TASK-*.md"
         - "tasks/**"
         - ".frida/reports/*.yaml"
-  frida_task_setter:
-    role: TASK_SETTER_AGENT
-    keywords:
-      - task
-      - formulation
-      - spec
-      - core-tasks
-    invariants:
-      - no_scope_creep
-    security:
-      read_allow:
-        - "core-tasks/**"
-        - "contract/**"
-        - "schemas/**"
-        - "templates/management/**"
-      create_allow:
-        - "core-tasks/TASK-*.md"
-        - ".frida/reports/*.yaml"
-      edit_allow: []
-      forbid:
-        - ".frida/inbox/**"
-        - "tasks/**"
-      edit_forbid:
-        - "core-tasks/TASK-*.md"
-        - "core-tasks/**/TASK-*.md"
-        - ".frida/reports/*.yaml"
-        - "core-tasks/README.md"
-        - "tasks/**"
   frida_readonly_observer:
     role: READONLY_AGENT
     keywords:
@@ -148,6 +122,33 @@ FRIDA_ENFORCEMENT:
       scope: kernel
     - id: frida_inbox_no_agent_access
       text: "Agents MUST NOT use `.frida/inbox/**` as a general-purpose work surface. Direct edits are allowed only under `.frida/inbox/app-contract/**` through `FRIDA_INTERFACE_UPDATE_APP_BY_SPEC` or `FRIDA_INTERFACE_UPDATE_APP_BY_CODE` using the interface-scoped `app_contract_editor` profile; all other consumers use `.frida/contract/app/**` or read-only Frida surfaces."
+      scope: kernel
+    - id: task_pack_immutable
+      text: "Published task packs are immutable specifications; substantive changes require successor tasks and supersession tracking outside the task pack body."
+      scope: kernel
+    - id: task_pack_no_live_status
+      text: "Task packs MUST NOT store live execution status; normative status lives only in the task status registry."
+      scope: kernel
+    - id: task_status_registry_separate_from_sessions
+      text: "`tasks/index.yaml` is the only normative task status registry; `tasks/sessions/**` remain append-only telemetry and MUST NOT become the status source of truth."
+      scope: kernel
+    - id: task_validation_mirror_only
+      text: "Task intake, task setting, task validation, and task tracking read app contract context only from `.frida/contract/app/**`; direct `.frida/inbox/app-contract/**` access is reserved for app-contract mutation interfaces."
+      scope: kernel
+    - id: task_validation_requires_mirror_integrity
+      text: "If `.frida/contract/app/**` is missing, invalid, or stale, task validation MUST stop with `insufficient_contract_context` and MUST NOT publish a task pack."
+      scope: kernel
+    - id: task_validation_artifact_required
+      text: "Every published task pack MUST be backed by a machine-readable validation artifact in `.frida/reports/*.yaml`."
+      scope: kernel
+    - id: task_validation_contract_collision_is_error
+      text: "A task that collides with the app contract is erroneously set and MUST be rejected or rerouted rather than published with warnings."
+      scope: kernel
+    - id: task_triage_routes_before_publication
+      text: "Non-executable requests route to inbox, contract editor, architect review, or clarification before task-pack publication."
+      scope: kernel
+    - id: task_session_logs_append_only
+      text: "Task execution telemetry under `tasks/sessions/**` is append-only evidence and MUST NOT be edited in place."
       scope: kernel
     - id: zone_resolution_path_only
       text: "Zone is resolved ONLY by path matching, never by profile keywords or heuristics."

@@ -1,7 +1,7 @@
 meta:
   id: frida-meta
   version: 1.0.0
-  schemaVersion: "6.1"
+  schemaVersion: "7.0"
   mode: schema
   contractArtifactRef: PATHS.contract.coreCanonFile
 core:
@@ -20,7 +20,10 @@ core:
     - FRIDA_INTERFACE_AUDIT
     - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
     - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
-    - FRIDA_INTERFACE_TASKSET
+    - FRIDA_INTERFACE_TASK_INTAKE
+    - FRIDA_INTERFACE_TASK_SETTER
+    - FRIDA_INTERFACE_TASK_VALIDATION
+    - FRIDA_INTERFACE_TASK_TRACKING
     - FRIDA_AGENT_ENTRY_PROTOCOL
     - FRIDA_INTERFACE_ROUTING
     - FRIDA_CLAUSE_INDEX

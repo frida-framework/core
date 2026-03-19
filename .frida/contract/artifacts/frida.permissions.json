@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generatedAt": "2026-03-10T18:16:25.538Z",
-    "contractSha256": "17cb6b34d394cc203f21a13626cc086812b020dcc31d464e3fe30ce12c58e537",
-    "pathMappingsCount": 81,
+    "generatedAt": "2026-03-19T22:05:19.550Z",
+    "contractSha256": "fc480579913da0ea3654420fd0aef6179a53db7cedf2b6662972922a27c6b5ee",
+    "pathMappingsCount": 80,
     "zoneCount": 3,
-    "profileCount": 3
+    "profileCount": 2
   },
   "zones": [
     {
@@ -38,11 +38,12 @@
       "keywords": "governance, contract, frida, self-contract",
       "security": {
         "read_allow": [
-          "frida-tasks/**",
-          "contract/**",
+          "core-tasks/**",
+          "core-contract/**",
           "schemas/**",
           "src/**",
           "templates/**",
+          "core-templates/**",
           "README.md",
           "package.json",
           ".frida/AGENTS.md",
@@ -54,13 +55,14 @@
           "templates/AGENTS.md"
         ],
         "edit_allow": [
-          "contract/**",
+          "core-contract/**",
           "schemas/**",
           "src/**",
           "templates/**",
+          "core-templates/**",
           "README.md",
           "package.json",
-          "frida-tasks/README.md"
+          "core-tasks/README.md"
         ],
         "create_allow": [
           ".frida/reports/*.yaml"
@@ -71,8 +73,8 @@
         ],
         "edit_forbid": [
           ".frida/**",
-          "frida-tasks/TASK-*.md",
-          "frida-tasks/**/TASK-*.md",
+          "core-tasks/TASK-*.md",
+          "core-tasks/**/TASK-*.md",
           "tasks/**",
           ".frida/reports/*.yaml"
         ],
@@ -80,41 +82,6 @@
         "redirects": []
       },
       "invariants": []
-    },
-    {
-      "id": "frida_task_setter",
-      "keywords": "task, formulation, spec, frida-tasks",
-      "security": {
-        "read_allow": [
-          "frida-tasks/**",
-          "contract/**",
-          "schemas/**",
-          "templates/management/**",
-          "AGENTS.md",
-          "templates/AGENTS.md"
-        ],
-        "edit_allow": [],
-        "create_allow": [
-          "frida-tasks/TASK-*.md",
-          ".frida/reports/*.yaml"
-        ],
-        "forbid": [
-          ".frida/inbox/**",
-          "tasks/**"
-        ],
-        "edit_forbid": [
-          "frida-tasks/TASK-*.md",
-          "frida-tasks/**/TASK-*.md",
-          ".frida/reports/*.yaml",
-          "frida-tasks/README.md",
-          "tasks/**"
-        ],
-        "forbiddenAction": "REDIRECT",
-        "redirects": []
-      },
-      "invariants": [
-        "no_scope_creep"
-      ]
     },
     {
       "id": "frida_readonly_observer",
@@ -135,8 +102,8 @@
           "tasks/**"
         ],
         "edit_forbid": [
-          "frida-tasks/TASK-*.md",
-          "frida-tasks/**/TASK-*.md",
+          "core-tasks/TASK-*.md",
+          "core-tasks/**/TASK-*.md",
           ".frida/reports/*.yaml",
           "**"
         ],

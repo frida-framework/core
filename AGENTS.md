@@ -79,7 +79,7 @@ Otherwise, continue with standard routing below.
 
 CONTRACT → ANTITASK → DEVELOPMENT [FL13:5]
 
-1. **Contract** exists in local repo (`core-contract/*` is the source of truth; `contract/*` is the generated public projection)
+1. **Contract** exists in local repo (contract/* blocks)
 2. **Antitask** exists as AGENTS.md in target zone
 3. **Development** proceeds within boundaries
 

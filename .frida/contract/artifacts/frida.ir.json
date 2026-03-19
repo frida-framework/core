@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generatedAt": "2026-03-10T18:16:25.538Z",
-    "contractSha256": "17cb6b34d394cc203f21a13626cc086812b020dcc31d464e3fe30ce12c58e537",
-    "pathMappingsCount": 81,
+    "generatedAt": "2026-03-19T22:05:19.550Z",
+    "contractSha256": "fc480579913da0ea3654420fd0aef6179a53db7cedf2b6662972922a27c6b5ee",
+    "pathMappingsCount": 80,
     "zoneCount": 3,
-    "profileCount": 3
+    "profileCount": 2
   },
   "nodes": [
     {
@@ -33,6 +33,62 @@
       "source": {
         "block": "GUARDS",
         "id": "GUARD_CONTRACT_SOURCE_DECLARED"
+      }
+    },
+    {
+      "id": "guard:GUARD_APP_PATHS_FILESYSTEM_ONLY",
+      "kind": "guard",
+      "label": "GUARD_APP_PATHS_FILESYSTEM_ONLY",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Active app PATHS must contain filesystem facts only and use canonical Dir/File/Glob/Pattern leaf names.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_APP_PATHS_FILESYSTEM_ONLY"
+      }
+    },
+    {
+      "id": "guard:GUARD_APP_PATH_SURFACES_REQUIRED",
+      "kind": "guard",
+      "label": "GUARD_APP_PATH_SURFACES_REQUIRED",
+      "attrs": {
+        "kind": "chain",
+        "statement": "Active app contracts must declare PATH_SURFACES to separate authority/lifecycle from PATHS.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_APP_PATH_SURFACES_REQUIRED"
+      }
+    },
+    {
+      "id": "guard:GUARD_APP_PATH_ALIAS_ZERO",
+      "kind": "guard",
+      "label": "GUARD_APP_PATH_ALIAS_ZERO",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Active app contracts must not publish duplicate PATHS aliases for the same concrete filesystem path.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_APP_PATH_ALIAS_ZERO"
+      }
+    },
+    {
+      "id": "guard:GUARD_APP_WIKI_MECHANICS_CORE_OWNED",
+      "kind": "guard",
+      "label": "GUARD_APP_WIKI_MECHANICS_CORE_OWNED",
+      "attrs": {
+        "kind": "ban",
+        "statement": "Active app contracts must not duplicate core-owned wiki/SSOT mechanics outside the permitted app wiki data surface.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_APP_WIKI_MECHANICS_CORE_OWNED"
       }
     },
     {
@@ -414,6 +470,20 @@
       }
     },
     {
+      "id": "guard:GUARD_APP_DEMOTE_OR_SPLIT",
+      "kind": "guard",
+      "label": "GUARD_APP_DEMOTE_OR_SPLIT",
+      "attrs": {
+        "kind": "chain",
+        "statement": "If a top-level app entity cannot sustain canonical name -> boundary -> refs coupling, it must be demoted or split rather than retained as an ambiguous boundary.",
+        "enforcement": "hard"
+      },
+      "source": {
+        "block": "GUARDS",
+        "id": "GUARD_APP_DEMOTE_OR_SPLIT"
+      }
+    },
+    {
       "id": "guard:GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST",
       "kind": "guard",
       "label": "GUARD_COMPONENT_VISUAL_BOUNDARY_FIRST",
@@ -432,7 +502,7 @@
       "kind": "invariant",
       "label": "contract_entity_single_declaration",
       "attrs": {
-        "text": "Any contract entity SHOULD be declared exactly once; duplicates emit warning.",
+        "text": "Any active contract entity MUST be declared exactly once. Duplicate declarations and semantic aliases are forbidden.",
         "scope": "kernel"
       },
       "source": {
@@ -627,12 +697,129 @@
       "kind": "invariant",
       "label": "frida_inbox_no_agent_access",
       "attrs": {
-        "text": "Agents MUST NOT directly read or modify `.frida/inbox/**`; work must use `.frida/contract/app/**` working copy surfaces.",
+        "text": "Agents MUST NOT use `.frida/inbox/**` as a general-purpose work surface. Direct edits are allowed only under `.frida/inbox/app-contract/**` through `FRIDA_INTERFACE_UPDATE_APP_BY_SPEC` or `FRIDA_INTERFACE_UPDATE_APP_BY_CODE` using the interface-scoped `app_contract_editor` profile; all other consumers use `.frida/contract/app/**` or read-only Frida surfaces.",
         "scope": "kernel"
       },
       "source": {
         "block": "INVARIANTS",
         "id": "frida_inbox_no_agent_access"
+      }
+    },
+    {
+      "id": "invariant:task_pack_immutable",
+      "kind": "invariant",
+      "label": "task_pack_immutable",
+      "attrs": {
+        "text": "Published task packs are immutable specifications; substantive changes require successor tasks and supersession tracking outside the task pack body.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_pack_immutable"
+      }
+    },
+    {
+      "id": "invariant:task_pack_no_live_status",
+      "kind": "invariant",
+      "label": "task_pack_no_live_status",
+      "attrs": {
+        "text": "Task packs MUST NOT store live execution status; normative status lives only in the task status registry.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_pack_no_live_status"
+      }
+    },
+    {
+      "id": "invariant:task_status_registry_separate_from_sessions",
+      "kind": "invariant",
+      "label": "task_status_registry_separate_from_sessions",
+      "attrs": {
+        "text": "`tasks/index.yaml` is the only normative task status registry; `tasks/sessions/**` remain append-only telemetry and MUST NOT become the status source of truth.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_status_registry_separate_from_sessions"
+      }
+    },
+    {
+      "id": "invariant:task_validation_mirror_only",
+      "kind": "invariant",
+      "label": "task_validation_mirror_only",
+      "attrs": {
+        "text": "Task intake, task setting, task validation, and task tracking read app contract context only from `.frida/contract/app/**`; direct `.frida/inbox/app-contract/**` access is reserved for app-contract mutation interfaces.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_validation_mirror_only"
+      }
+    },
+    {
+      "id": "invariant:task_validation_requires_mirror_integrity",
+      "kind": "invariant",
+      "label": "task_validation_requires_mirror_integrity",
+      "attrs": {
+        "text": "If `.frida/contract/app/**` is missing, invalid, or stale, task validation MUST stop with `insufficient_contract_context` and MUST NOT publish a task pack.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_validation_requires_mirror_integrity"
+      }
+    },
+    {
+      "id": "invariant:task_validation_artifact_required",
+      "kind": "invariant",
+      "label": "task_validation_artifact_required",
+      "attrs": {
+        "text": "Every published task pack MUST be backed by a machine-readable validation artifact in `.frida/reports/*.yaml`.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_validation_artifact_required"
+      }
+    },
+    {
+      "id": "invariant:task_validation_contract_collision_is_error",
+      "kind": "invariant",
+      "label": "task_validation_contract_collision_is_error",
+      "attrs": {
+        "text": "A task that collides with the app contract is erroneously set and MUST be rejected or rerouted rather than published with warnings.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_validation_contract_collision_is_error"
+      }
+    },
+    {
+      "id": "invariant:task_triage_routes_before_publication",
+      "kind": "invariant",
+      "label": "task_triage_routes_before_publication",
+      "attrs": {
+        "text": "Non-executable requests route to inbox, contract editor, architect review, or clarification before task-pack publication.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_triage_routes_before_publication"
+      }
+    },
+    {
+      "id": "invariant:task_session_logs_append_only",
+      "kind": "invariant",
+      "label": "task_session_logs_append_only",
+      "attrs": {
+        "text": "Task execution telemetry under `tasks/sessions/**` is append-only evidence and MUST NOT be edited in place.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "task_session_logs_append_only"
       }
     },
     {
@@ -705,7 +892,7 @@
       "kind": "invariant",
       "label": "frida_tasks_core_repo_only",
       "attrs": {
-        "text": "`frida-tasks/` is a Frida-core-only task surface. It MUST NOT be created or read outside the Frida repo.",
+        "text": "`core-tasks/` is a Frida-core-only task surface. It MUST NOT be created or read outside the Frida repo.",
         "scope": "kernel"
       },
       "source": {
@@ -783,7 +970,7 @@
       "kind": "invariant",
       "label": "target_delivery_no_internal_authoring_surfaces",
       "attrs": {
-        "text": "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml`.",
+        "text": "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml` and the app-contract SSOT authoring surface `.frida/inbox/app-contract/**` used by the public app-contract update interfaces.",
         "scope": "kernel"
       },
       "source": {
@@ -854,6 +1041,71 @@
       "source": {
         "block": "INVARIANTS",
         "id": "strict_path_refs"
+      }
+    },
+    {
+      "id": "invariant:app_paths_filesystem_facts_only",
+      "kind": "invariant",
+      "label": "app_paths_filesystem_facts_only",
+      "attrs": {
+        "text": "In active app contracts, PATHS MUST store concrete filesystem facts only. Semantic roles, ownership, and lifecycle MUST live outside PATHS.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_paths_filesystem_facts_only"
+      }
+    },
+    {
+      "id": "invariant:app_path_surfaces_required",
+      "kind": "invariant",
+      "label": "app_path_surfaces_required",
+      "attrs": {
+        "text": "Active app contracts MUST declare PATH_SURFACES as the ownership/lifecycle companion to PATHS.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_path_surfaces_required"
+      }
+    },
+    {
+      "id": "invariant:app_path_alias_zero",
+      "kind": "invariant",
+      "label": "app_path_alias_zero",
+      "attrs": {
+        "text": "Active app contracts MUST NOT declare the same concrete filesystem path under multiple active PATHS keys.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_path_alias_zero"
+      }
+    },
+    {
+      "id": "invariant:app_demote_or_split",
+      "kind": "invariant",
+      "label": "app_demote_or_split",
+      "attrs": {
+        "text": "If a top-level app entity cannot maintain a stable name -> boundary -> refs coupling, it MUST be demoted to a local/shared block or split into canonical entities.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_demote_or_split"
+      }
+    },
+    {
+      "id": "invariant:app_wiki_mechanics_core_owned",
+      "kind": "invariant",
+      "label": "app_wiki_mechanics_core_owned",
+      "attrs": {
+        "text": "App contracts MAY store wiki-specific app data, but FRIDA_WIKI_MECHANICS and APP_CONTRACT_SSOT remain core-owned and MUST NOT be re-declared in active app structured data.",
+        "scope": "kernel"
+      },
+      "source": {
+        "block": "INVARIANTS",
+        "id": "app_wiki_mechanics_core_owned"
       }
     },
     {
@@ -1208,11 +1460,12 @@
         "keywords": "governance, contract, frida, self-contract",
         "security": {
           "read_allow": [
-            "frida-tasks/**",
-            "contract/**",
+            "core-tasks/**",
+            "core-contract/**",
             "schemas/**",
             "src/**",
             "templates/**",
+            "core-templates/**",
             "README.md",
             "package.json",
             ".frida/AGENTS.md",
@@ -1224,13 +1477,14 @@
             "templates/AGENTS.md"
           ],
           "edit_allow": [
-            "contract/**",
+            "core-contract/**",
             "schemas/**",
             "src/**",
             "templates/**",
+            "core-templates/**",
             "README.md",
             "package.json",
-            "frida-tasks/README.md"
+            "core-tasks/README.md"
           ],
           "create_allow": [
             ".frida/reports/*.yaml"
@@ -1241,8 +1495,8 @@
           ],
           "edit_forbid": [
             ".frida/**",
-            "frida-tasks/TASK-*.md",
-            "frida-tasks/**/TASK-*.md",
+            "core-tasks/TASK-*.md",
+            "core-tasks/**/TASK-*.md",
             "tasks/**",
             ".frida/reports/*.yaml"
           ],
@@ -1253,46 +1507,6 @@
       "source": {
         "block": "FRIDA_TASK_PROFILES",
         "id": "frida_governance"
-      }
-    },
-    {
-      "id": "profile:frida_task_setter",
-      "kind": "profile",
-      "label": "frida_task_setter",
-      "attrs": {
-        "keywords": "task, formulation, spec, frida-tasks",
-        "security": {
-          "read_allow": [
-            "frida-tasks/**",
-            "contract/**",
-            "schemas/**",
-            "templates/management/**",
-            "AGENTS.md",
-            "templates/AGENTS.md"
-          ],
-          "edit_allow": [],
-          "create_allow": [
-            "frida-tasks/TASK-*.md",
-            ".frida/reports/*.yaml"
-          ],
-          "forbid": [
-            ".frida/inbox/**",
-            "tasks/**"
-          ],
-          "edit_forbid": [
-            "frida-tasks/TASK-*.md",
-            "frida-tasks/**/TASK-*.md",
-            ".frida/reports/*.yaml",
-            "frida-tasks/README.md",
-            "tasks/**"
-          ],
-          "forbiddenAction": "REDIRECT",
-          "redirects": []
-        }
-      },
-      "source": {
-        "block": "FRIDA_TASK_PROFILES",
-        "id": "frida_task_setter"
       }
     },
     {
@@ -1317,8 +1531,8 @@
             "tasks/**"
           ],
           "edit_forbid": [
-            "frida-tasks/TASK-*.md",
-            "frida-tasks/**/TASK-*.md",
+            "core-tasks/TASK-*.md",
+            "core-tasks/**/TASK-*.md",
             ".frida/reports/*.yaml",
             "**"
           ],
@@ -1332,19 +1546,19 @@
       }
     },
     {
-      "id": "path:frida-tasks/**",
+      "id": "path:core-tasks/**",
       "kind": "path",
-      "label": "frida-tasks/**",
+      "label": "core-tasks/**",
       "attrs": {
-        "contractical": "frida-tasks/**"
+        "contractical": "core-tasks/**"
       }
     },
     {
-      "id": "path:contract/**",
+      "id": "path:core-contract/**",
       "kind": "path",
-      "label": "contract/**",
+      "label": "core-contract/**",
       "attrs": {
-        "contractical": "contract/**"
+        "contractical": "core-contract/**"
       }
     },
     {
@@ -1369,6 +1583,14 @@
       "label": "templates/**",
       "attrs": {
         "contractical": "templates/**"
+      }
+    },
+    {
+      "id": "path:core-templates/**",
+      "kind": "path",
+      "label": "core-templates/**",
+      "attrs": {
+        "contractical": "core-templates/**"
       }
     },
     {
@@ -1444,11 +1666,11 @@
       }
     },
     {
-      "id": "path:frida-tasks/README.md",
+      "id": "path:core-tasks/README.md",
       "kind": "path",
-      "label": "frida-tasks/README.md",
+      "label": "core-tasks/README.md",
       "attrs": {
-        "contractical": "frida-tasks/README.md"
+        "contractical": "core-tasks/README.md"
       }
     },
     {
@@ -1476,27 +1698,19 @@
       }
     },
     {
-      "id": "path:frida-tasks/TASK-*.md",
+      "id": "path:core-tasks/TASK-*.md",
       "kind": "path",
-      "label": "frida-tasks/TASK-*.md",
+      "label": "core-tasks/TASK-*.md",
       "attrs": {
-        "contractical": "frida-tasks/TASK-*.md"
+        "contractical": "core-tasks/TASK-*.md"
       }
     },
     {
-      "id": "path:frida-tasks/**/TASK-*.md",
+      "id": "path:core-tasks/**/TASK-*.md",
       "kind": "path",
-      "label": "frida-tasks/**/TASK-*.md",
+      "label": "core-tasks/**/TASK-*.md",
       "attrs": {
-        "contractical": "frida-tasks/**/TASK-*.md"
-      }
-    },
-    {
-      "id": "path:templates/management/**",
-      "kind": "path",
-      "label": "templates/management/**",
-      "attrs": {
-        "contractical": "templates/management/**"
+        "contractical": "core-tasks/**/TASK-*.md"
       }
     },
     {
@@ -1510,23 +1724,18 @@
   ],
   "edges": [
     {
-      "from": "profile:frida_task_setter",
-      "to": "invariant:no_scope_creep",
-      "kind": "requires"
-    },
-    {
       "from": "profile:frida_readonly_observer",
       "to": "invariant:contract_not_runtime",
       "kind": "requires"
     },
     {
       "from": "profile:frida_governance",
-      "to": "path:frida-tasks/**",
+      "to": "path:core-tasks/**",
       "kind": "may_read"
     },
     {
       "from": "profile:frida_governance",
-      "to": "path:contract/**",
+      "to": "path:core-contract/**",
       "kind": "may_read"
     },
     {
@@ -1542,6 +1751,11 @@
     {
       "from": "profile:frida_governance",
       "to": "path:templates/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_governance",
+      "to": "path:core-templates/**",
       "kind": "may_read"
     },
     {
@@ -1591,7 +1805,7 @@
     },
     {
       "from": "profile:frida_governance",
-      "to": "path:contract/**",
+      "to": "path:core-contract/**",
       "kind": "may_edit"
     },
     {
@@ -1611,6 +1825,11 @@
     },
     {
       "from": "profile:frida_governance",
+      "to": "path:core-templates/**",
+      "kind": "may_edit"
+    },
+    {
+      "from": "profile:frida_governance",
       "to": "path:README.md",
       "kind": "may_edit"
     },
@@ -1621,7 +1840,7 @@
     },
     {
       "from": "profile:frida_governance",
-      "to": "path:frida-tasks/README.md",
+      "to": "path:core-tasks/README.md",
       "kind": "may_edit"
     },
     {
@@ -1641,12 +1860,12 @@
     },
     {
       "from": "profile:frida_governance",
-      "to": "path:frida-tasks/TASK-*.md",
+      "to": "path:core-tasks/TASK-*.md",
       "kind": "no_edit"
     },
     {
       "from": "profile:frida_governance",
-      "to": "path:frida-tasks/**/TASK-*.md",
+      "to": "path:core-tasks/**/TASK-*.md",
       "kind": "no_edit"
     },
     {
@@ -1661,81 +1880,6 @@
     },
     {
       "from": "profile:frida_governance",
-      "to": "path:.frida/reports/*.yaml",
-      "kind": "may_create"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:frida-tasks/**",
-      "kind": "may_read"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:contract/**",
-      "kind": "may_read"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:schemas/**",
-      "kind": "may_read"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:templates/management/**",
-      "kind": "may_read"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:AGENTS.md",
-      "kind": "may_read"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:templates/AGENTS.md",
-      "kind": "may_read"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:.frida/inbox/**",
-      "kind": "forbidden"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:tasks/**",
-      "kind": "forbidden"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:frida-tasks/TASK-*.md",
-      "kind": "no_edit"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:frida-tasks/**/TASK-*.md",
-      "kind": "no_edit"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:.frida/reports/*.yaml",
-      "kind": "no_edit"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:frida-tasks/README.md",
-      "kind": "no_edit"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:tasks/**",
-      "kind": "no_edit"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "path:frida-tasks/TASK-*.md",
-      "kind": "may_create"
-    },
-    {
-      "from": "profile:frida_task_setter",
       "to": "path:.frida/reports/*.yaml",
       "kind": "may_create"
     },
@@ -1771,12 +1915,12 @@
     },
     {
       "from": "profile:frida_readonly_observer",
-      "to": "path:frida-tasks/TASK-*.md",
+      "to": "path:core-tasks/TASK-*.md",
       "kind": "no_edit"
     },
     {
       "from": "profile:frida_readonly_observer",
-      "to": "path:frida-tasks/**/TASK-*.md",
+      "to": "path:core-tasks/**/TASK-*.md",
       "kind": "no_edit"
     },
     {
@@ -1806,16 +1950,6 @@
     },
     {
       "from": "profile:frida_governance",
-      "to": "zone:non_templates",
-      "kind": "may_access_zone"
-    },
-    {
-      "from": "profile:frida_task_setter",
-      "to": "zone:templates",
-      "kind": "may_access_zone"
-    },
-    {
-      "from": "profile:frida_task_setter",
       "to": "zone:non_templates",
       "kind": "may_access_zone"
     },

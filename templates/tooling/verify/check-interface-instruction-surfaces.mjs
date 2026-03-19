@@ -104,7 +104,14 @@ function extractInterfaceRefs(raw) {
 
 function buildRequirements(mode) {
   const management = yaml.parse(readText(path.join(PACKAGE_ROOT, resolveSourceContractLayerRel('FL11-management.yaml', PACKAGE_ROOT))));
-  const interfaces = ['FRIDA_INTERFACE_UPDATE_APP_BY_SPEC', 'FRIDA_INTERFACE_UPDATE_APP_BY_CODE'];
+  const interfaces = [
+    'FRIDA_INTERFACE_UPDATE_APP_BY_SPEC',
+    'FRIDA_INTERFACE_UPDATE_APP_BY_CODE',
+    'FRIDA_INTERFACE_TASK_INTAKE',
+    'FRIDA_INTERFACE_TASK_SETTER',
+    'FRIDA_INTERFACE_TASK_VALIDATION',
+    'FRIDA_INTERFACE_TASK_TRACKING',
+  ];
   const perFile = new Map();
 
   for (const interfaceName of interfaces) {

@@ -5,7 +5,7 @@ templates:
     sha256: sha256:d117ca22a7586f923090fb83354256b90dd125b2812dd9107b53628c7e381b3b
   - id: FRIDA_TPL_ROUTER
     file: templates/frida/router.xml.hbs
-    sha256: sha256:77c7108e78753bdc8e312f70a6d3a8d569800ce01109874740d31494b4c73bb6
+    sha256: sha256:f9e13383bc6274ade7764dd2eef5b35cdc4e7bccd527148594d6676ea5335b89
   - id: FRIDA_TPL_PROFILE
     file: templates/frida/profile.xml.hbs
     sha256: sha256:aa7d6c855d0c57512dd9b029c84dc9c776de1a458f21bc652438e8abc98ce11b

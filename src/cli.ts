@@ -11,6 +11,7 @@ import { runFridaBuildCli } from './build.ts';
 import { runFridaBootstrapCli } from './bootstrap.ts';
 import { runFridaValidateCli } from './contract-validator.ts';
 import { FRIDA_CLI_NAME } from './identity.ts';
+import { runFridaTaskCollisionCli, runFridaTaskSetCli } from './task-set-check.ts';
 
 function printHelp(): void {
   console.log(`${FRIDA_CLI_NAME}
@@ -27,6 +28,8 @@ Usage:
   ${FRIDA_CLI_NAME} visual-viewer [args...]         (DEPRECATED — use visualizer instead)
   ${FRIDA_CLI_NAME} report [check|path|write] [args...]
   ${FRIDA_CLI_NAME} check contract-set [--include-frida-internal]
+  ${FRIDA_CLI_NAME} check task-set [--format text|json|yaml]
+  ${FRIDA_CLI_NAME} check task-collision --task <path> [--format text|json|yaml]
   ${FRIDA_CLI_NAME} check [zone args...]
   ${FRIDA_CLI_NAME} hash [--manifest <path>] [--contract <path>]
   ${FRIDA_CLI_NAME} build [--public] [--output <path>] [--contract <path>]
@@ -77,6 +80,12 @@ async function run(): Promise<number> {
           rootDir: process.cwd(),
           includeFridaInternal: args.includes('--include-frida-internal'),
         });
+      }
+      if (args[0] === 'task-set') {
+        return runFridaTaskSetCli(args.slice(1), { rootDir: process.cwd() });
+      }
+      if (args[0] === 'task-collision') {
+        return runFridaTaskCollisionCli(args.slice(1), { rootDir: process.cwd() });
       }
       return runFridaCheckCli(args);
     case 'hash':

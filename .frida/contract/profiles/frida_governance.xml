@@ -5,11 +5,12 @@
   
   <security_clearance>
     <allowed_paths>
-      <path mode="read">frida-tasks/**</path>
-      <path mode="read">contract/**</path>
+      <path mode="read">core-tasks/**</path>
+      <path mode="read">core-contract/**</path>
       <path mode="read">schemas/**</path>
       <path mode="read">src/**</path>
       <path mode="read">templates/**</path>
+      <path mode="read">core-templates/**</path>
       <path mode="read">README.md</path>
       <path mode="read">package.json</path>
       <path mode="read">.frida/AGENTS.md</path>
@@ -19,13 +20,14 @@
       <path mode="read">.frida/reports/*.yaml</path>
       <path mode="read">AGENTS.md</path>
       <path mode="read">templates/AGENTS.md</path>
-      <path mode="edit">contract/**</path>
+      <path mode="edit">core-contract/**</path>
       <path mode="edit">schemas/**</path>
       <path mode="edit">src/**</path>
       <path mode="edit">templates/**</path>
+      <path mode="edit">core-templates/**</path>
       <path mode="edit">README.md</path>
       <path mode="edit">package.json</path>
-      <path mode="edit">frida-tasks/README.md</path>
+      <path mode="edit">core-tasks/README.md</path>
     </allowed_paths>
     <create_allow>
       <path>.frida/reports/*.yaml</path>
@@ -34,8 +36,8 @@
       <path>.frida/inbox/**</path>
       <path>tasks/**</path>
       <path mode="no-edit">.frida/**</path>
-      <path mode="no-edit">frida-tasks/TASK-*.md</path>
-      <path mode="no-edit">frida-tasks/**/TASK-*.md</path>
+      <path mode="no-edit">core-tasks/TASK-*.md</path>
+      <path mode="no-edit">core-tasks/**/TASK-*.md</path>
       <path mode="no-edit">tasks/**</path>
       <path mode="no-edit">.frida/reports/*.yaml</path>
     </forbidden_paths>

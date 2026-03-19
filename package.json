@@ -1,6 +1,6 @@
 {
   "name": "@sistemado/frida",
-  "version": "3.3.6",
+  "version": "4.0.0",
   "description": "Schema-driven Frida Core generation engine",
   "private": false,
   "repository": {
@@ -48,13 +48,14 @@
   "scripts": {
     "build": "npm run clean && node templates/tooling/lib/generate-identity.mjs && node templates/tooling/lib/assemble-public-package-surface.mjs && tsc -p tsconfig.build.json && node -e \"import('node:fs').then(fs=>fs.chmodSync('dist/cli.js',0o755))\" && node templates/tooling/lib/build-optional-visualizer.mjs",
     "clean": "node -e \"import('node:fs').then(fs=>{fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('templates/tooling/visualizer/dist',{recursive:true,force:true});})\"",
-    "verify": "npm run build && node templates/tooling/verify/check-package-identity-sync.mjs && node templates/tooling/verify/check-public-projection-surface.mjs && node templates/tooling/verify/check-package-tarball.mjs && node dist/cli.js migration-report && node templates/tooling/verify/check-component-boundary-contract.mjs && node templates/tooling/verify/check-surface-isolation.mjs && node templates/tooling/verify/check-interface-instruction-surfaces.mjs && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs && npm run verify:task-packs && npm run verify:zero-start",
+    "verify": "npm run build && node templates/tooling/verify/check-package-identity-sync.mjs && node templates/tooling/verify/check-public-projection-surface.mjs && node templates/tooling/verify/check-package-tarball.mjs && node dist/cli.js migration-report && node templates/tooling/verify/check-component-boundary-contract.mjs && node templates/tooling/verify/check-surface-isolation.mjs && node templates/tooling/verify/check-interface-instruction-surfaces.mjs && node dist/cli.js check zone --path . && node templates/tooling/verify/check-agents-contract-set.mjs && npm run verify:task-set && npm run verify:zero-start",
     "frida:visual": "node dist/cli.js visual",
     "frida:visual-viewer": "node dist/cli.js visual-viewer",
 
     "verify:visual": "npm run build && node templates/tooling/verify/check-visual-contract-consistency.mjs && npm run frida:visual && node templates/tooling/verify/check-visual-no-skip.mjs && node templates/tooling/verify/check-visual-schema-determinism.mjs && node templates/tooling/verify/check-verify-visual-separation.mjs",
     "verify:component-boundary": "node templates/tooling/verify/check-component-boundary-contract.mjs",
-    "verify:task-packs": "node templates/tooling/verify/tasks-taskpacks-schema.mjs && node templates/tooling/verify/tasks-taskpacks-immutable.mjs",
+    "verify:task-set": "node dist/cli.js check task-set && node templates/tooling/verify/tasks-taskpacks-schema.mjs && node templates/tooling/verify/tasks-taskpacks-immutable.mjs && node templates/tooling/verify/tasks-sessions-append-only.mjs",
+    "verify:task-packs": "npm run verify:task-set",
     "verify:zero-start": "node dist/zero-start-determinism.js",
     "prepack": "npm run build"
   },

@@ -14,6 +14,6 @@
     "frida:visual": "frida-core visual"
   },
   "devDependencies": {
-    "@sistemado/frida": "^3.3.6"
+    "@sistemado/frida": "^4.0.0"
   }
 }

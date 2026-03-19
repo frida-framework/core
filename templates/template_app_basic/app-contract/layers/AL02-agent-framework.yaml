@@ -80,11 +80,12 @@ ZONES:
     owner: Platform
     path: "tasks/**"
     readOnly: false
-    purpose: Task packs and orchestration notes.
+    purpose: Immutable task packs plus the normative task status registry.
     agentsPath: "tasks"
     agentsTemplate: mapper
     constraints:
       - Task packs are immutable; create new files instead of editing existing task instructions.
+      - "`tasks/index.yaml` is the only normative task status registry."
     verification: n/a
     guardRefs: []
   agentInbox:
@@ -107,6 +108,7 @@ ZONES:
     agentsTemplate: mapper
     constraints:
       - New run means new session report file.
+      - Sessions are evidence only and do not define normative task status.
     verification: n/a
     guardRefs: []
   tempWorkspace:
@@ -169,6 +171,7 @@ TASK_PROFILES:
         - tasks/**
         - .temp/**
       edit_allow:
+        - tasks/index.yaml
         - src/**
         - scripts/**
         - docs/**
@@ -206,6 +209,7 @@ TASK_PROFILES:
         - tasks/**
         - .temp/**
       edit_allow:
+        - tasks/index.yaml
         - src/**
         - docs/**
         - tasks/README.md
@@ -244,6 +248,7 @@ TASK_PROFILES:
         - tasks/**
         - .temp/**
       edit_allow:
+        - tasks/index.yaml
         - tests/**
         - tasks/README.md
         - tasks/**/README.md
@@ -261,59 +266,119 @@ TASK_PROFILES:
       - temp_dot_temp_only
       - temp_ephemeral_session
       - error_explicit
-  app_task_setter:
-    description: Task orchestration profile for creating new task packs and keeping task readmes current.
+  app_task_intake:
+    description: Task intake and triage profile for routing requests before task-pack publication.
     keywords:
-      - task setter
-      - task pack
-      - create task pack
-      - tasks/TASK-
-      - orchestration
-    role: TASK_SETTER_AGENT
-    security:
-      read_allow:
-        - tasks/**
-        - docs/**
-        - .temp/**
-      edit_allow:
-        - tasks/README.md
-        - tasks/**/README.md
-        - .temp/**
-      create_allow:
-        - tasks/TASK-*.md
-        - tasks/sessions/*.md
-        - .frida/reports/*.yaml
-      forbid:
-        - .frida/**
-      edit_forbid:
-        - tasks/TASK-*.md
-        - tasks/**/TASK-*.md
-        - src/**
-    invariants:
-      - no_scope_creep
-      - temp_dot_temp_only
-      - temp_ephemeral_session
-  app_architect_inbox:
-    description: Architecture proposal intake profile.
-    keywords:
+      - task intake
+      - triage
       - inbox
-      - architecture request
-      - proposal
-      - contract impact
+      - clarification
+      - route request
     role: ARCHITECT_AGENT
     security:
       read_allow:
         - tasks/**
         - docs/**
-        - .frida/**
+        - .frida/contract/app/**
         - .temp/**
       edit_allow:
         - tasks/inbox/**
         - tasks/inbox/README.md
+        - .temp/**
       create_allow:
-        - tasks/sessions/*.md
         - .frida/reports/*.yaml
       forbid:
+        - .frida/inbox/**
+        - src/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  app_task_setter:
+    description: Task setter profile for publishing immutable executable task packs after validation.
+    keywords:
+      - task setter
+      - task pack
+      - create task pack
+      - tasks/TASK-
+      - executable task
+    role: TASK_SETTER_AGENT
+    security:
+      read_allow:
+        - tasks/**
+        - docs/**
+        - .frida/contract/app/**
+        - .temp/**
+      edit_allow:
+        - tasks/index.yaml
+        - .temp/**
+      create_allow:
+        - tasks/TASK-*.md
+        - .frida/reports/*.yaml
+      forbid:
+        - .frida/inbox/**
+        - src/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+  app_task_validator:
+    description: Task validation profile for contract-collision scans and validation artifact publication.
+    keywords:
+      - task validation
+      - collision scan
+      - validate task
+      - contract collision
+    role: QA_AGENT
+    security:
+      read_allow:
+        - tasks/**
+        - docs/**
+        - .frida/contract/app/**
+        - .temp/**
+      edit_allow:
+        - tasks/index.yaml
+        - .temp/**
+      create_allow:
+        - .frida/reports/*.yaml
+      forbid:
+        - .frida/inbox/**
+        - src/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
+      - error_explicit
+  app_task_tracker:
+    description: Task tracking profile for maintaining `tasks/index.yaml` separately from task specs and telemetry.
+    keywords:
+      - task tracking
+      - task status
+      - tasks index
+      - update task status
+    role: APP_AGENT
+    security:
+      read_allow:
+        - tasks/**
+        - docs/**
+        - .frida/contract/app/**
+        - .temp/**
+      edit_allow:
+        - tasks/index.yaml
+        - .temp/**
+      create_allow:
+        - .frida/reports/*.yaml
+      forbid:
+        - .frida/inbox/**
         - src/**
       edit_forbid:
         - tasks/TASK-*.md
@@ -375,6 +440,7 @@ TASK_PROFILES:
         - docs/**
         - .temp/**
       edit_allow:
+        - tasks/index.yaml
         - .github/**
         - scripts/**
         - package.json

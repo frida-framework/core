@@ -37,6 +37,7 @@ APP_EXTENSION_BACKEND:
             - tasks/**
             - .temp/**
           edit_allow:
+            - tasks/index.yaml
             - src/**
             - scripts/**
             - docs/**

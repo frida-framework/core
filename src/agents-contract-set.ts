@@ -1,5 +1,5 @@
-import { execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadContractDocument } from './contract-path.ts';
@@ -25,6 +25,15 @@ const ENGINE_TEMPLATE_AGENTS_PREFIXES = [
   'templates/tooling/',
   '.frida/templates/',
 ] as const;
+const WALK_SKIP_DIRS = new Set(['.git', 'node_modules']);
+
+function shouldSkipWalkDir(entryName: string): boolean {
+  if (WALK_SKIP_DIRS.has(entryName)) {
+    return true;
+  }
+
+  return entryName.startsWith('.') && entryName !== '.frida';
+}
 
 function normalizePath(input: string): string {
   const withSlashes = String(input || '')
@@ -189,18 +198,60 @@ function collectExpectedAgents(
 }
 
 function collectTrackedAgents(rootDir: string, options: { includeFridaInternal: boolean }): Set<string> {
-  const filesRaw = execSync('git ls-files', { cwd: rootDir, encoding: 'utf8' });
-  const tracked = filesRaw
-    .split('\n')
-    .map((line) => normalizePath(line))
-    .filter(Boolean)
-    .filter((relPath) => existsSync(path.join(rootDir, relPath)))
-    .filter((relPath) => relPath === 'AGENTS.md' || relPath.endsWith('/AGENTS.md'))
-    // Template-source AGENTS files are package assets, not live contract-set surfaces.
-    .filter((relPath) => !isIgnoredTrackedAgentsPath(rootDir, relPath))
-    .filter((relPath) => options.includeFridaInternal || !isFridaInternalPath(relPath));
+  try {
+    const filesRaw = execFileSync('git', ['ls-files'], { cwd: rootDir, encoding: 'utf8' });
+    const tracked = filesRaw
+      .split('\n')
+      .map((line) => normalizePath(line))
+      .filter(Boolean)
+      .filter((relPath) => existsSync(path.join(rootDir, relPath)))
+      .filter((relPath) => relPath === 'AGENTS.md' || relPath.endsWith('/AGENTS.md'))
+      // Template-source AGENTS files are package assets, not live contract-set surfaces.
+      .filter((relPath) => !isIgnoredTrackedAgentsPath(rootDir, relPath))
+      .filter((relPath) => options.includeFridaInternal || !isFridaInternalPath(relPath));
 
-  return new Set(tracked);
+    return new Set(tracked);
+  } catch {
+    return collectAgentsFromDisk(rootDir, options);
+  }
+}
+
+function collectAgentsFromDisk(rootDir: string, options: { includeFridaInternal: boolean }): Set<string> {
+  const discovered = new Set<string>();
+  const pending = [''];
+
+  while (pending.length > 0) {
+    const currentRel = pending.pop() || '';
+    const currentAbs = path.join(rootDir, currentRel);
+    const entries = readdirSync(currentAbs, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const nextRel = normalizePath(currentRel ? path.join(currentRel, entry.name) : entry.name);
+
+      if (entry.isDirectory()) {
+        if (!shouldSkipWalkDir(entry.name)) {
+          pending.push(nextRel);
+        }
+        continue;
+      }
+
+      if (!entry.isFile() || entry.name !== 'AGENTS.md') {
+        continue;
+      }
+
+      if (isIgnoredTrackedAgentsPath(rootDir, nextRel)) {
+        continue;
+      }
+
+      if (!options.includeFridaInternal && isFridaInternalPath(nextRel)) {
+        continue;
+      }
+
+      discovered.add(nextRel);
+    }
+  }
+
+  return discovered;
 }
 
 function collectExistingAgents(rootDir: string, expected: Set<string>): Set<string> {
