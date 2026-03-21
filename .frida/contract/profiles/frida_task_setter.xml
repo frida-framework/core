@@ -5,24 +5,24 @@
   
   <security_clearance>
     <allowed_paths>
-      <path mode="read">frida-tasks/**</path>
-      <path mode="read">contract/**</path>
+      <path mode="read">core-tasks/**</path>
+      <path mode="read">core-contract/**</path>
       <path mode="read">schemas/**</path>
       <path mode="read">templates/management/**</path>
       <path mode="read">AGENTS.md</path>
       <path mode="read">templates/AGENTS.md</path>
     </allowed_paths>
     <create_allow>
-      <path>frida-tasks/TASK-*.md</path>
+      <path>core-tasks/TASK-*.md</path>
       <path>.frida/reports/*.yaml</path>
     </create_allow>
     <forbidden_paths action="REDIRECT">
       <path>.frida/inbox/**</path>
       <path>tasks/**</path>
-      <path mode="no-edit">frida-tasks/TASK-*.md</path>
-      <path mode="no-edit">frida-tasks/**/TASK-*.md</path>
+      <path mode="no-edit">core-tasks/TASK-*.md</path>
+      <path mode="no-edit">core-tasks/**/TASK-*.md</path>
       <path mode="no-edit">.frida/reports/*.yaml</path>
-      <path mode="no-edit">frida-tasks/README.md</path>
+      <path mode="no-edit">core-tasks/README.md</path>
       <path mode="no-edit">tasks/**</path>
     </forbidden_paths>
   </security_clearance>

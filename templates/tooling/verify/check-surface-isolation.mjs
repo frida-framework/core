@@ -36,6 +36,11 @@ function expectTextIncludes(relativePath, token, reason) {
 
 expectTextExcludes('templates/frida/bootloader.hbs', '.frida/templates/management/', 'bootloader must not reference undeployed management templates');
 expectTextIncludes('templates/frida/bootloader.hbs', '{{auditPlaybookPath}}', 'bootloader must use repo-scoped audit playbook path');
+expectTextIncludes(
+  'templates/frida/bootloader.hbs',
+  'standalone visualizer development repositories',
+  'bootloader must preserve the standalone visualizer governance-only posture note',
+);
 
 expectTextExcludes('templates/template_app_basic/README.md', 'cd ../frida', 'template README must not depend on a local core checkout');
 expectTextExcludes('templates/template_app_basic/package.json', 'file:../frida', 'template package metadata must not depend on a local core checkout');
@@ -53,6 +58,23 @@ if (sharedLayer?.FRIDA_CONFIG?.paths?.templates_docsRef) {
 }
 if (sharedLayer?.core?.pathRefs?.templatesFrida || sharedLayer?.core?.pathRefs?.templatesDocs) {
   fail('templates/template_app_basic/app-contract/layers/AL01-shared.yaml: core.pathRefs must not expose engine template roots');
+}
+
+const agentFrameworkLayer = loadYaml('templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml');
+if (agentFrameworkLayer?.ZONES?.sourceCode?.purpose !== 'Primary repository source code.') {
+  fail('templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: ZONES.sourceCode.purpose must describe src/** as the primary repository code surface');
+}
+
+const sourceCodeConstraints = Array.isArray(agentFrameworkLayer?.ZONES?.sourceCode?.constraints)
+  ? agentFrameworkLayer.ZONES.sourceCode.constraints
+  : [];
+for (const requiredConstraint of [
+  'In standalone visualizer development repositories, src/** is a code-only surface. Frida governs workflow here but is not the recipient of implementation activity.',
+  'Do not reshape src/** around .frida/**, app-contract authoring, or FRIDA ecosystem embedding unless an explicit later integration task authorizes it.',
+]) {
+  if (!sourceCodeConstraints.includes(requiredConstraint)) {
+    fail(`templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: missing sourceCode constraint (${requiredConstraint})`);
+  }
 }
 
 const managementLayerPath = resolveSourceContractLayerRel('FL11-management.yaml', ROOT_DIR);

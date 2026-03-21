@@ -47,11 +47,13 @@ ZONES:
     owner: App
     path: "src/**"
     readOnly: false
-    purpose: Application source code.
+    purpose: Primary repository source code.
     agentsPath: "src"
     agentsTemplate: mapper
     constraints:
       - Keep app logic outside .frida managed surfaces.
+      - In standalone visualizer development repositories, src/** is a code-only surface. Frida governs workflow here but is not the recipient of implementation activity.
+      - Do not reshape src/** around .frida/**, app-contract authoring, or FRIDA ecosystem embedding unless an explicit later integration task authorizes it.
     verification: n/a
     guardRefs: []
   scripts:

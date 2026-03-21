@@ -47,6 +47,34 @@ FRIDA_TASK_PROFILES:
         - "core-tasks/**/TASK-*.md"
         - "tasks/**"
         - ".frida/reports/*.yaml"
+  frida_task_setter:
+    role: TASK_SETTER_AGENT
+    keywords:
+      - task
+      - formulation
+      - spec
+      - core-tasks
+    invariants:
+      - no_scope_creep
+    security:
+      read_allow:
+        - "core-tasks/**"
+        - "core-contract/**"
+        - "schemas/**"
+        - "templates/management/**"
+      create_allow:
+        - "core-tasks/TASK-*.md"
+        - ".frida/reports/*.yaml"
+      edit_allow: []
+      forbid:
+        - ".frida/inbox/**"
+        - "tasks/**"
+      edit_forbid:
+        - "core-tasks/TASK-*.md"
+        - "core-tasks/**/TASK-*.md"
+        - ".frida/reports/*.yaml"
+        - "core-tasks/README.md"
+        - "tasks/**"
   frida_readonly_observer:
     role: READONLY_AGENT
     keywords:
@@ -121,7 +149,7 @@ FRIDA_ENFORCEMENT:
       text: "Warm and cold-engine bootstrap modes MUST NOT modify app-contract files."
       scope: kernel
     - id: frida_inbox_no_agent_access
-      text: "Agents MUST NOT use `.frida/inbox/**` as a general-purpose work surface. Direct edits are allowed only under `.frida/inbox/app-contract/**` through `FRIDA_INTERFACE_UPDATE_APP_BY_SPEC` or `FRIDA_INTERFACE_UPDATE_APP_BY_CODE` using the interface-scoped `app_contract_editor` profile; all other consumers use `.frida/contract/app/**` or read-only Frida surfaces."
+      text: "Agents MUST NOT use `.frida/inbox/**` as a general-purpose work surface. Direct edits are allowed only under `.frida/inbox/app-contract/**` through `FRIDA_INTERFACE_UPDATE_APP_BY_SPEC` or `FRIDA_INTERFACE_UPDATE_APP_BY_CODE` using the interface-scoped `app_contract_editor` profile, or through `FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE` using `frida_toolchain_upgrade`; all other consumers use `.frida/contract/app/**` or read-only Frida surfaces."
       scope: kernel
     - id: task_pack_immutable
       text: "Published task packs are immutable specifications; substantive changes require successor tasks and supersession tracking outside the task pack body."
@@ -184,7 +212,7 @@ FRIDA_ENFORCEMENT:
       text: "`template_app_basic` is a shipped derivative baseline and MUST NOT define unique normative Frida semantics absent from core contract or bootstrap policy."
       scope: kernel
     - id: target_delivery_no_internal_authoring_surfaces
-      text: "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml` and the app-contract SSOT authoring surface `.frida/inbox/app-contract/**` used by the public app-contract update interfaces."
+      text: "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml` and the app-contract SSOT authoring surface `.frida/inbox/app-contract/**` used by the public app-contract update and target toolchain-upgrade interfaces."
       scope: kernel
     - id: interface_instruction_surfaces_seed_then_user_owned
       text: "Public interface-instruction surfaces in target repos are seeded by Frida once and then remain user-owned in form; Frida validates only normative completeness against the backing interface."
@@ -196,7 +224,7 @@ FRIDA_ENFORCEMENT:
       text: "App extensions are active only when their AL## layer is linked in the target app contract index. Presence of inactive extension files alone has no effect."
       scope: kernel
     - id: app_update_interfaces_non_inventive
-      text: "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC and FRIDA_INTERFACE_UPDATE_APP_BY_CODE MUST operate only within baseline or already-designed app extensions and MUST NOT invent new backend/vendor structures."
+      text: "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC, FRIDA_INTERFACE_UPDATE_APP_BY_CODE, and FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE MUST operate only within baseline or already-designed app extensions and MUST NOT invent new backend/vendor structures."
       scope: kernel
     - id: strict_path_refs
       text: "Literal paths are forbidden outside the PATHS block. Keys MUST end in *Ref."

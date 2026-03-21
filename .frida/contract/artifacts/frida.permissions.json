@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generatedAt": "2026-03-19T22:05:19.550Z",
-    "contractSha256": "fc480579913da0ea3654420fd0aef6179a53db7cedf2b6662972922a27c6b5ee",
+    "generatedAt": "2026-03-21T00:14:38.416Z",
+    "contractSha256": "d817107999bc09c77173c66fae427c9bd8bc520726e51fe2f86871065503710a",
     "pathMappingsCount": 80,
     "zoneCount": 3,
-    "profileCount": 2
+    "profileCount": 3
   },
   "zones": [
     {
@@ -82,6 +82,41 @@
         "redirects": []
       },
       "invariants": []
+    },
+    {
+      "id": "frida_task_setter",
+      "keywords": "task, formulation, spec, core-tasks",
+      "security": {
+        "read_allow": [
+          "core-tasks/**",
+          "core-contract/**",
+          "schemas/**",
+          "templates/management/**",
+          "AGENTS.md",
+          "templates/AGENTS.md"
+        ],
+        "edit_allow": [],
+        "create_allow": [
+          "core-tasks/TASK-*.md",
+          ".frida/reports/*.yaml"
+        ],
+        "forbid": [
+          ".frida/inbox/**",
+          "tasks/**"
+        ],
+        "edit_forbid": [
+          "core-tasks/TASK-*.md",
+          "core-tasks/**/TASK-*.md",
+          ".frida/reports/*.yaml",
+          "core-tasks/README.md",
+          "tasks/**"
+        ],
+        "forbiddenAction": "REDIRECT",
+        "redirects": []
+      },
+      "invariants": [
+        "no_scope_creep"
+      ]
     },
     {
       "id": "frida_readonly_observer",

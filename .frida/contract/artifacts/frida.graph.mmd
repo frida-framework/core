@@ -109,6 +109,7 @@ flowchart TD
   n_fdfa6b57c710["Frida_managed"]
   n_b63f5826d23a["Non_templates"]
   n_9977e01e65fb["frida_governance"]
+  n_58cea83b951c["frida_task_setter"]
   n_96a207e021d2["frida_readonly_observer"]
   n_9c2af2c03fd7["core-tasks/**"]
   n_032ba52d38fc["core-contract/**"]
@@ -131,11 +132,15 @@ flowchart TD
   n_8a75dbc25456[".frida/**"]
   n_dc43909a2d66["core-tasks/TASK-*.md"]
   n_d9fddcc0dec0["core-tasks/**/TASK-*.md"]
+  n_94ac154e07a6["templates/management/**"]
   n_34551235f73d["**"]
+  n_58cea83b951c -->|requires| n_609a672ec3e9
   n_96a207e021d2 -->|requires| n_c2d134702189
   n_9977e01e65fb -->|may_access_zone| n_2a475bc68ea8
   n_9977e01e65fb -->|may_access_zone| n_fdfa6b57c710
   n_9977e01e65fb -->|may_access_zone| n_b63f5826d23a
+  n_58cea83b951c -->|may_access_zone| n_2a475bc68ea8
+  n_58cea83b951c -->|may_access_zone| n_b63f5826d23a
   n_96a207e021d2 -->|may_access_zone| n_2a475bc68ea8
   n_96a207e021d2 -->|may_access_zone| n_fdfa6b57c710
   n_96a207e021d2 -->|may_access_zone| n_b63f5826d23a

@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generatedAt": "2026-03-19T22:05:19.550Z",
-    "contractSha256": "fc480579913da0ea3654420fd0aef6179a53db7cedf2b6662972922a27c6b5ee",
+    "generatedAt": "2026-03-21T00:14:38.416Z",
+    "contractSha256": "d817107999bc09c77173c66fae427c9bd8bc520726e51fe2f86871065503710a",
     "pathMappingsCount": 80,
     "zoneCount": 3,
-    "profileCount": 2
+    "profileCount": 3
   },
   "nodes": [
     {
@@ -697,7 +697,7 @@
       "kind": "invariant",
       "label": "frida_inbox_no_agent_access",
       "attrs": {
-        "text": "Agents MUST NOT use `.frida/inbox/**` as a general-purpose work surface. Direct edits are allowed only under `.frida/inbox/app-contract/**` through `FRIDA_INTERFACE_UPDATE_APP_BY_SPEC` or `FRIDA_INTERFACE_UPDATE_APP_BY_CODE` using the interface-scoped `app_contract_editor` profile; all other consumers use `.frida/contract/app/**` or read-only Frida surfaces.",
+        "text": "Agents MUST NOT use `.frida/inbox/**` as a general-purpose work surface. Direct edits are allowed only under `.frida/inbox/app-contract/**` through `FRIDA_INTERFACE_UPDATE_APP_BY_SPEC` or `FRIDA_INTERFACE_UPDATE_APP_BY_CODE` using the interface-scoped `app_contract_editor` profile, or through `FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE` using `frida_toolchain_upgrade`; all other consumers use `.frida/contract/app/**` or read-only Frida surfaces.",
         "scope": "kernel"
       },
       "source": {
@@ -970,7 +970,7 @@
       "kind": "invariant",
       "label": "target_delivery_no_internal_authoring_surfaces",
       "attrs": {
-        "text": "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml` and the app-contract SSOT authoring surface `.frida/inbox/app-contract/**` used by the public app-contract update interfaces.",
+        "text": "Target app delivery MUST NOT expose framework authoring surfaces or source-path refs except for the public runtime config template `.frida/templates/config.template.yaml` and the app-contract SSOT authoring surface `.frida/inbox/app-contract/**` used by the public app-contract update and target toolchain-upgrade interfaces.",
         "scope": "kernel"
       },
       "source": {
@@ -1022,7 +1022,7 @@
       "kind": "invariant",
       "label": "app_update_interfaces_non_inventive",
       "attrs": {
-        "text": "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC and FRIDA_INTERFACE_UPDATE_APP_BY_CODE MUST operate only within baseline or already-designed app extensions and MUST NOT invent new backend/vendor structures.",
+        "text": "FRIDA_INTERFACE_UPDATE_APP_BY_SPEC, FRIDA_INTERFACE_UPDATE_APP_BY_CODE, and FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE MUST operate only within baseline or already-designed app extensions and MUST NOT invent new backend/vendor structures.",
         "scope": "kernel"
       },
       "source": {
@@ -1510,6 +1510,46 @@
       }
     },
     {
+      "id": "profile:frida_task_setter",
+      "kind": "profile",
+      "label": "frida_task_setter",
+      "attrs": {
+        "keywords": "task, formulation, spec, core-tasks",
+        "security": {
+          "read_allow": [
+            "core-tasks/**",
+            "core-contract/**",
+            "schemas/**",
+            "templates/management/**",
+            "AGENTS.md",
+            "templates/AGENTS.md"
+          ],
+          "edit_allow": [],
+          "create_allow": [
+            "core-tasks/TASK-*.md",
+            ".frida/reports/*.yaml"
+          ],
+          "forbid": [
+            ".frida/inbox/**",
+            "tasks/**"
+          ],
+          "edit_forbid": [
+            "core-tasks/TASK-*.md",
+            "core-tasks/**/TASK-*.md",
+            ".frida/reports/*.yaml",
+            "core-tasks/README.md",
+            "tasks/**"
+          ],
+          "forbiddenAction": "REDIRECT",
+          "redirects": []
+        }
+      },
+      "source": {
+        "block": "FRIDA_TASK_PROFILES",
+        "id": "frida_task_setter"
+      }
+    },
+    {
       "id": "profile:frida_readonly_observer",
       "kind": "profile",
       "label": "frida_readonly_observer",
@@ -1714,6 +1754,14 @@
       }
     },
     {
+      "id": "path:templates/management/**",
+      "kind": "path",
+      "label": "templates/management/**",
+      "attrs": {
+        "contractical": "templates/management/**"
+      }
+    },
+    {
       "id": "path:**",
       "kind": "path",
       "label": "**",
@@ -1723,6 +1771,11 @@
     }
   ],
   "edges": [
+    {
+      "from": "profile:frida_task_setter",
+      "to": "invariant:no_scope_creep",
+      "kind": "requires"
+    },
     {
       "from": "profile:frida_readonly_observer",
       "to": "invariant:contract_not_runtime",
@@ -1884,6 +1937,81 @@
       "kind": "may_create"
     },
     {
+      "from": "profile:frida_task_setter",
+      "to": "path:core-tasks/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:core-contract/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:schemas/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:templates/management/**",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:templates/AGENTS.md",
+      "kind": "may_read"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:.frida/inbox/**",
+      "kind": "forbidden"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:tasks/**",
+      "kind": "forbidden"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:core-tasks/TASK-*.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:core-tasks/**/TASK-*.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:core-tasks/README.md",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:tasks/**",
+      "kind": "no_edit"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:core-tasks/TASK-*.md",
+      "kind": "may_create"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "path:.frida/reports/*.yaml",
+      "kind": "may_create"
+    },
+    {
       "from": "profile:frida_readonly_observer",
       "to": "path:**",
       "kind": "may_read"
@@ -1950,6 +2078,16 @@
     },
     {
       "from": "profile:frida_governance",
+      "to": "zone:non_templates",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_task_setter",
+      "to": "zone:templates",
+      "kind": "may_access_zone"
+    },
+    {
+      "from": "profile:frida_task_setter",
       "to": "zone:non_templates",
       "kind": "may_access_zone"
     },

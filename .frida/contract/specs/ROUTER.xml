@@ -36,6 +36,11 @@
       <keywords>governance, contract, frida, self-contract</keywords>
       <context_path>.frida/contract/profiles/frida_governance.xml</context_path>
     </profile>
+    <profile id="frida_task_setter">
+      <role>TASK_SETTER_AGENT</role>
+      <keywords>task, formulation, spec, core-tasks</keywords>
+      <context_path>.frida/contract/profiles/frida_task_setter.xml</context_path>
+    </profile>
     <profile id="frida_readonly_observer">
       <role>READONLY_AGENT</role>
       <keywords>observe, review, audit</keywords>
