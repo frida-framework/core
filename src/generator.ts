@@ -610,6 +610,19 @@ function resolveRepoScopedInterfacePathOrFail(
     return rawValue;
 }
 
+let cachedEnginePublicContract: Contract | null = null;
+
+function loadEnginePublicContract(): Contract {
+    if (cachedEnginePublicContract) {
+        return cachedEnginePublicContract;
+    }
+
+    const engineContractPath = path.join(ENGINE_PACKAGE_ROOT, 'contract', 'contract.index.yaml');
+    const loaded = loadContractDocument(ENGINE_PACKAGE_ROOT, engineContractPath);
+    cachedEnginePublicContract = loaded.parsed as Contract;
+    return cachedEnginePublicContract;
+}
+
 function loadAuditInterfaceContract(repoScope: 'frida_repo' | 'target_app_repo', currentContract: Contract): Contract {
     if (repoScope === 'frida_repo' && (currentContract as Record<string, any>).FRIDA_INTERFACE_AUDIT) {
         return currentContract;
@@ -619,9 +632,19 @@ function loadAuditInterfaceContract(repoScope: 'frida_repo' | 'target_app_repo',
         return currentContract;
     }
 
-    const engineContractPath = path.join(ENGINE_PACKAGE_ROOT, 'contract', 'contract.index.yaml');
-    const loaded = loadContractDocument(ENGINE_PACKAGE_ROOT, engineContractPath);
-    return loaded.parsed as Contract;
+    return loadEnginePublicContract();
+}
+
+function loadRoutingInterfaceContract(repoScope: 'frida_repo' | 'target_app_repo', currentContract: Contract): Contract {
+    if (repoScope === 'frida_repo' && (currentContract as Record<string, any>).FRIDA_INTERFACE_ROUTING) {
+        return currentContract;
+    }
+
+    if ((currentContract as Record<string, any>).FRIDA_INTERFACE_ROUTING) {
+        return currentContract;
+    }
+
+    return loadEnginePublicContract();
 }
 
 function resolvePathValue(contract: Contract, value: string, context: string): string[] {
@@ -1172,6 +1195,8 @@ function loadGeneratorContext(): LoadedGeneratorContext {
 function validateContract(contract: Contract): EffectiveGuards {
     const zoneBlockName = getZoneBlockName();
     const profileBlockName = getProfileBlockName();
+    const repoScope = isEngineSelfRepo(ROOT_DIR) ? 'frida_repo' : 'target_app_repo';
+    const routingContract = loadRoutingInterfaceContract(repoScope, contract);
     const required = [zoneBlockName, profileBlockName, 'INVARIANTS'];
     const missing = required.filter(key => !contract[key]);
 
@@ -1307,11 +1332,15 @@ function validateContract(contract: Contract): EffectiveGuards {
     const readAllowGovernanceRequired = policyList('read_allow_governance_required', []);
     const readAllowTaskSetterRequired = policyList('read_allow_task_setter_required', []);
     const contractEditorProfileIds = policyList('contract_editor_profile_ids', ['app_contract_editor']);
+    const toolchainUpgradeProfileIds = policyList('toolchain_upgrade_profile_ids', ['frida_toolchain_upgrade']);
     const readAllowContractEditorRequired = policyList('read_allow_contract_editor_required', []);
+    const readAllowToolchainUpgradeRequired = policyList('read_allow_toolchain_upgrade_required', []);
     const editAllowArchitectRequired = policyList('edit_allow_architect_required', ['tasks/inbox/**']);
     const editAllowArchitectAllowedOnly = policyList('edit_allow_architect_allowed_only', ['tasks/inbox/**', 'tasks/inbox/README.md']);
     const editAllowContractEditorRequired = policyList('edit_allow_contract_editor_required', []);
     const editAllowContractEditorAllowedOnly = policyList('edit_allow_contract_editor_allowed_only', []);
+    const editAllowToolchainUpgradeRequired = policyList('edit_allow_toolchain_upgrade_required', []);
+    const editAllowToolchainUpgradeAllowedOnly = policyList('edit_allow_toolchain_upgrade_allowed_only', []);
     const editAllowNonArchitectRequired = policyList('edit_allow_non_architect_required', ['tasks/README.md', 'tasks/**/README.md']);
     const editForbidRequired = policyList('edit_forbid_required', ['tasks/TASK-*.md', 'tasks/**/TASK-*.md', '.frida/reports/*.yaml']);
     const forbidMustInclude = policyList('forbid_must_include', ['.frida/**']);
@@ -1338,6 +1367,7 @@ function validateContract(contract: Contract): EffectiveGuards {
             const role = (profileData as any).role;
             const isArchitect = role === 'ARCHITECT_AGENT';
             const isContractEditorProfile = contractEditorProfileIds.includes(profileId);
+            const isToolchainUpgradeProfile = toolchainUpgradeProfileIds.includes(profileId);
             const isGovernanceProfile = profileId === 'frida_governance' || profileId === 'app_governance';
             const isTaskSetterProfile = role === 'TASK_SETTER_AGENT';
             const resolvedSec = resolveSecurity(contract, sec, `${profileBlockName}.${profileId}.security`);
@@ -1373,13 +1403,24 @@ function validateContract(contract: Contract): EffectiveGuards {
                     }
                 }
             }
+            if (isToolchainUpgradeProfile) {
+                for (const requiredPath of readAllowToolchainUpgradeRequired) {
+                    if (!has(readAllow, requiredPath)) {
+                        tasksPolicyErrors.push(`${profileBlockName}.${profileId}: toolchain upgrade profile missing security.read_allow "${requiredPath}"`);
+                    }
+                }
+            }
 
             // Check required edit_allow based on role
             if (isArchitect) {
-                const requiredArchitectEditAllow = isContractEditorProfile && editAllowContractEditorRequired.length > 0
+                const requiredArchitectEditAllow = isToolchainUpgradeProfile && editAllowToolchainUpgradeRequired.length > 0
+                    ? editAllowToolchainUpgradeRequired
+                    : isContractEditorProfile && editAllowContractEditorRequired.length > 0
                     ? editAllowContractEditorRequired
                     : editAllowArchitectRequired;
-                const allowedArchitectEditAllow = isContractEditorProfile && editAllowContractEditorAllowedOnly.length > 0
+                const allowedArchitectEditAllow = isToolchainUpgradeProfile && editAllowToolchainUpgradeAllowedOnly.length > 0
+                    ? editAllowToolchainUpgradeAllowedOnly
+                    : isContractEditorProfile && editAllowContractEditorAllowedOnly.length > 0
                     ? editAllowContractEditorAllowedOnly
                     : editAllowArchitectAllowedOnly;
 
@@ -1477,6 +1518,53 @@ function validateContract(contract: Contract): EffectiveGuards {
             }
             process.exit(1);
         }
+    }
+
+    // D6: Validate that repository-scoped routing points only to defined profiles
+    const definedProfileIds = new Set(getProfileEntries(contract).map(([profileId]) => profileId));
+    const routingProfileErrors: string[] = [];
+    const routeBlocks = [
+        ...(Array.isArray(routingContract.FRIDA_INTERFACE_ROUTING?.routes) ? routingContract.FRIDA_INTERFACE_ROUTING.routes : []),
+        ...(isEngineSelfRepo(ROOT_DIR) && Array.isArray(contract.FRIDA_INT_AGENT_ROUTING?.routes)
+            ? contract.FRIDA_INT_AGENT_ROUTING.routes
+            : []),
+    ];
+
+    routeBlocks.forEach((route: any, index: number) => {
+        const routeLabel = route?.id || `route_${index}`;
+        const allowedProfilesRaw = isEngineSelfRepo(ROOT_DIR)
+            ? (Array.isArray(route?.allowed_profiles) ? route.allowed_profiles : route?.allowed_profiles?.frida_repo)
+            : route?.allowed_profiles?.target_app_repo;
+        const allowedProfiles = Array.isArray(allowedProfilesRaw)
+            ? allowedProfilesRaw.filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0)
+            : [];
+
+        for (const allowedProfileId of allowedProfiles) {
+            if (definedProfileIds.has(allowedProfileId)) {
+                continue;
+            }
+
+            if (!isEngineSelfRepo(ROOT_DIR) && allowedProfileId === 'frida_toolchain_upgrade') {
+                routingProfileErrors.push(
+                    `FRIDA_INTERFACE_ROUTING.routes.${routeLabel}: missing routed profile "frida_toolchain_upgrade". ` +
+                    `Align .frida/inbox/app-contract/layers/AL02-agent-framework.yaml to the shipped baseline, ` +
+                    `rerun frida-core gen, and do not patch .frida/contract/** or invent repo-local temporary profiles.`
+                );
+                continue;
+            }
+
+            routingProfileErrors.push(
+                `FRIDA_INTERFACE_ROUTING.routes.${routeLabel}: allowed profile "${allowedProfileId}" is not defined in ${profileBlockName}.`
+            );
+        }
+    });
+
+    if (routingProfileErrors.length > 0) {
+        console.error('❌ Error: repository-scoped routing references undefined profiles:');
+        for (const err of routingProfileErrors) {
+            console.error(`  - ${err}`);
+        }
+        process.exit(1);
     }
 
     console.log('✅ Contract validated');
@@ -1854,6 +1942,7 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
     const loaded = loadGeneratorContext();
     const contract = normalizeContractForGenerator(loaded.contract);
     const { contractRaw, runtimePaths } = loaded;
+    const routingContract = loadRoutingInterfaceContract(runtimePaths.repoScope, contract);
     console.log(`📄 Contract artifact: ${path.relative(ROOT_DIR, runtimePaths.contractArtifactPath)}`);
     const effectiveGuards = validateContract(contract);
     checkTemplateDrift(contract);
@@ -1930,7 +2019,7 @@ export async function runFridaArtifactGenerator(options: LegacyGeneratorOptions 
     // Generate Router
     const tplRouter = loadTemplate(fridaTplRoot, 'router.xml.hbs');
     const routeSets = [
-        ...(Array.isArray(contract.FRIDA_INTERFACE_ROUTING?.routes) ? contract.FRIDA_INTERFACE_ROUTING.routes : []),
+        ...(Array.isArray(routingContract.FRIDA_INTERFACE_ROUTING?.routes) ? routingContract.FRIDA_INTERFACE_ROUTING.routes : []),
         ...(isEngineSelfRepo(ROOT_DIR) && Array.isArray(contract.FRIDA_INT_AGENT_ROUTING?.routes)
             ? contract.FRIDA_INT_AGENT_ROUTING.routes
             : []),

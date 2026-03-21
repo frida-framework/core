@@ -134,7 +134,7 @@ Rules:
   - retired path markers are detected only for one-way cleanup; bootstrap never regenerates retired surfaces.
   - demo mode is explicit-only and zero-deploy-only.
   - user-owned runtime config (.frida/config.yaml) and reports (.frida/reports/**) are preserved.
-  - component=interface-instructions-reset force-restores the packaged baseline for .frida/contract/playbooks/AGENT-app-contract-*.md only.
+  - component=interface-instructions-reset force-restores the packaged baseline for public app-facing playbooks under .frida/contract/playbooks/.
 `);
 }
 

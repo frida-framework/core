@@ -421,6 +421,42 @@ TASK_PROFILES:
       - no_scope_creep
       - temp_dot_temp_only
       - temp_ephemeral_session
+  frida_toolchain_upgrade:
+    description: Interface-scoped profile for canonical Frida package/toolchain upgrades that also align the target app contract source.
+    keywords:
+      - frida upgrade
+      - toolchain upgrade
+      - upgrade @sistemado/frida
+      - align app-contract
+      - package-lock
+    role: ARCHITECT_AGENT
+    security:
+      read_allow:
+        - .frida/**
+        - package.json
+        - package-lock.json
+        - scripts/**
+        - docs/**
+        - tasks/**
+        - .temp/**
+      edit_allow:
+        - package.json
+        - package-lock.json
+        - .frida/inbox/app-contract/**
+        - scripts/**
+        - docs/**
+        - .temp/**
+      create_allow:
+        - .frida/reports/*.yaml
+      forbid:
+        - src/**
+      edit_forbid:
+        - tasks/TASK-*.md
+        - tasks/**/TASK-*.md
+    invariants:
+      - no_scope_creep
+      - temp_dot_temp_only
+      - temp_ephemeral_session
   ci_debugger:
     description: CI, workflow, and repository automation profile.
     keywords:

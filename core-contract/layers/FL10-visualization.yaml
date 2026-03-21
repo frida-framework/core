@@ -707,7 +707,7 @@ FRIDA_VISUAL:
     execution_legality_ref: "FRIDA_VISUAL.execution_legality"
     bootstrap_relation_ref: "FRIDA_VISUAL.bootstrap_relation"
     module_rootDirRef: "PATHS.tooling.visualizerDir"
-    cli_entrypoint: "frida-core visual-viewer"
+    cli_entrypoint: "frida-core visualizer"
     browser_runtime_entrypoint: "templates/tooling/visualizer/src/visual-reference-viewer-app.ts"
     output_rule: "Visualizer delivery MUST present the architecture of the target application as an interactive diagram. Proof-oriented textual output is secondary and MUST NOT define the product surface."
     frida_repo_rule: "The Frida repository is not a legal visualizer execution surface. Shipping source/templates there does not make local generation or runtime legal."

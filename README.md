@@ -81,6 +81,22 @@ npm run frida:gen        # regenerate after contract edits
 npm run frida:bootstrap  # subsequent reconcile/repair (warm mode)
 ```
 
+### Canonical upgrade path
+
+For a target repo that already uses Frida, the supported package + app-contract upgrade path is:
+
+```sh
+npm install
+npm run frida:migration-report
+npm run frida:bootstrap
+# align package.json / package-lock.json / .frida/inbox/app-contract/** / scripts/** / docs/** as needed
+npm run frida:gen
+npm run frida:check:zone
+npm run frida:check:contract-set
+```
+
+Do not invent repo-local temporary profiles and do not patch generated `.frida/contract/**` by hand during upgrade.
+
 ### Determinism and repeatability
 
 - Zero-start post-generation runs with fixed `generatedAt=1970-01-01T00:00:00.000Z`.

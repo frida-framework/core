@@ -2,7 +2,7 @@ version: "1.0"
 templates:
   - id: FRIDA_TPL_BOOTLOADER
     file: templates/frida/bootloader.hbs
-    sha256: sha256:d117ca22a7586f923090fb83354256b90dd125b2812dd9107b53628c7e381b3b
+    sha256: sha256:a8f77ccbb789fed9708c8eb88f7c92f978dacccdb6c1053896f5d820736ec108
   - id: FRIDA_TPL_ROUTER
     file: templates/frida/router.xml.hbs
     sha256: sha256:f9e13383bc6274ade7764dd2eef5b35cdc4e7bccd527148594d6676ea5335b89

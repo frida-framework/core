@@ -107,6 +107,7 @@ function buildRequirements(mode) {
   const interfaces = [
     'FRIDA_INTERFACE_UPDATE_APP_BY_SPEC',
     'FRIDA_INTERFACE_UPDATE_APP_BY_CODE',
+    'FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE',
     'FRIDA_INTERFACE_TASK_INTAKE',
     'FRIDA_INTERFACE_TASK_SETTER',
     'FRIDA_INTERFACE_TASK_VALIDATION',
@@ -152,8 +153,13 @@ function buildRequirements(mode) {
   return perFile;
 }
 
-function main() {
-  const { root, mode } = readArgs(process.argv);
+function formatFailures(failures) {
+  return failures.map((failure) => `   - ${failure}`).join('\n');
+}
+
+export function checkInterfaceInstructionSurfaces(options = {}) {
+  const root = path.resolve(options.root || PACKAGE_ROOT);
+  const mode = options.mode || 'source';
   if (mode !== 'source' && mode !== 'deployed') {
     throw new Error(`Unsupported --mode value: ${mode}`);
   }
@@ -191,14 +197,30 @@ function main() {
   }
 
   if (failures.length > 0) {
-    console.error('❌ Interface instruction surface check failed:');
-    for (const failure of failures) {
-      console.error(`   - ${failure}`);
-    }
-    process.exit(1);
+    throw new Error(`❌ Interface instruction surface check failed:\n${formatFailures(failures)}`);
   }
 
-  console.log(`✅ Interface instruction surfaces check passed (${mode}, root=${root.replace(/\\/g, '/')})`);
+  return `✅ Interface instruction surfaces check passed (${mode}, root=${root.replace(/\\/g, '/')})`;
 }
 
-main();
+function main() {
+  const { root, mode } = readArgs(process.argv);
+  console.log(checkInterfaceInstructionSurfaces({ root, mode }));
+}
+
+function isExecutedDirectly(moduleMetaUrl) {
+  const executedPath = process.argv[1];
+  if (!executedPath) {
+    return false;
+  }
+  return path.resolve(executedPath) === path.resolve(fileURLToPath(moduleMetaUrl));
+}
+
+if (isExecutedDirectly(import.meta.url)) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}

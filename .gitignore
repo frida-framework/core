@@ -3,5 +3,5 @@ dist/
 *.log
 *.zip
 .DS_Store
-...restored/**
 .archive/**
+.frida/contract/artifacts/**

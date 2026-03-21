@@ -3,9 +3,9 @@
 CONTRACT_META:
   _visibility: private
   id: frida-contract-meta
-  version: 6.0.0
+  version: 6.1.0
   owner: frida-core
-  updated_at: "2026-03-20"
+  updated_at: "2026-03-21"
   scope:
     repository: hanszel/frida
     package: "@sistemado/frida"
@@ -35,6 +35,7 @@ CONTRACT_META:
         examples:
           - ".frida/contract/playbooks/AGENT-app-contract-update.md"
           - ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+          - ".frida/contract/playbooks/AGENT-frida-toolchain-upgrade.md"
       derived_templates:
         meaning: "Shipped baseline materials derived from Frida rules and bootstrap policy, never normative sources."
         examples:
@@ -74,6 +75,11 @@ CONTRACT_META:
         block: FRIDA_INTERFACE_UPDATE_APP_BY_CODE
         repository_scope: target_app_repo_only
         mutation_scope: target_app_contract_only
+        deployment_scope: public
+      target_toolchain_upgrade:
+        block: FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE
+        repository_scope: target_app_repo_only
+        mutation_scope: target_app_toolchain_and_contract
         deployment_scope: public
   source_ref: FRIDA_CORE_CONTRACT
 
@@ -138,6 +144,7 @@ core:
     - FRIDA_INTERFACE_SELF_CONTRACT_MANAGEMENT
     - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
     - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+    - FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE
     - FRIDA_INTERFACE_TASK_INTAKE
     - FRIDA_INTERFACE_TASK_SETTER
     - FRIDA_INTERFACE_TASK_VALIDATION

@@ -17,7 +17,7 @@ export {
   composeEffectiveVisualContract,
   loadEffectiveVisualContractDocument,
 } from './visual-contract.ts';
-export { runFridaVisualViewerCli } from './visualizer-dispatch.ts';
+export { runFridaVisualViewerCli, runFridaVisualizerCli } from './visualizer-dispatch.ts';
 export { runFridaInitCli } from './init.ts';
 export { runFridaBootstrapCli } from './bootstrap.ts';
 export { runFridaReportCli } from './report.ts';

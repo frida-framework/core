@@ -471,11 +471,11 @@ export function checkTaskCollision(rootDir = process.cwd(), taskPath = ''): Task
     result.conflicts.push(`${filePathForErrors}: unknown target profile '${taskData.target_profile}'.`);
   }
 
-  if (taskData.target_profile === 'app_contract_editor') {
+  if (taskData.target_profile === 'app_contract_editor' || taskData.target_profile === 'frida_toolchain_upgrade') {
     result.collision_scan_result = 'requires_contract_change';
     result.decision = 'requires_contract_change';
     result.reroute_target = determineRerouteTarget(result.decision);
-    result.conflicts.push(`${filePathForErrors}: target profile 'app_contract_editor' indicates contract mutation rather than executable task work.`);
+    result.conflicts.push(`${filePathForErrors}: target profile '${taskData.target_profile}' indicates contract mutation rather than executable task work.`);
     return result;
   }
 

@@ -25,7 +25,6 @@ Usage:
   ${FRIDA_CLI_NAME} bootstrap --component <name> [--target <dir>]
   ${FRIDA_CLI_NAME} visual [--check] [args...]
   ${FRIDA_CLI_NAME} visualizer                     (target-repo only — illegal in Frida repo)
-  ${FRIDA_CLI_NAME} visual-viewer [args...]         (DEPRECATED — use visualizer instead)
   ${FRIDA_CLI_NAME} report [check|path|write] [args...]
   ${FRIDA_CLI_NAME} check contract-set [--include-frida-internal]
   ${FRIDA_CLI_NAME} check task-set [--format text|json|yaml]

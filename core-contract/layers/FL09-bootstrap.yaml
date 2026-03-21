@@ -107,6 +107,7 @@ FRIDA_CONTRACT_BOOTSTRAP:
           scope:
             - ".frida/contract/playbooks/AGENT-app-contract-update.md"
             - ".frida/contract/playbooks/AGENT-app-contract-repair.md"
+            - ".frida/contract/playbooks/AGENT-frida-toolchain-upgrade.md"
           generation_after_reset: false
   target_detection:
     model: strong_marker_any
@@ -211,6 +212,7 @@ FRIDA_APP_TEMPLATE_MODEL:
     applies_to:
       - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
       - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
+      - FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE
     known_inactive_extension:
       action: HALT
       output_requirements:

@@ -488,6 +488,20 @@ entries:
       - warm
       - cold-engine
       - demo
+  - id: playbook_frida_toolchain_upgrade
+    source: templates/management/AGENT-frida-toolchain-upgrade.md
+    target: .frida/contract/playbooks/AGENT-frida-toolchain-upgrade.md
+    kind: file
+    ownership_class: user_owned
+    apply_mode: seed_if_absent
+    sha256: sha256:85a7f39a10d025cc10c8a293b4535c6e9b4b5356ba1b9e93da87773e09ed407e
+    components:
+      - playbooks
+      - interface-instructions-reset
+    modes:
+      - warm
+      - cold-engine
+      - demo
   - id: playbook_repo_audit
     source: templates/management/AGENT-repo-audit.md
     target: .frida/contract/playbooks/AGENT-repo-audit.md
@@ -589,7 +603,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:f3090734874cfe730c63933269b539b9808185385cd3349887aed5a2a39002db
+    sha256: sha256:90f708d92571e74964f73a6079fb5223f1d595e453b9d22276b1178470727b23
     modes:
       - zero-start
   - id: zero_start_template_app_basic_host_root_layer_seed
@@ -625,7 +639,7 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:5206cfb7b14ba35827c45673be58867b99c295ba3bd7ecbc8d6d58e160dfc639
+    sha256: sha256:95ac166e34359b5d605fda93bc68575890deb2441e003fd0a5d923cf689ca89e
     modes:
       - zero-start
   - id: zero_start_template_app_basic_package_json_seed
@@ -634,6 +648,6 @@ entries:
     kind: file
     ownership_class: user_data
     apply_mode: seed_if_absent
-    sha256: sha256:07373cc9caaa90c7fd2bbccfb3bd72aadc1b9b2ecef127ceb59b9912b23cc99e
+    sha256: sha256:c5b7b7193533c2a2f01ae25e9709c3293577a650e7ede43fb6b1478145faff17
     modes:
       - zero-start

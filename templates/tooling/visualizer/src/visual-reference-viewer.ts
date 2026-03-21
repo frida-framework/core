@@ -148,7 +148,7 @@ export async function runFridaVisualViewerCli(args: string[] = []): Promise<numb
         );
         return 0;
     } catch (error) {
-        console.error(`❌ frida-core visual-viewer failed: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(`❌ frida-core visualizer failed: ${error instanceof Error ? error.message : String(error)}`);
         return 1;
     }
 }

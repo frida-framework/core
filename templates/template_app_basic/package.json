@@ -11,9 +11,10 @@
     "frida:check": "npm run frida:check:zone && npm run frida:check:contract-set",
     "frida:migration-report": "frida-core migration-report",
     "frida:build": "frida-core build",
-    "frida:visual": "frida-core visual"
+    "frida:visual": "frida-core visual",
+    "frida:visualizer": "frida-core visualizer"
   },
   "devDependencies": {
-    "@sistemado/frida": "^4.0.0"
+    "@sistemado/frida": "^4.1.0"
   }
 }

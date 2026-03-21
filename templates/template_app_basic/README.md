@@ -43,3 +43,17 @@ Framework authoring templates such as `.frida/templates/frida/**` and `.frida/te
 - activate shipped extensions only by linking their `AL##` layer entries in `.frida/inbox/app-contract/contract.index.yaml`
 - expand the baseline layers as the application grows
 - use `npm run frida:bootstrap` for later reconcile/repair; do not rerun zero-start after deployment
+
+## Upgrade Frida
+
+For the canonical Frida upgrade path in a target repo, run:
+
+1. `npm install`
+2. `npm run frida:migration-report`
+3. `npm run frida:bootstrap`
+4. align `package.json`, `package-lock.json`, `.frida/inbox/app-contract/**`, `scripts/**`, and `docs/**` as needed
+5. `npm run frida:gen`
+6. `npm run frida:check:zone`
+7. `npm run frida:check:contract-set`
+
+Do not patch generated `.frida/contract/**` manually and do not invent repo-local temporary profiles for this flow.

@@ -65,6 +65,46 @@ if (agentFrameworkLayer?.ZONES?.sourceCode?.purpose !== 'Primary repository sour
   fail('templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: ZONES.sourceCode.purpose must describe src/** as the primary repository code surface');
 }
 
+const taskProfiles = agentFrameworkLayer?.TASK_PROFILES || {};
+const appContractEditor = taskProfiles.app_contract_editor || {};
+const toolchainUpgrade = taskProfiles.frida_toolchain_upgrade || {};
+const ciDebugger = taskProfiles.ci_debugger || {};
+const appGovernance = taskProfiles.app_governance || {};
+
+if (!taskProfiles.frida_toolchain_upgrade) {
+  fail('templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: TASK_PROFILES.frida_toolchain_upgrade must exist.');
+}
+
+for (const requiredEditPath of ['package.json', 'package-lock.json', '.frida/inbox/app-contract/**', 'scripts/**', 'docs/**', '.temp/**']) {
+  if (!Array.isArray(toolchainUpgrade?.security?.edit_allow) || !toolchainUpgrade.security.edit_allow.includes(requiredEditPath)) {
+    fail(`templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: frida_toolchain_upgrade must include edit_allow ${requiredEditPath}`);
+  }
+}
+
+for (const forbiddenPath of ['package.json', 'package-lock.json', 'scripts/**', 'docs/**']) {
+  if (Array.isArray(appContractEditor?.security?.edit_allow) && appContractEditor.security.edit_allow.includes(forbiddenPath)) {
+    fail(`templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: app_contract_editor must not gain ${forbiddenPath}`);
+  }
+}
+
+for (const requiredEditorPath of ['.frida/inbox/app-contract/**', '.temp/**']) {
+  if (!Array.isArray(appContractEditor?.security?.edit_allow) || !appContractEditor.security.edit_allow.includes(requiredEditorPath)) {
+    fail(`templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: app_contract_editor must keep ${requiredEditorPath}`);
+  }
+}
+
+for (const forbiddenCiPath of ['.frida/inbox/app-contract/**', 'package-lock.json']) {
+  if (Array.isArray(ciDebugger?.security?.edit_allow) && ciDebugger.security.edit_allow.includes(forbiddenCiPath)) {
+    fail(`templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: ci_debugger must not gain ${forbiddenCiPath}`);
+  }
+}
+
+for (const forbiddenGovernancePath of ['.frida/inbox/app-contract/**', 'package.json', 'package-lock.json']) {
+  if (Array.isArray(appGovernance?.security?.edit_allow) && appGovernance.security.edit_allow.includes(forbiddenGovernancePath)) {
+    fail(`templates/template_app_basic/app-contract/layers/AL02-agent-framework.yaml: app_governance must not gain ${forbiddenGovernancePath}`);
+  }
+}
+
 const sourceCodeConstraints = Array.isArray(agentFrameworkLayer?.ZONES?.sourceCode?.constraints)
   ? agentFrameworkLayer.ZONES.sourceCode.constraints
   : [];
@@ -93,6 +133,7 @@ for (const token of [
   'instruction_contract:',
   'AGENT-app-contract-update.md',
   'AGENT-app-contract-repair.md',
+  'AGENT-frida-toolchain-upgrade.md',
   'AGENT-task-intake.md',
   'AGENT-task-setter.md',
   'AGENT-task-validation.md',
@@ -109,6 +150,7 @@ const entries = Array.isArray(bootstrapManifest?.entries) ? bootstrapManifest.en
 const findEntry = (id) => entries.find((entry) => entry?.id === id);
 const appUpdateEntry = findEntry('playbook_app_contract_update');
 const appRepairEntry = findEntry('playbook_app_contract_repair');
+const toolchainUpgradeEntry = findEntry('playbook_frida_toolchain_upgrade');
 const taskIntakeEntry = findEntry('playbook_task_intake');
 const taskSetterEntry = findEntry('playbook_task_setter');
 const taskValidationEntry = findEntry('playbook_task_validation');
@@ -117,6 +159,7 @@ const taskTrackingEntry = findEntry('playbook_task_tracking');
 for (const [id, entry, target] of [
   ['playbook_app_contract_update', appUpdateEntry, '.frida/contract/playbooks/AGENT-app-contract-update.md'],
   ['playbook_app_contract_repair', appRepairEntry, '.frida/contract/playbooks/AGENT-app-contract-repair.md'],
+  ['playbook_frida_toolchain_upgrade', toolchainUpgradeEntry, '.frida/contract/playbooks/AGENT-frida-toolchain-upgrade.md'],
   ['playbook_task_intake', taskIntakeEntry, '.frida/contract/playbooks/AGENT-task-intake.md'],
   ['playbook_task_setter', taskSetterEntry, '.frida/contract/playbooks/AGENT-task-setter.md'],
   ['playbook_task_validation', taskValidationEntry, '.frida/contract/playbooks/AGENT-task-validation.md'],

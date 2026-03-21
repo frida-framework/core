@@ -385,8 +385,8 @@ function assertOverlayAuthorityModel(contract, issues) {
     if (referenceViewer.module_rootDirRef !== 'PATHS.tooling.visualizerDir') {
       issues.push('FRIDA_VISUAL.reference_viewer.module_rootDirRef must equal PATHS.tooling.visualizerDir.');
     }
-    if (referenceViewer.cli_entrypoint !== 'frida-core visual-viewer') {
-      issues.push("FRIDA_VISUAL.reference_viewer.cli_entrypoint must equal 'frida-core visual-viewer' until the delivery rename lands.");
+    if (referenceViewer.cli_entrypoint !== 'frida-core visualizer') {
+      issues.push("FRIDA_VISUAL.reference_viewer.cli_entrypoint must equal 'frida-core visualizer'.");
     }
     if (referenceViewer.browser_runtime_entrypoint !== 'templates/tooling/visualizer/src/visual-reference-viewer-app.ts') {
       issues.push('FRIDA_VISUAL.reference_viewer.browser_runtime_entrypoint must equal templates/tooling/visualizer/src/visual-reference-viewer-app.ts.');

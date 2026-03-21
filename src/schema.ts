@@ -160,6 +160,20 @@ export function collectMigrationIssues(contract: Record<string, any>, strict = f
     });
   }
 
+  if (
+    contract.FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE &&
+    contract.TASK_PROFILES &&
+    typeof contract.TASK_PROFILES === 'object' &&
+    !contract.TASK_PROFILES.frida_toolchain_upgrade
+  ) {
+    issues.push({
+      field: 'TASK_PROFILES.frida_toolchain_upgrade',
+      replacement: '.frida/inbox/app-contract/layers/AL02-agent-framework.yaml -> TASK_PROFILES.frida_toolchain_upgrade',
+      severity: strict ? 'error' : 'warning',
+      message: 'Canonical Frida package+contract upgrade is unavailable until the shipped frida_toolchain_upgrade profile is added to the target app contract baseline.',
+    });
+  }
+
   if (typeof contract.meta?.mode === 'string' && contract.meta.mode !== 'schema') {
     issues.push({
       field: 'meta.mode',

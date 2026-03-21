@@ -2,10 +2,12 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { spawnSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import * as yaml from 'yaml';
 import { runFridaBootstrapCli } from './bootstrap.ts';
+import { APP_CONTRACT_INBOX_INDEX_REL_PATH } from './contract-mirror.ts';
+import { runFridaGeneration, runFridaMigrationReport } from './runtime.ts';
+import { runFridaAgentsContractSetCheck } from './agents-contract-set.ts';
 import {
   collectManifestTargetsForMode,
   loadBootstrapPackageManifest,
@@ -64,6 +66,14 @@ function listFiles(rootDir: string): string[] {
 
 function hashFile(filePath: string): string {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function readJsonFile<T>(filePath: string): T {
+  return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as T;
+}
+
+function writeJsonFile(filePath: string, payload: unknown): void {
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8');
 }
 
 function buildSnapshot(rootDir: string): Map<string, string> {
@@ -167,45 +177,160 @@ function assertSnapshotsEqual(left: Map<string, string>, right: Map<string, stri
   }
 }
 
-function runCliCheck(rootDir: string, args: string[]): void {
-  const result = spawnSync(process.execPath, [path.join(PACKAGE_ROOT, 'dist', 'cli.js'), ...args], {
-    cwd: rootDir,
-    encoding: 'utf-8',
-  });
+async function runZoneCheck(rootDir: string, workingPath: string): Promise<void> {
+  const previousRepoRoot = process.env.FRIDA_REPO_ROOT;
+  const previousContractPath = process.env.FRIDA_CONTRACT_PATH;
 
-  if (result.status !== 0) {
-    throw new Error(
-      `CLI check failed (${args.join(' ')}): ${result.stderr || result.stdout || `exit=${result.status}`}`
-    );
-  }
-}
+  try {
+    process.env.FRIDA_REPO_ROOT = rootDir;
+    delete process.env.FRIDA_CONTRACT_PATH;
 
-function runInterfaceInstructionCheck(rootDir: string): void {
-  const result = spawnSync(
-    process.execPath,
-    [path.join(PACKAGE_ROOT, 'templates', 'tooling', 'verify', 'check-interface-instruction-surfaces.mjs'), '--root', rootDir, '--mode', 'deployed'],
-    {
-      cwd: PACKAGE_ROOT,
-      encoding: 'utf-8',
+    const zoneCheckModuleUrl =
+      `${pathToFileURL(path.join(PACKAGE_ROOT, 'dist', 'zone-check.js')).href}?root=${encodeURIComponent(rootDir)}&path=${encodeURIComponent(workingPath)}`;
+    const zoneCheckModule = await import(zoneCheckModuleUrl);
+    const result = zoneCheckModule.validateZoneAgentsMd(workingPath, APP_CONTRACT_INBOX_INDEX_REL_PATH);
+
+    if (!result.zone_id || !result.exists) {
+      throw new Error(result.error || 'zone validation failed');
     }
-  );
+  } finally {
+    if (previousRepoRoot === undefined) {
+      delete process.env.FRIDA_REPO_ROOT;
+    } else {
+      process.env.FRIDA_REPO_ROOT = previousRepoRoot;
+    }
 
-  if (result.status !== 0) {
-    throw new Error(
-      `interface-instruction validation failed: ${result.stderr || result.stdout || `exit=${result.status}`}`
-    );
+    if (previousContractPath === undefined) {
+      delete process.env.FRIDA_CONTRACT_PATH;
+    } else {
+      process.env.FRIDA_CONTRACT_PATH = previousContractPath;
+    }
   }
 }
 
-function runGit(rootDir: string, args: string[]): void {
-  const result = spawnSync('git', args, {
-    cwd: rootDir,
-    encoding: 'utf-8',
-  });
+async function runCliCheck(rootDir: string, args: string[]): Promise<void> {
+  const commandLabel = args.join(' ');
 
-  if (result.status !== 0) {
-    throw new Error(`git ${args.join(' ')} failed: ${result.stderr || result.stdout || `exit=${result.status}`}`);
+  if (args.length === 1 && args[0] === 'migration-report') {
+    const code = runFridaMigrationReport({ rootDir, contractPath: APP_CONTRACT_INBOX_INDEX_REL_PATH });
+    if (code !== 0) {
+      throw new Error(`CLI check failed (${commandLabel}): exit=${code}`);
+    }
+    return;
   }
+
+  if (args.length >= 1 && args[0] === 'bootstrap') {
+    const forwardedArgs = args.slice(1).map((value, index, array) => (
+      value === '.' && array[index - 1] === '--target' ? rootDir : value
+    ));
+    const code = await runFridaBootstrapCli(forwardedArgs);
+    if (code !== 0) {
+      throw new Error(`CLI check failed (${commandLabel}): exit=${code}`);
+    }
+    return;
+  }
+
+  if (args.length === 1 && args[0] === 'gen') {
+    await runFridaGeneration({ rootDir, contractPath: APP_CONTRACT_INBOX_INDEX_REL_PATH });
+    return;
+  }
+
+  if (args.length >= 2 && args[0] === 'check' && args[1] === 'zone') {
+    const pathIndex = args.indexOf('--path');
+    const workingPath = pathIndex >= 0 && args[pathIndex + 1] ? args[pathIndex + 1] : '.';
+    await runZoneCheck(rootDir, workingPath);
+    return;
+  }
+
+  if (args.length === 2 && args[0] === 'check' && args[1] === 'contract-set') {
+    const code = runFridaAgentsContractSetCheck({ rootDir });
+    if (code !== 0) {
+      throw new Error(`CLI check failed (${commandLabel}): exit=${code}`);
+    }
+    return;
+  }
+
+  throw new Error(`Unsupported zero-start CLI check: ${commandLabel}`);
+}
+
+async function runInterfaceInstructionCheck(rootDir: string): Promise<void> {
+  const scriptUrl = pathToFileURL(
+    path.join(PACKAGE_ROOT, 'templates', 'tooling', 'verify', 'check-interface-instruction-surfaces.mjs')
+  ).href;
+  const module = await import(scriptUrl);
+  module.checkInterfaceInstructionSurfaces({ root: rootDir, mode: 'deployed' });
+}
+
+function assertToolchainUpgradeSurfaces(rootDir: string): void {
+  const routerPath = path.join(rootDir, '.frida', 'contract', 'specs', 'ROUTER.xml');
+  const profilePath = path.join(rootDir, '.frida', 'contract', 'profiles', 'frida_toolchain_upgrade.xml');
+  const playbookPath = path.join(rootDir, '.frida', 'contract', 'playbooks', 'AGENT-frida-toolchain-upgrade.md');
+
+  if (!fs.existsSync(profilePath)) {
+    throw new Error('zero-start did not project frida_toolchain_upgrade profile');
+  }
+  if (!fs.existsSync(playbookPath)) {
+    throw new Error('zero-start did not seed AGENT-frida-toolchain-upgrade.md');
+  }
+
+  const routerRaw = fs.readFileSync(routerPath, 'utf-8');
+  for (const token of ['FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE', 'frida_toolchain_upgrade']) {
+    if (!routerRaw.includes(token)) {
+      throw new Error(`router is missing toolchain-upgrade token: ${token}`);
+    }
+  }
+}
+
+function writeSyntheticPackageLock(targetDir: string): void {
+  const packageJsonPath = path.join(targetDir, 'package.json');
+  const packageJson = readJsonFile<Record<string, any>>(packageJsonPath);
+  const packageLockPath = path.join(targetDir, 'package-lock.json');
+  const dependencyVersion = packageJson?.devDependencies?.['@sistemado/frida'] || null;
+
+  writeJsonFile(packageLockPath, {
+    name: packageJson.name,
+    version: packageJson.version,
+    lockfileVersion: 3,
+    requires: true,
+    packages: {
+      '': {
+        name: packageJson.name,
+        version: packageJson.version,
+        devDependencies: packageJson.devDependencies || {},
+      },
+    },
+    dependencies: dependencyVersion
+      ? {
+          '@sistemado/frida': {
+            version: dependencyVersion,
+            dev: true,
+          },
+        }
+      : {},
+  });
+}
+
+async function assertCombinedToolchainUpgradeFlow(rootDir: string): Promise<void> {
+  const packageJsonPath = path.join(rootDir, 'package.json');
+  const contractIndexPath = path.join(rootDir, '.frida', 'inbox', 'app-contract', 'contract.index.yaml');
+
+  const packageJson = readJsonFile<Record<string, any>>(packageJsonPath);
+  packageJson.devDependencies = packageJson.devDependencies || {};
+  const fridaVersion = String(packageJson.devDependencies['@sistemado/frida'] || '').replace(/^\^/, '');
+  packageJson.devDependencies['@sistemado/frida'] = fridaVersion || packageJson.devDependencies['@sistemado/frida'];
+  writeJsonFile(packageJsonPath, packageJson);
+  writeSyntheticPackageLock(rootDir);
+
+  const contractIndex = yaml.parse(fs.readFileSync(contractIndexPath, 'utf-8')) as Record<string, any>;
+  contractIndex.version = '0.1.1';
+  contractIndex.date = '1970-01-02';
+  fs.writeFileSync(contractIndexPath, yaml.stringify(contractIndex, { lineWidth: 120 }), 'utf-8');
+
+  await runCliCheck(rootDir, ['migration-report']);
+  await runCliCheck(rootDir, ['bootstrap', '--target', '.']);
+  await runCliCheck(rootDir, ['gen']);
+  await runCliCheck(rootDir, ['check', 'zone', '--path', '.']);
+  await runCliCheck(rootDir, ['check', 'contract-set']);
 }
 
 async function bootstrapInto(targetDir: string): Promise<void> {
@@ -224,11 +349,13 @@ async function assertZeroStartRedeployRejected(targetDir: string): Promise<void>
 
 async function assertWarmPreservesUserOwnedInstructions(targetDir: string): Promise<void> {
   const updatePath = path.join(targetDir, '.frida', 'contract', 'playbooks', 'AGENT-app-contract-update.md');
+  const toolchainUpgradePath = path.join(targetDir, '.frida', 'contract', 'playbooks', 'AGENT-frida-toolchain-upgrade.md');
   const legacyUpdatePath = path.join(targetDir, '.frida', 'contract', 'playbooks', 'AGENT-contract-update.md');
   const legacyRepairPath = path.join(targetDir, '.frida', 'contract', 'playbooks', 'AGENT-contract-repair.md');
   const sentinel = '\n<!-- USER CUSTOMIZATION SENTINEL -->\n';
 
   fs.appendFileSync(updatePath, sentinel, 'utf-8');
+  fs.appendFileSync(toolchainUpgradePath, sentinel, 'utf-8');
   fs.writeFileSync(legacyUpdatePath, '# legacy update\n', 'utf-8');
   fs.writeFileSync(legacyRepairPath, '# legacy repair\n', 'utf-8');
 
@@ -238,8 +365,12 @@ async function assertWarmPreservesUserOwnedInstructions(targetDir: string): Prom
   }
 
   const updatedRaw = fs.readFileSync(updatePath, 'utf-8');
+  const upgradedRaw = fs.readFileSync(toolchainUpgradePath, 'utf-8');
   if (!updatedRaw.includes(sentinel.trim())) {
     throw new Error('warm bootstrap overwrote a user-owned interface instruction surface');
+  }
+  if (!upgradedRaw.includes(sentinel.trim())) {
+    throw new Error('warm bootstrap overwrote a user-owned toolchain-upgrade instruction surface');
   }
   if (fs.existsSync(legacyUpdatePath) || fs.existsSync(legacyRepairPath)) {
     throw new Error('warm bootstrap did not remove legacy deployed AGENT-contract-* playbooks');
@@ -250,6 +381,7 @@ async function assertInterfaceInstructionResetRestoresBaseline(targetDir: string
   const files = [
     'AGENT-app-contract-update.md',
     'AGENT-app-contract-repair.md',
+    'AGENT-frida-toolchain-upgrade.md',
   ];
 
   for (const fileName of files) {
@@ -282,14 +414,9 @@ async function main(): Promise<void> {
   fs.mkdirSync(secondDir, { recursive: true });
 
   try {
-    runGit(firstDir, ['init', '-q']);
-    runGit(secondDir, ['init', '-q']);
-
     await bootstrapInto(firstDir);
     await bootstrapInto(secondDir);
     await assertZeroStartRedeployRejected(firstDir);
-
-    runGit(firstDir, ['add', '-A']);
 
     assertRequiredOutputs(firstDir);
     assertRequiredOutputs(secondDir);
@@ -301,11 +428,13 @@ async function main(): Promise<void> {
     assertProjectedCoreMirrorSanitized(secondDir);
     assertProjectedCoreMirrorSelfContained(firstDir);
     assertProjectedCoreMirrorSelfContained(secondDir);
-    runInterfaceInstructionCheck(firstDir);
-    runInterfaceInstructionCheck(secondDir);
+    await runInterfaceInstructionCheck(firstDir);
+    await runInterfaceInstructionCheck(secondDir);
+    assertToolchainUpgradeSurfaces(firstDir);
+    assertToolchainUpgradeSurfaces(secondDir);
 
-    runCliCheck(firstDir, ['check', 'zone', '--path', '.']);
-    runCliCheck(firstDir, ['check', 'contract-set']);
+    await runCliCheck(firstDir, ['check', 'zone', '--path', '.']);
+    await runCliCheck(firstDir, ['check', 'contract-set']);
 
     const firstSnapshot = buildSnapshot(firstDir);
     const secondSnapshot = buildSnapshot(secondDir);
@@ -318,7 +447,8 @@ async function main(): Promise<void> {
 
     await assertWarmPreservesUserOwnedInstructions(firstDir);
     await assertInterfaceInstructionResetRestoresBaseline(firstDir);
-    runInterfaceInstructionCheck(firstDir);
+    await assertCombinedToolchainUpgradeFlow(firstDir);
+    await runInterfaceInstructionCheck(firstDir);
 
     console.log(
       `zero-start determinism OK (${firstSnapshot.size} files, digest=${digest}, temp_root=${tempRoot.replace(/\\/g, '/')})`

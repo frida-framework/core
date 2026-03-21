@@ -262,8 +262,17 @@ FRIDA_CONFIG:
             - ".temp/**"
           contract_editor_profile_ids:
             - "app_contract_editor"
+          toolchain_upgrade_profile_ids:
+            - "frida_toolchain_upgrade"
           read_allow_contract_editor_required:
             - ".frida/**"
+          read_allow_toolchain_upgrade_required:
+            - ".frida/**"
+            - "package.json"
+            - "package-lock.json"
+            - "scripts/**"
+            - "docs/**"
+            - ".temp/**"
           edit_allow_architect_required:
             - "tasks/inbox/**"
           edit_allow_architect_allowed_only:
@@ -274,6 +283,20 @@ FRIDA_CONFIG:
             - ".temp/**"
           edit_allow_contract_editor_allowed_only:
             - ".frida/inbox/app-contract/**"
+            - ".temp/**"
+          edit_allow_toolchain_upgrade_required:
+            - "package.json"
+            - "package-lock.json"
+            - ".frida/inbox/app-contract/**"
+            - "scripts/**"
+            - "docs/**"
+            - ".temp/**"
+          edit_allow_toolchain_upgrade_allowed_only:
+            - "package.json"
+            - "package-lock.json"
+            - ".frida/inbox/app-contract/**"
+            - "scripts/**"
+            - "docs/**"
             - ".temp/**"
           edit_allow_non_architect_required:
             - "tasks/index.yaml"
@@ -354,14 +377,17 @@ FRIDA_ROOT_LAYOUT_POLICY:
       interface_refs:
         - FRIDA_INTERFACE_UPDATE_APP_BY_SPEC
         - FRIDA_INTERFACE_UPDATE_APP_BY_CODE
-      required_profile: "app_contract_editor"
+        - FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE
+      required_profile_ids:
+        - "app_contract_editor"
+        - "frida_toolchain_upgrade"
       read_allow:
         - ".frida/**"
       edit_allow:
         - ".frida/inbox/app-contract/**"
         - ".temp/**"
     work_surface_redirect: ".frida/contract/app/**"
-    note: "Inbox stores inbound/SSOT app-contract material and raw sync payloads. General agents stay out; app-contract mutation interfaces author in `.frida/inbox/app-contract/**`, while mirror consumers may read `.frida/contract/app/**`."
+    note: "Inbox stores inbound/SSOT app-contract material and raw sync payloads. General agents stay out; app-contract mutation and target toolchain-upgrade interfaces author in `.frida/inbox/app-contract/**`, while mirror consumers may read `.frida/contract/app/**`."
 
 FRIDA_CONFIG_FIELD_DOCS:
   _visibility: public
@@ -761,10 +787,10 @@ FRIDA_CONFIG_FIELD_DOCS:
       purpose: "Constrains direct authoring to `.frida/inbox/app-contract/**`."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.interface_refs"
       what: "Interfaces allowed to use the inbox authoring exception."
-      purpose: "Binds the writable inbox exception to the public app-contract mutation interfaces only."
-    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.required_profile"
-      what: "Canonical profile id required for direct inbox authoring."
-      purpose: "Makes the deployed app-contract editor profile explicit."
+      purpose: "Binds the writable inbox exception to the public app-contract mutation and toolchain-upgrade interfaces."
+    - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.required_profile_ids"
+      what: "Canonical profile ids required for direct inbox authoring."
+      purpose: "Makes the deployed app-contract editor and toolchain-upgrade profiles explicit."
     - path: "FRIDA_ROOT_LAYOUT_POLICY.inbox_access_policy.authoring_exception.read_allow"
       what: "Read permissions required by the inbox authoring exception."
       purpose: "Documents that the editor reads the full Frida deployment surface for context."

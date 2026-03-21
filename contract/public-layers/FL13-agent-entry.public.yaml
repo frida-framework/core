@@ -193,6 +193,24 @@ FRIDA_INTERFACE_ROUTING:
       allowed_profiles:
         target_app_repo:
           - app_contract_editor
+    - id: target_toolchain_upgrade
+      clause_ref: FL13:6.6
+      interface_ref: FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE
+      intent_family: target_toolchain_upgrade
+      selector_keywords:
+        - frida upgrade
+        - toolchain upgrade
+        - package-lock
+        - align app-contract
+        - upgrade @sistemado/frida
+      selector_phrases:
+        - upgrade frida and align app-contract
+        - upgrade frida package and app contract
+        - bump @sistemado/frida and align app-contract
+        - апгрейд frida и выровняй app-contract
+      allowed_profiles:
+        target_app_repo:
+          - frida_toolchain_upgrade
 FRIDA_CLAUSE_INDEX:
   id: frida-clause-index
   version: 1.0.0

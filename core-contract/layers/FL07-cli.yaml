@@ -77,6 +77,9 @@ FRIDA_CLI:
           description: "Build visual overlay from contract."
         check:
           description: "Validate visual overlay freshness."
+    visualizer:
+      purpose: "Build the packaged visualizer in a legal target app repository."
+      description: "Target-repo-only visualizer build command."
   command_separation:
     core_commands:
       - build
@@ -84,6 +87,7 @@ FRIDA_CLI:
       - check_templates
       - bootstrap
       - visual
+      - visualizer
     future_commands:
       - migration_report
     manual_only_commands:

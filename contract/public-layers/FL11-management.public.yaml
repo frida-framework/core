@@ -303,6 +303,133 @@ FRIDA_INTERFACE_UPDATE_APP_BY_CODE:
       playbook_ref: templates/management/AGENT-app-contract-repair.md
       deployed_playbook_ref: .frida/contract/playbooks/AGENT-app-contract-repair.md
       requires_role: ARCHITECT_AGENT
+FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE:
+  id: frida-interface-target-toolchain-upgrade
+  version: 1.0.0
+  purpose: Upgrade the Frida package/toolchain in a target application repository and align the active app-contract source
+    without repo-local workaround profiles or manual generated-surface patches.
+  repository_scope: target_app_repo_only
+  mutation_scope: target_app_toolchain_and_contract
+  forbidden_targets:
+    - frida_core_contract
+    - frida_core_repo_sources
+    - frida_tasks_directory
+    - generated_frida_contract_surfaces
+  deployment_scope: public
+  playbook_ref: templates/management/AGENT-frida-toolchain-upgrade.md
+  deployed_playbook_ref: .frida/contract/playbooks/AGENT-frida-toolchain-upgrade.md
+  instruction_contract:
+    interface_id: FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE
+    repository_scope: target_app_repo_only
+    mutation_scope: target_app_toolchain_and_contract
+    ownership_model: seed_then_user_owned
+    form_policy:
+      exact_markdown_shape: user_adaptable
+      accepted_declaration_forms:
+        - yaml_front_matter
+        - fenced_yaml_metadata_block
+        - canonical_textual_interface_ref_line
+      required_normative_link: explicit_interface_ref_or_interface_refs
+    required_concepts:
+      - target_app_repo_only
+      - target_app_toolchain_and_contract
+      - frida_toolchain_upgrade
+      - package.json
+      - package-lock.json
+      - .frida/inbox/app-contract/**
+      - scripts/**
+      - docs/**
+      - .temp/**
+      - canonical_upgrade_path
+      - no repo-local workaround profile
+      - no manual edits under .frida/contract/**
+      - FRIDA_VERSION_POLICY
+      - npm run frida:migration-report
+      - npm run frida:check:contract-set
+    required_rules_refs:
+      - FRIDA_INTERFACE_TARGET_TOOLCHAIN_UPGRADE
+      - FRIDA_VERSION_POLICY
+    required_invariants:
+      - app_update_interfaces_non_inventive
+      - interface_instruction_surfaces_seed_then_user_owned
+      - target_delivery_no_internal_authoring_surfaces
+    required_guard_refs: []
+    required_verification:
+      - npm install
+      - npm run frida:migration-report
+      - npm run frida:bootstrap
+      - npm run frida:gen
+      - npm run frida:check:zone
+      - npm run frida:check:contract-set
+    required_report_fields:
+      - frida_report
+      - profile_id
+      - verification
+      - summary
+    forbidden_claims:
+      - This instruction authorizes manual edits under .frida/contract/**.
+      - This instruction authorizes repo-local temporary profiles or router patches.
+      - This instruction authorizes mutation of the Frida core contract.
+    baseline_reset_command: frida-core bootstrap --component interface-instructions-reset --target <dir>
+    authoring_surface:
+      source_of_truth:
+        - package.json
+        - package-lock.json
+        - .frida/inbox/app-contract/**
+      read_context:
+        - .frida/**
+        - package.json
+        - package-lock.json
+        - scripts/**
+        - docs/**
+        - .temp/**
+      edit_scope:
+        - package.json
+        - package-lock.json
+        - .frida/inbox/app-contract/**
+        - scripts/**
+        - docs/**
+        - .temp/**
+      derived_mirror:
+        - .frida/contract/**
+      required_profile_id: frida_toolchain_upgrade
+    instruction_surfaces:
+      upgrade:
+        deployed_playbook_ref: .frida/contract/playbooks/AGENT-frida-toolchain-upgrade.md
+  canonical_upgrade_path:
+    description: Canonical Frida target-repo upgrade path for package/toolchain + app-contract alignment.
+    steps:
+      - npm install
+      - npm run frida:migration-report
+      - npm run frida:bootstrap
+      - npm run frida:gen
+      - npm run frida:check:zone
+      - npm run frida:check:contract-set
+    rule: Upgrade MUST either converge through this path or halt with an explicit actionable reason.
+  migration_guardrails:
+    generated_surface_rule: Generated `.frida/contract/**` remains derived output and MUST NOT be patched manually during upgrade.
+    missing_profile_halt:
+      error_code: target_toolchain_upgrade_profile_missing
+      reason: Target app contract does not yet define `frida_toolchain_upgrade`.
+      remediation:
+        - Align `.frida/inbox/app-contract/layers/AL02-agent-framework.yaml` to the shipped baseline.
+        - Do not invent repo-local temporary profiles or patch generated `.frida/contract/**`.
+        - Rerun `npm run frida:gen` after the source app-contract alignment.
+  version_impact:
+    evaluate: always
+    rule: After applying target toolchain or app-contract changes, determine affected version domains (contract, schema,
+      package) and bump per FRIDA_VERSION_POLICY.
+    ref: FRIDA_VERSION_POLICY
+  protocols:
+    upgrade:
+      description: Align target package manifests, tooling wrappers, and app-contract source during a Frida package upgrade.
+      playbook_ref: templates/management/AGENT-frida-toolchain-upgrade.md
+      deployed_playbook_ref: .frida/contract/playbooks/AGENT-frida-toolchain-upgrade.md
+      requires_role: ARCHITECT_AGENT
+  halt_conditions:
+    - Generated `.frida/contract/**` would need manual edits.
+    - Repository lacks `frida_toolchain_upgrade` and the app-contract source has not been aligned yet.
+    - Upgrade depends on a repo-local temporary profile, router patch, or governance workaround.
 FRIDA_INTERFACE_TASK_INTAKE:
   id: frida-interface-task-intake
   version: 1.0.0
